@@ -1,0 +1,828 @@
+{% extends 'gallery/base.html' %}
+
+{% block title %}Super Admin Console - Photona{% endblock %}
+
+{% block content %}
+<style>
+    /* ── Override app container for full-bleed layout ── */
+    .app-container { max-width: 100%; padding: 0; }
+
+    .admin-shell {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: calc(100vh - 74px);
+    }
+
+    /* ── Left Sidebar ── */
+    .admin-sidebar {
+        background: var(--bg-secondary);
+        border-right: 1px solid var(--border-light);
+        padding: 2.5rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        position: sticky;
+        top: 74px;
+        height: calc(100vh - 74px);
+        overflow-y: auto;
+    }
+
+    .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .sidebar-brand-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: var(--gradient-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        color: white;
+    }
+
+    .sidebar-brand-text {
+        font-family: 'Outfit', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 750;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand-sub {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .sidebar-section-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 0 0.75rem;
+        margin-top: 1.25rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .sidebar-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.65rem 0.75rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.88rem;
+        font-weight: 550;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: var(--transition);
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+    }
+
+    .sidebar-nav-item:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
+
+    .sidebar-nav-item.active {
+        background: rgba(79, 70, 229, 0.07);
+        color: var(--accent-indigo);
+        font-weight: 650;
+    }
+
+    .sidebar-nav-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .sidebar-nav-item.active .sidebar-nav-icon {
+        background: rgba(79, 70, 229, 0.1);
+    }
+
+    .sidebar-stat-card {
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-md);
+        padding: 1rem 1.1rem;
+        margin-top: auto;
+    }
+
+    .sidebar-stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.4rem 0;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .sidebar-stat-item:last-child { border-bottom: none; }
+
+    .sidebar-stat-val {
+        font-weight: 700;
+        color: var(--text-primary);
+        font-size: 0.88rem;
+    }
+
+    /* ── Right Main Panel ── */
+    .admin-main {
+        padding: 2.5rem 3rem;
+        background: var(--bg-primary);
+        overflow-y: auto;
+    }
+
+    .admin-panel-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .admin-panel-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        background: rgba(79, 70, 229, 0.08);
+    }
+
+    .admin-panel-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        letter-spacing: -0.03em;
+        margin-bottom: 2px;
+    }
+
+    .admin-panel-subtitle {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    /* ── Content Panels ── */
+    .admin-content-panel { display: none; }
+    .admin-content-panel.visible { display: block; }
+
+    /* ── Metrics Row ── */
+    .metrics-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .metric-box {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .metric-box:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-xl);
+    }
+
+    .metric-box-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.6rem;
+    }
+
+    .metric-box-val {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: var(--text-primary);
+        letter-spacing: -0.04em;
+        line-height: 1;
+        margin-bottom: 0.4rem;
+    }
+
+    .metric-box-desc {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    /* ── Form Grid ── */
+    .form-field { margin-bottom: 1.25rem; }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    /* ── Table ── */
+    .admin-table-wrap {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .admin-table-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--border-light);
+    }
+</style>
+
+<div class="admin-shell">
+
+    <!-- ══ LEFT SIDEBAR ══ -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon">⚡</div>
+            <div>
+                <div class="sidebar-brand-text">Super Admin</div>
+                <div class="sidebar-brand-sub">Photona Console</div>
+            </div>
+        </div>
+
+        <div class="sidebar-section-label">Overview</div>
+        <button class="sidebar-nav-item active" onclick="switchPanel('overview', this)">
+            <div class="sidebar-nav-icon">📊</div>
+            Overview
+        </button>
+
+        <div class="sidebar-section-label">Tenant Management</div>
+        <button class="sidebar-nav-item" onclick="switchPanel('tenants', this)">
+            <div class="sidebar-nav-icon">👥</div>
+            All Tenants
+        </button>
+        <button class="sidebar-nav-item" onclick="switchPanel('create-tenant', this)">
+            <div class="sidebar-nav-icon">➕</div>
+            Create Tenant
+        </button>
+
+        <div class="sidebar-section-label">Subscriptions</div>
+        <button class="sidebar-nav-item" onclick="switchPanel('plans', this)">
+            <div class="sidebar-nav-icon">💳</div>
+            Manage Plans
+        </button>
+        <button class="sidebar-nav-item" onclick="switchPanel('create-plan', this)">
+            <div class="sidebar-nav-icon">✨</div>
+            Create Plan
+        </button>
+
+        <!-- Quick Stats at bottom -->
+        <div class="sidebar-stat-card" style="margin-top: 2rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem;">Quick Stats</div>
+            <div class="sidebar-stat-item">
+                <span>Total Tenants</span>
+                <span class="sidebar-stat-val">{{ total_tenants }}</span>
+            </div>
+            <div class="sidebar-stat-item">
+                <span>Active Plans</span>
+                <span class="sidebar-stat-val">{{ total_plans }}</span>
+            </div>
+            <div class="sidebar-stat-item">
+                <span>Storage Used</span>
+                <span class="sidebar-stat-val">{{ total_storage_used|floatformat:1 }} MB</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ══ RIGHT MAIN PANEL ══ -->
+    <main class="admin-main">
+
+        <!-- ── OVERVIEW PANEL ── -->
+        <div id="panel-overview" class="admin-content-panel visible">
+            <div class="admin-panel-header">
+                <div class="admin-panel-icon">📊</div>
+                <div>
+                    <div class="admin-panel-title">System Overview</div>
+                    <div class="admin-panel-subtitle">High-level metrics across all tenant workspaces.</div>
+                </div>
+            </div>
+
+            <div class="metrics-row">
+                <div class="metric-box">
+                    <div class="metric-box-label">Total Tenants</div>
+                    <div class="metric-box-val">{{ total_tenants }}</div>
+                    <div class="metric-box-desc">Active studio administrators</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-box-label">Active Plans</div>
+                    <div class="metric-box-val">{{ total_plans }}</div>
+                    <div class="metric-box-desc">Configured subscription tiers</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-box-label">Global Storage Used</div>
+                    <div class="metric-box-val" style="font-size: 1.8rem;">{{ total_storage_used|floatformat:1 }} <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">MB</span></div>
+                    <div class="metric-box-desc">Cumulative disk consumption</div>
+                </div>
+            </div>
+
+            <!-- Summary tenant table -->
+            <div class="admin-table-wrap">
+                <div class="admin-table-head">
+                    <div>
+                        <div style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 750; color: var(--text-primary);">Tenant Summary</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">All registered administrators</div>
+                    </div>
+                    <span class="badge badge-purple">{{ admins|length }} Active</span>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Administrator</th>
+                                <th>Role</th>
+                                <th>Plan</th>
+                                <th>Storage Usage</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for admin in admins %}
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.85rem;">
+                                            {{ admin.username|make_list|first|upper }}
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">{{ admin.username }}</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ admin.email|default:"No email set" }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge badge-emerald">{{ admin.profile.get_role_display }}</span></td>
+                                <td><span class="badge badge-purple">{{ admin.profile.subscription_plan.name|default:"None" }}</span></td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div class="progress-bar" style="width: 80px; margin-top: 0;">
+                                            <div class="progress-fill" style="width: {{ admin.profile.storage_percentage }}%;"></div>
+                                        </div>
+                                        <span style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;">{{ admin.profile.used_storage_mb|floatformat:1 }} / {{ admin.profile.subscription_plan.storage_limit_mb|default:"0" }} MB</span>
+                                    </div>
+                                </td>
+                                <td style="text-align: right;">
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}')" class="action-edit" style="font-size: 0.75rem;">✎ Edit</button>
+                                        <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete" style="font-size: 0.75rem;">✕ Remove</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 3rem 0;">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">👥</div>
+                                        <h3 class="empty-state-title">No tenant administrators</h3>
+                                        <p class="empty-state-desc">Use "Create Tenant" in the sidebar to add your first administrator.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── ALL TENANTS PANEL ── -->
+        <div id="panel-tenants" class="admin-content-panel">
+            <div class="admin-panel-header">
+                <div class="admin-panel-icon">👥</div>
+                <div>
+                    <div class="admin-panel-title">All Tenants</div>
+                    <div class="admin-panel-subtitle">Supervise and manage all registered studio administrators.</div>
+                </div>
+            </div>
+            <div class="admin-table-wrap">
+                <div class="admin-table-head">
+                    <div>
+                        <div style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 750; color: var(--text-primary);">Registered Admins</div>
+                    </div>
+                    <span class="badge badge-purple">{{ admins|length }} Total</span>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Administrator</th>
+                                <th>Role</th>
+                                <th>Plan Assigned</th>
+                                <th>Storage Usage</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for admin in admins %}
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.85rem;">
+                                            {{ admin.username|make_list|first|upper }}
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">{{ admin.username }}</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ admin.email|default:"No email set" }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge badge-emerald">{{ admin.profile.get_role_display }}</span></td>
+                                <td><span class="badge badge-purple">{{ admin.profile.subscription_plan.name|default:"None Assigned" }}</span></td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div class="progress-bar" style="width: 80px; margin-top: 0;">
+                                            <div class="progress-fill" style="width: {{ admin.profile.storage_percentage }}%;"></div>
+                                        </div>
+                                        <span style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;">{{ admin.profile.used_storage_mb|floatformat:1 }} / {{ admin.profile.subscription_plan.storage_limit_mb|default:"0" }} MB</span>
+                                    </div>
+                                </td>
+                                <td style="text-align: right;">
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}')" class="action-edit" style="font-size: 0.75rem;">✎ Edit</button>
+                                        <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete" style="font-size: 0.75rem;">✕ Remove</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 3rem 0;">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">👥</div>
+                                        <h3 class="empty-state-title">No tenant administrators</h3>
+                                        <p class="empty-state-desc">Create your first administrator from the sidebar.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── CREATE TENANT PANEL ── -->
+        <div id="panel-create-tenant" class="admin-content-panel">
+            <div class="admin-panel-header">
+                <div class="admin-panel-icon">➕</div>
+                <div>
+                    <div class="admin-panel-title">Create Tenant</div>
+                    <div class="admin-panel-subtitle">Provision a new studio administrator with a storage plan.</div>
+                </div>
+            </div>
+            <div class="card" style="max-width: 640px;">
+                <form id="createAdminForm" method="post">
+                    {% csrf_token %}
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" required placeholder="e.g. janesmith" class="form-input">
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" name="email" required placeholder="e.g. jane@example.com" class="form-input">
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" required placeholder="Create a strong password" class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label class="form-label">Role Classification</label>
+                            <select name="role" required class="form-input">
+                                {% for value, name in roles %}
+                                    <option value="{{ value }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Subscription Plan</label>
+                            <select name="plan_id" required class="form-input">
+                                {% for plan in plans %}
+                                    <option value="{{ plan.id }}">{{ plan.name }} ({{ plan.storage_limit_mb }} MB)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn" style="width: 100%; margin-top: 0.5rem;">Create Tenant Account</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ── MANAGE PLANS PANEL ── -->
+        <div id="panel-plans" class="admin-content-panel">
+            <div class="admin-panel-header">
+                <div class="admin-panel-icon">💳</div>
+                <div>
+                    <div class="admin-panel-title">Manage Plans</div>
+                    <div class="admin-panel-subtitle">View and manage all configured subscription tiers.</div>
+                </div>
+            </div>
+            <div class="admin-table-wrap">
+                <div class="admin-table-head">
+                    <div>
+                        <div style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 750; color: var(--text-primary);">Configured Plans</div>
+                    </div>
+                    <span class="badge badge-amber">{{ total_plans }} Plans</span>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Plan Name</th>
+                                <th>Storage Limit</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for plan in plans %}
+                            <tr>
+                                <td style="color: var(--text-muted);">{{ forloop.counter }}</td>
+                                <td style="font-weight: 600; color: var(--text-primary);">{{ plan.name }}</td>
+                                <td><span class="badge badge-amber">{{ plan.storage_limit_mb }} MB</span></td>
+                                <td style="text-align: right;">
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                        <button onclick="openEditPlan({{ plan.id }}, '{{ plan.name }}', {{ plan.storage_limit_mb }})" class="action-edit" style="font-size: 0.75rem;">✎ Edit</button>
+                                        <button onclick="deletePlan({{ plan.id }}, '{{ plan.name }}')" class="action-delete" style="font-size: 0.75rem;">✕ Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" style="text-align: center; padding: 3rem 0;">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">💳</div>
+                                        <h3 class="empty-state-title">No plans configured</h3>
+                                        <p class="empty-state-desc">Use "Create Plan" in the sidebar to add your first subscription tier.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── CREATE PLAN PANEL ── -->
+        <div id="panel-create-plan" class="admin-content-panel">
+            <div class="admin-panel-header">
+                <div class="admin-panel-icon">✨</div>
+                <div>
+                    <div class="admin-panel-title">Create Plan</div>
+                    <div class="admin-panel-subtitle">Define a new subscription tier with a storage quota.</div>
+                </div>
+            </div>
+            <div class="card" style="max-width: 480px;">
+                <form id="createPlanForm" method="post">
+                    {% csrf_token %}
+                    <div class="form-field">
+                        <label class="form-label">Plan Name</label>
+                        <input type="text" name="name" required placeholder="e.g. Pro Plan (2 GB)" class="form-input">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Storage Capacity (MB)</label>
+                        <input type="number" name="storage_limit_mb" required placeholder="e.g. 2048" class="form-input">
+                    </div>
+                    <button type="submit" class="btn" style="width: 100%; margin-top: 0.5rem;">Create Subscription Plan</button>
+                </form>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ══ EDIT TENANT MODAL ══ -->
+<div id="editTenantModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); backdrop-filter:blur(6px); z-index:10000; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-secondary); border-radius:var(--radius-lg); padding:2.5rem; width:560px; max-width:95vw; box-shadow:var(--shadow-xl); position:relative;">
+        <button onclick="closeEditTenant()" style="position:absolute; top:1.25rem; right:1.25rem; background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--text-muted);">×</button>
+        <div style="font-family:'Outfit',sans-serif; font-size:1.25rem; font-weight:800; color:var(--text-primary); margin-bottom:0.3rem;">Edit Tenant</div>
+        <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1.75rem;">Update tenant credentials, role, or subscription plan.</div>
+        <form id="editTenantForm">
+            <input type="hidden" id="editTenantId">
+            <div class="form-row">
+                <div class="form-field">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="editTenantUsername" class="form-input" placeholder="Username">
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="editTenantEmail" class="form-input" placeholder="Email address">
+                </div>
+            </div>
+            <div class="form-field">
+                <label class="form-label">New Password <span style="color:var(--text-muted); font-weight:400;">(leave blank to keep current)</span></label>
+                <input type="password" id="editTenantPassword" class="form-input" placeholder="New password (optional)">
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label class="form-label">Role</label>
+                    <select id="editTenantRole" class="form-input">
+                        {% for value, label in roles %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Plan</label>
+                    <select id="editTenantPlan" class="form-input">
+                        {% for plan in plans %}
+                            <option value="{{ plan.id }}">{{ plan.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex; gap:0.75rem; margin-top:0.5rem;">
+                <button type="submit" class="btn" style="flex:1;">Save Changes</button>
+                <button type="button" onclick="closeEditTenant()" style="flex:1; padding:0.7rem; border-radius:var(--radius-sm); border:1px solid var(--border-light); background:none; font-weight:600; cursor:pointer; color:var(--text-secondary);">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══ EDIT PLAN MODAL ══ -->
+<div id="editPlanModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); backdrop-filter:blur(6px); z-index:10000; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-secondary); border-radius:var(--radius-lg); padding:2.5rem; width:420px; max-width:95vw; box-shadow:var(--shadow-xl); position:relative;">
+        <button onclick="closeEditPlan()" style="position:absolute; top:1.25rem; right:1.25rem; background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--text-muted);">×</button>
+        <div style="font-family:'Outfit',sans-serif; font-size:1.25rem; font-weight:800; color:var(--text-primary); margin-bottom:0.3rem;">Edit Plan</div>
+        <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1.75rem;">Update subscription plan name or storage quota.</div>
+        <form id="editPlanForm">
+            <input type="hidden" id="editPlanId">
+            <div class="form-field">
+                <label class="form-label">Plan Name</label>
+                <input type="text" id="editPlanName" class="form-input" placeholder="e.g. Pro Plan">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Storage Limit (MB)</label>
+                <input type="number" id="editPlanStorage" class="form-input" placeholder="e.g. 2048">
+            </div>
+            <div style="display:flex; gap:0.75rem; margin-top:0.5rem;">
+                <button type="submit" class="btn" style="flex:1;">Save Changes</button>
+                <button type="button" onclick="closeEditPlan()" style="flex:1; padding:0.7rem; border-radius:var(--radius-sm); border:1px solid var(--border-light); background:none; font-weight:600; cursor:pointer; color:var(--text-secondary);">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+function switchPanel(panelId, btn) {
+    document.querySelectorAll('.admin-content-panel').forEach(p => p.classList.remove('visible'));
+    document.querySelectorAll('.sidebar-nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + panelId).classList.add('visible');
+    btn.classList.add('active');
+}
+
+// ── CREATE TENANT ──
+document.getElementById('createAdminForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    fetch('{% url "gallery:create_admin" %}', { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) { showToast(data.message, 'success'); setTimeout(() => window.location.reload(), 1000); }
+        else { customAlert('Error', data.message); }
+    });
+});
+
+// ── EDIT TENANT ──
+function openEditTenant(id, username, email, role, planId) {
+    document.getElementById('editTenantId').value = id;
+    document.getElementById('editTenantUsername').value = username;
+    document.getElementById('editTenantEmail').value = email;
+    document.getElementById('editTenantPassword').value = '';
+    document.getElementById('editTenantRole').value = role;
+    if(planId) document.getElementById('editTenantPlan').value = planId;
+    const modal = document.getElementById('editTenantModal');
+    modal.style.display = 'flex';
+}
+
+function closeEditTenant() {
+    document.getElementById('editTenantModal').style.display = 'none';
+}
+
+document.getElementById('editTenantForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editTenantId').value;
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', CSRF);
+    formData.append('username', document.getElementById('editTenantUsername').value);
+    formData.append('email', document.getElementById('editTenantEmail').value);
+    formData.append('password', document.getElementById('editTenantPassword').value);
+    formData.append('role', document.getElementById('editTenantRole').value);
+    formData.append('plan_id', document.getElementById('editTenantPlan').value);
+    fetch(`/super-admin/update-admin/${id}/`, { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) { closeEditTenant(); showToast(data.message, 'success'); setTimeout(() => window.location.reload(), 1000); }
+        else { customAlert('Error', data.message); }
+    });
+});
+
+// ── DELETE TENANT ──
+function deleteAdmin(id, name) {
+    customConfirm('Delete Admin', `Are you sure you want to delete admin "${name}"? This deletes all their events and photos.`, (confirmed) => {
+        if(!confirmed) return;
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', CSRF);
+        fetch(`/super-admin/delete-admin/${id}/`, { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) { showToast(data.message, 'success'); setTimeout(() => window.location.reload(), 1000); }
+            else { customAlert('Error', data.message); }
+        });
+    });
+}
+
+// ── CREATE PLAN ──
+document.getElementById('createPlanForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    fetch('{% url "gallery:create_plan" %}', { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) { showToast(data.message, 'success'); setTimeout(() => window.location.reload(), 1000); }
+        else { customAlert('Error', data.message); }
+    });
+});
+
+// ── EDIT PLAN ──
+function openEditPlan(id, name, storage) {
+    document.getElementById('editPlanId').value = id;
+    document.getElementById('editPlanName').value = name;
+    document.getElementById('editPlanStorage').value = storage;
+    document.getElementById('editPlanModal').style.display = 'flex';
+}
+
+function closeEditPlan() {
+    document.getElementById('editPlanModal').style.display = 'none';
+}
+
+document.getElementById('editPlanForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editPlanId').value;
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', CSRF);
+    formData.append('name', document.getElementById('editPlanName').value);
+    formData.append('storage_limit_mb', document.getElementById('editPlanStorage').value);
+    fetch(`/super-admin/update-plan/${id}/`, { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) { closeEditPlan(); showToast(data.message, 'success'); setTimeout(() => window.location.reload(), 1000); }
+        else { customAlert('Error', data.message); }
+    });
+});
+
+// ── DELETE PLAN ──
+function deletePlan(id, name) {
+    customConfirm('Delete Plan', `Delete plan "${name}"? Tenants assigned to this plan will have no plan.`, (confirmed) => {
+        if(!confirmed) return;
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', CSRF);
+        fetch(`/super-admin/delete-plan/${id}/`, { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) { showToast(data.message, 'success'); setTimeout(() => window.location.reload(), 1000); }
+            else { customAlert('Error', data.message); }
+        });
+    });
+}
+
+// Close modals on outside click
+['editTenantModal','editPlanModal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function(e) {
+        if(e.target === this) this.style.display = 'none';
+    });
+});
+</script>
+{% endblock %}

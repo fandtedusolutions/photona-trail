@@ -1,0 +1,166 @@
+{% extends 'gallery/base.html' %}
+{% load static %}
+
+{% block title %}Upload Photos - Photona{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <h2 class="card-title">
+        <span style="display: inline-flex; width: 32px; height: 32px; border-radius: 8px; background: rgba(99, 102, 241, 0.08); align-items: center; justify-content: center; font-size: 0.9rem;">🚀</span>
+        Upload Gallery Photos
+    </h2>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; line-height: 1.5;">
+        Upload multiple event photos. Photona will automatically extract face embeddings and register them into the search index.
+    </p>
+
+    <form id="uploadForm" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+            <div class="dropzone-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+            </div>
+            <p style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);">Drop images or ZIP files here or click to browse</p>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Supports JPEG, PNG, WEBP, BMP, ZIP</p>
+            <input type="file" id="fileInput" name="photos" multiple accept="image/*,.zip" style="display: none;" onchange="handleFiles(this.files)">
+        </div>
+
+        <div id="fileList" style="margin-top: 1rem; max-height: 200px; overflow-y: auto;"></div>
+
+        <button type="submit" class="btn" id="uploadBtn" style="display: none; width: 100%; margin-top: 1rem;">Index Uploaded Images</button>
+    </form>
+
+    <div style="text-align: center; margin: 2rem 0; color: var(--text-muted); font-size: 0.82rem; position: relative;">
+        <span style="background: var(--bg-secondary); padding: 0 12px; z-index: 1; position: relative; font-weight: 600;">OR</span>
+        <hr style="position: absolute; top: 50%; left: 0; width: 100%; border: 0; border-top: 1px solid var(--border-light); z-index: 0; margin: 0;">
+    </div>
+
+    <form id="gdriveForm" method="post">
+        {% csrf_token %}
+        <h3 class="card-title" style="font-size: 1.05rem;">
+            <span style="display: inline-flex; width: 28px; height: 28px; border-radius: 7px; background: rgba(16, 185, 129, 0.08); align-items: center; justify-content: center; font-size: 0.8rem;">🔗</span>
+            Import from Google Drive
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 1rem; line-height: 1.5;">
+            Paste a public Google Drive sharing link (direct image or ZIP containing images).
+        </p>
+        <input type="url" id="gdriveUrl" name="gdrive_url" placeholder="https://drive.google.com/file/d/.../view?usp=sharing" 
+               required class="form-input" style="margin-bottom: 0.75rem;">
+        <button type="submit" class="btn" style="width: 100%;">Import & Index Drive Link</button>
+    </form>
+</div>
+
+<script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    
+    let selectedFiles = [];
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+        }, false);
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles(files);
+    });
+
+    function handleFiles(files) {
+        selectedFiles = Array.from(files);
+        fileList.innerHTML = '';
+        
+        if (selectedFiles.length > 0) {
+            uploadBtn.style.display = 'block';
+            selectedFiles.forEach(file => {
+                const item = document.createElement('div');
+                item.style.cssText = 'padding: 8px 10px; border-bottom: 1px solid var(--border-light); font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center;';
+                item.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--accent-indigo);">📄</span> ${file.name}</span> <span style="color: var(--text-muted)">${(file.size / 1024 / 1024).toFixed(2)} MB</span>`;
+                fileList.appendChild(item);
+            });
+        } else {
+            uploadBtn.style.display = 'none';
+        }
+    }
+
+    uploadForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (selectedFiles.length === 0) return;
+
+        showLoading('AI face extraction is running...');
+
+        const formData = new FormData();
+        selectedFiles.forEach(file => {
+            formData.append('photos', file);
+        });
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        fetch('{% url "gallery:upload" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                showToast(data.message, 'success');
+                window.location.href = '{% url "gallery:dashboard" %}';
+            } else {
+                customAlert('Upload Failed', data.message);
+            }
+        })
+        .catch(err => {
+            hideLoading();
+            showToast('An error occurred during indexing: ' + err, 'error');
+        });
+    });
+
+    const gdriveForm = document.getElementById('gdriveForm');
+    gdriveForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const url = document.getElementById('gdriveUrl').value;
+        if (!url) return;
+
+        showLoading('Downloading from Google Drive...');
+
+        const formData = new FormData();
+        formData.append('gdrive_url', url);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        fetch('{% url "gallery:gdrive_import" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                showToast(data.message, 'success');
+                window.location.href = '{% url "gallery:dashboard" %}';
+            } else {
+                customAlert('Import Failed', data.message);
+            }
+        })
+        .catch(err => {
+            hideLoading();
+            showToast('An error occurred during import: ' + err, 'error');
+        });
+    });
+</script>
+{% endblock %}

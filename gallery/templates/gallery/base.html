@@ -1,0 +1,344 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Photona - Face Recognition{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <style>
+        /* Custom Alert & Toast Inline Styles */
+        .custom-toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .custom-toast {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            min-width: 300px;
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .custom-toast.show {
+            transform: translateX(0);
+        }
+
+        .custom-toast.success {
+            border-left: 4px solid var(--accent-emerald);
+        }
+
+        .custom-toast.error {
+            border-left: 4px solid var(--accent-rose);
+        }
+
+        .custom-toast.info {
+            border-left: 4px solid var(--accent-indigo);
+        }
+
+        .custom-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(16px);
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .custom-modal-card {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-xl);
+            width: 100%;
+            max-width: 440px;
+            padding: 2rem;
+            box-shadow: var(--shadow-xl);
+            transform: scale(0.92);
+            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: block;
+        }
+
+        .custom-modal-overlay.show {
+            display: flex;
+        }
+
+        .custom-modal-overlay.show .custom-modal-card {
+            transform: scale(1);
+        }
+
+        .custom-modal-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
+        }
+
+        .custom-modal-body {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            margin-bottom: 1.5rem;
+        }
+
+        .custom-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .custom-modal-btn {
+            padding: 0.55rem 1.2rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .custom-modal-btn.primary {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+        }
+
+        .custom-modal-btn.primary:hover {
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .custom-modal-btn.secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+        }
+
+        .custom-modal-btn.secondary:hover {
+            background: rgba(15, 23, 42, 0.06);
+        }
+
+        .custom-modal-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-sm);
+            border: 1.5px solid var(--border-medium);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: inherit;
+            margin-bottom: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .custom-modal-input:focus {
+            outline: none;
+            border-color: var(--accent-indigo);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Pulse animation for processing states */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <header class="glass-panel" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 2.5rem; position: sticky; top: 0; z-index: 100; margin-bottom: 2.5rem; border-bottom: 1px solid var(--glass-border); background: var(--glass-bg); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);">
+        <a href="{% if request.user.is_superuser %}{% url 'gallery:super_admin_dashboard' %}{% elif request.user.is_authenticated %}{% url 'gallery:dashboard' %}{% else %}/{% endif %}" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
+            <div class="logo" style="display: flex; align-items: center; gap: 10px; font-size: 1.6rem; font-weight: 850; letter-spacing: -0.05em;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 6px rgba(99, 102, 241, 0.3));">
+                    <rect x="2" y="2" width="20" height="20" rx="8" fill="url(#grad_logo)"/>
+                    <circle cx="12" cy="12" r="4.5" fill="white" opacity="0.95"/>
+                    <circle cx="17.5" cy="6.5" r="1.5" fill="white" opacity="0.8"/>
+                    <defs>
+                        <linearGradient id="grad_logo" x1="2" y1="2" x2="22" y2="22">
+                            <stop stop-color="#6366f1"/>
+                            <stop offset="1" stop-color="#ec4899"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span class="text-gradient">Photona</span>
+            </div>
+        </a>
+        <nav style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255, 255, 255, 0.5); padding: 0.35rem 0.5rem; border-radius: var(--radius-xl); border: 1px solid var(--border-light); box-shadow: var(--shadow-sm);">
+            {% if request.user.is_authenticated %}
+                {% if request.user.is_superuser %}
+                    <a href="{% url 'gallery:super_admin_dashboard' %}" class="nav-link {% if request.resolver_match.view_name == 'gallery:super_admin_dashboard' %}active{% endif %}" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">Dashboard</a>
+                {% else %}
+                    <a href="{% url 'gallery:dashboard' %}" class="nav-link {% if request.resolver_match.view_name == 'gallery:dashboard' %}active{% endif %}" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">Events</a>
+                    {% if request.resolver_match.view_name == 'gallery:event_detail' or request.resolver_match.view_name == 'gallery:search' or request.resolver_match.view_name == 'gallery:group_by_face' %}
+                        {% with ev=selected_event|default:event %}
+                            {% if ev %}
+                                <a href="{% url 'gallery:search' %}?event={{ ev.slug }}" class="nav-link {% if request.resolver_match.view_name == 'gallery:search' %}active{% endif %}" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">AI Search</a>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                {% endif %}
+                <div style="width: 1px; height: 16px; background: var(--border-medium); margin: 0 0.25rem;"></div>
+                <a href="{% url 'gallery:user_logout' %}" class="nav-link" style="color: var(--accent-rose); border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">Logout</a>
+            {% else %}
+                <a href="/#features" class="nav-link" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">Features</a>
+                <a href="/#pricing" class="nav-link" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">Pricing</a>
+                <div style="width: 1px; height: 16px; background: var(--border-medium); margin: 0 0.25rem;"></div>
+                <a href="{% url 'gallery:user_login' %}" class="nav-link {% if request.resolver_match.view_name == 'gallery:user_login' %}active{% endif %}" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem; font-weight: 700; color: var(--accent-indigo);">Sign In</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <div class="app-container">
+        <main style="width: 100%;">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Global Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;">
+        <div class="spinner" style="width: 36px; height: 36px; border: 3px solid rgba(79,70,229,0.15); border-top-color: var(--accent-indigo); border-radius: 50%; animation: spin 0.7s linear infinite;"></div>
+        <div id="loadingText" style="font-size: 0.9rem; font-weight: 600; color: var(--text-secondary);">Processing...</div>
+    </div>
+
+    <!-- Custom Toast Container -->
+    <div id="toastContainer" class="custom-toast-container"></div>
+
+    <!-- Custom Modal Dialog -->
+    <div id="customModalOverlay" class="custom-modal-overlay">
+        <div class="custom-modal-card">
+            <h3 id="customModalTitle" class="custom-modal-title">Confirm</h3>
+            <div id="customModalBody" class="custom-modal-body">Are you sure?</div>
+            <div id="customModalInputContainer" style="display: none; width: 100%;">
+                <input type="text" id="customModalInput" class="custom-modal-input">
+            </div>
+            <div class="custom-modal-actions">
+                <button id="customModalCancelBtn" class="custom-modal-btn secondary">Cancel</button>
+                <button id="customModalConfirmBtn" class="custom-modal-btn primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showLoading(text) {
+            const overlay = document.getElementById('loadingOverlay');
+            const txt = document.getElementById('loadingText');
+            if (text) txt.innerText = text;
+            overlay.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        // Custom Toast Notification System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `custom-toast ${type}`;
+            
+            let icon = 'ℹ️';
+            if (type === 'success') icon = '✅';
+            if (type === 'error') icon = '❌';
+            
+            toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 50);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 3500);
+        }
+
+        // Custom Alert/Confirm/Prompt System
+        let activeModalCallback = null;
+
+        function closeCustomModal() {
+            document.getElementById('customModalOverlay').classList.remove('show');
+            document.getElementById('customModalInputContainer').style.display = 'none';
+            document.getElementById('customModalInput').value = '';
+            activeModalCallback = null;
+        }
+
+        function customAlert(title, message, callback = null) {
+            document.getElementById('customModalTitle').innerText = title;
+            document.getElementById('customModalBody').innerText = message;
+            document.getElementById('customModalCancelBtn').style.display = 'none';
+            document.getElementById('customModalInputContainer').style.display = 'none';
+            
+            const confirmBtn = document.getElementById('customModalConfirmBtn');
+            confirmBtn.innerText = 'OK';
+            
+            activeModalCallback = callback;
+            document.getElementById('customModalOverlay').classList.add('show');
+        }
+
+        function customConfirm(title, message, callback) {
+            document.getElementById('customModalTitle').innerText = title;
+            document.getElementById('customModalBody').innerText = message;
+            document.getElementById('customModalCancelBtn').style.display = 'inline-block';
+            document.getElementById('customModalInputContainer').style.display = 'none';
+            
+            const confirmBtn = document.getElementById('customModalConfirmBtn');
+            confirmBtn.innerText = 'Confirm';
+            
+            activeModalCallback = callback;
+            document.getElementById('customModalOverlay').classList.add('show');
+        }
+
+        function customPrompt(title, defaultValue, placeholder, callback) {
+            document.getElementById('customModalTitle').innerText = title;
+            document.getElementById('customModalBody').innerText = '';
+            document.getElementById('customModalCancelBtn').style.display = 'inline-block';
+            
+            const inputContainer = document.getElementById('customModalInputContainer');
+            inputContainer.style.display = 'block';
+            
+            const input = document.getElementById('customModalInput');
+            input.value = defaultValue;
+            input.placeholder = placeholder;
+            
+            const confirmBtn = document.getElementById('customModalConfirmBtn');
+            confirmBtn.innerText = 'Save';
+            
+            activeModalCallback = callback;
+            document.getElementById('customModalOverlay').classList.add('show');
+            input.focus();
+        }
+
+        document.getElementById('customModalConfirmBtn').addEventListener('click', () => {
+            const callback = activeModalCallback;
+            const isPrompt = document.getElementById('customModalInputContainer').style.display === 'block';
+            const value = isPrompt ? document.getElementById('customModalInput').value : true;
+            
+            closeCustomModal();
+            if (callback) callback(value);
+        });
+
+        document.getElementById('customModalCancelBtn').addEventListener('click', () => {
+            const callback = activeModalCallback;
+            closeCustomModal();
+            if (callback) callback(null);
+        });
+    </script>
+</body>
+</html>

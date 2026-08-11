@@ -1,0 +1,1112 @@
+{% extends 'gallery/base.html' %}
+{% load static %}
+
+{% block title %}{{ event.name }} - Photona{% endblock %}
+
+{% block content %}
+<style>
+    /* ── Override container for this page ── */
+    .app-container { max-width: 100%; padding: 0 2rem; }
+
+    /* ── Event Header ── */
+    .event-hero {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1.25rem;
+        padding: 2rem 0 1.75rem;
+        border-bottom: 1px solid var(--border-light);
+        margin-bottom: 2rem;
+    }
+
+    .event-hero-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2rem;
+        font-weight: 900;
+        color: var(--text-primary);
+        letter-spacing: -0.04em;
+        margin-bottom: 0.3rem;
+    }
+
+    .event-hero-desc {
+        font-size: 0.88rem;
+        color: var(--text-muted);
+        margin-bottom: 0.85rem;
+    }
+
+    /* ── Upload Strip ── */
+    .upload-strip {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    /* ── Main Two-Column Layout ── */
+    .split-layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    /* ── Left: Sorted People Panel ── */
+    .people-panel {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        position: sticky;
+        top: 88px;
+        max-height: calc(100vh - 110px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .people-panel-header {
+        padding: 1.4rem 1.5rem 1rem;
+        border-bottom: 1px solid var(--border-light);
+        flex-shrink: 0;
+        background: var(--bg-secondary);
+    }
+
+    .people-panel-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        font-weight: 750;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 3px;
+    }
+
+    .people-panel-sub {
+        font-size: 0.74rem;
+        color: var(--text-muted);
+    }
+
+    .people-scroll {
+        overflow-y: auto;
+        flex: 1;
+        padding: 0.75rem;
+    }
+
+    /* ── Face Person Card ── */
+    .person-card {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-md);
+        padding: 0.85rem;
+        margin-bottom: 0.65rem;
+        transition: var(--transition);
+        cursor: default;
+    }
+
+    .person-card:hover {
+        background: var(--bg-secondary);
+        border-color: rgba(79, 70, 229, 0.15);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+
+    .person-card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.6rem;
+    }
+
+    .person-name-btn {
+        font-size: 0.83rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: var(--transition);
+    }
+
+    .person-name-btn:hover { color: var(--accent-indigo); }
+
+    .person-count {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: white;
+        background: var(--accent-indigo);
+        padding: 2px 8px;
+        border-radius: 20px;
+    }
+
+    .person-thumbs {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin-bottom: 0.7rem;
+    }
+
+    .person-thumb {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: var(--radius-sm);
+        border: 1.5px solid var(--border-medium);
+        transition: var(--transition);
+    }
+
+    .person-thumb:hover {
+        transform: scale(1.12);
+        z-index: 1;
+        box-shadow: var(--shadow-md);
+    }
+
+    .person-more {
+        width: 40px;
+        height: 40px;
+        background: rgba(79, 70, 229, 0.08);
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--accent-indigo);
+    }
+
+    .person-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    /* ── Right: Photos Panel ── */
+    .photos-panel {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .photos-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.4rem 1.75rem 1rem;
+        border-bottom: 1px solid var(--border-light);
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .photos-panel-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        font-weight: 750;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .photos-grid-wrap {
+        padding: 1.25rem 1.5rem;
+    }
+
+    /* ── Rich Gallery Items ── */
+    .rich-gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .rich-gallery-item {
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-light);
+        transition: var(--transition);
+        position: relative;
+    }
+
+    .rich-gallery-item:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+        border-color: rgba(79, 70, 229, 0.2);
+    }
+
+    .rich-thumb-wrap {
+        position: relative;
+        aspect-ratio: 1 / 1;
+        overflow: hidden;
+    }
+
+    .rich-thumb {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .rich-gallery-item:hover .rich-thumb { transform: scale(1.06); }
+
+    .rich-thumb-actions {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 17, 23, 0);
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-end;
+        padding: 8px;
+        gap: 5px;
+        transition: var(--transition);
+        opacity: 0;
+    }
+
+    .rich-gallery-item:hover .rich-thumb-actions {
+        background: rgba(15, 17, 23, 0.35);
+        opacity: 1;
+    }
+
+    .thumb-action-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        cursor: pointer;
+        border: 1px solid rgba(255,255,255,0.2);
+        backdrop-filter: blur(4px);
+        transition: var(--transition);
+        text-decoration: none;
+        color: white;
+        background: rgba(15, 17, 23, 0.5);
+    }
+
+    .thumb-action-btn:hover { background: rgba(79, 70, 229, 0.85); border-color: rgba(79, 70, 229, 0.6); }
+    .thumb-action-btn.del:hover { background: rgba(225, 29, 72, 0.85); }
+
+    .rich-gallery-info {
+        padding: 0.55rem 0.7rem;
+        background: var(--bg-secondary);
+    }
+
+    .rich-gallery-name {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 2px;
+    }
+
+    .rich-gallery-meta {
+        font-size: 0.68rem;
+        color: var(--text-muted);
+    }
+
+    /* ── Empty state ── */
+    .people-empty {
+        text-align: center;
+        padding: 2.5rem 1rem;
+        color: var(--text-muted);
+    }
+
+    .people-empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
+    .people-empty-title { font-weight: 600; font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 4px; }
+    .people-empty-desc { font-size: 0.78rem; line-height: 1.5; }
+
+    /* ── Share Manager Modal ── */
+    .share-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15,17,23,0.5);
+        backdrop-filter: blur(10px);
+        z-index: 9500;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+    }
+    .share-modal-box {
+        background: var(--bg-secondary);
+        border-radius: var(--radius-xl);
+        width: 680px;
+        max-width: 96vw;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 40px 100px -20px rgba(15,17,23,0.3);
+        overflow: hidden;
+    }
+    .share-modal-header {
+        padding: 1.75rem 2rem 1.25rem;
+        border-bottom: 1px solid var(--border-light);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .share-modal-body {
+        overflow-y: auto;
+        flex: 1;
+        padding: 1.5rem 2rem;
+    }
+    .share-link-row {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-md);
+        padding: 1rem 1.1rem;
+        margin-bottom: 0.75rem;
+        transition: var(--transition);
+    }
+    .share-link-row:hover { border-color: rgba(79,70,229,0.15); box-shadow: var(--shadow-sm); }
+    .share-link-url {
+        font-family: monospace;
+        font-size: 0.73rem;
+        color: var(--text-muted);
+        background: var(--bg-primary);
+        padding: 5px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border-light);
+        word-break: break-all;
+        margin: 0.5rem 0;
+    }
+    .share-toggle {
+        appearance: none;
+        width: 36px;
+        height: 20px;
+        border-radius: 20px;
+        background: var(--border-medium);
+        cursor: pointer;
+        position: relative;
+        transition: var(--transition);
+        flex-shrink: 0;
+    }
+    .share-toggle:checked { background: var(--accent-emerald); }
+    .share-toggle::after {
+        content: '';
+        position: absolute;
+        width: 14px; height: 14px;
+        border-radius: 50%;
+        background: white;
+        top: 3px; left: 3px;
+        transition: var(--transition);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .share-toggle:checked::after { left: 19px; }
+</style>
+
+<!-- ── Event Hero Header ── -->
+<div class="event-hero">
+    <div>
+        <a href="{% url 'gallery:dashboard' %}" style="color: var(--accent-indigo); text-decoration: none; font-size: 0.8rem; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.75rem; opacity: 0.85; transition: var(--transition);" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            All Events
+        </a>
+        <div class="event-hero-title">{{ event.name }}</div>
+        <div class="event-hero-desc">{{ event.description|default:"No description provided." }}</div>
+        <a href="{% url 'gallery:search' %}?event={{ event.slug }}" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            AI Search by Selfie
+        </a>
+    </div>
+    <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+        {% if clusters %}
+        <div style="text-align: center; background: rgba(79,70,229,0.05); border: 1px solid rgba(79,70,229,0.1); border-radius: var(--radius-md); padding: 0.6rem 1.1rem;">
+            <div style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--accent-indigo);">{{ clusters|length }}</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">People</div>
+        </div>
+        {% endif %}
+        <button onclick="openShareManager()" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; background: var(--gradient-primary); color: white; border: none;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share Event
+        </button>
+        <a href="{% url 'gallery:download_event_zip' event.slug %}" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+            📦 Download All (ZIP)
+        </a>
+    </div>
+</div>
+
+<!-- ── Upload Strip ── -->
+<div class="upload-strip">
+    <!-- Local Upload -->
+    <div class="card" style="padding: 1.5rem;">
+        <h3 class="card-title" style="margin-bottom: 1rem;">
+            <span style="display: inline-flex; width: 28px; height: 28px; border-radius: 7px; background: rgba(99, 102, 241, 0.08); align-items: center; justify-content: center; font-size: 0.85rem;">📤</span>
+            Upload Photos
+        </h3>
+        <form id="uploadForm" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="event_id" value="{{ event.id }}">
+            <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                <div class="dropzone-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <p style="font-size: 0.84rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 3px;">Drop files or click to browse</p>
+                <p style="font-size: 0.72rem; color: var(--text-muted);">Images & ZIP archives</p>
+                <input type="file" id="fileInput" name="photos" multiple accept="image/*,.zip" style="display: none;" onchange="handleFiles(this.files)">
+            </div>
+            <div id="fileList" style="margin-top: 0.6rem; max-height: 80px; overflow-y: auto;"></div>
+            <button type="submit" class="btn" id="uploadBtn" style="display: none; margin-top: 0.6rem; width: 100%;">Upload & Process</button>
+        </form>
+    </div>
+
+    <!-- Google Drive -->
+    <div class="card" style="padding: 1.5rem;">
+        <h3 class="card-title" style="margin-bottom: 1rem;">
+            <span style="display: inline-flex; width: 28px; height: 28px; border-radius: 7px; background: rgba(16, 185, 129, 0.08); align-items: center; justify-content: center; font-size: 0.85rem;">🔗</span>
+            Import from Drive
+        </h3>
+        <form id="gdriveForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="event_id" value="{{ event.id }}">
+            <p style="color: var(--text-muted); font-size: 0.78rem; margin-bottom: 0.85rem; line-height: 1.5;">Paste a public Google Drive link to import images or ZIP archives directly.</p>
+            <input type="url" id="gdriveUrl" name="gdrive_url" placeholder="https://drive.google.com/file/d/.../view" required class="form-input" style="margin-bottom: 0.65rem;">
+            <button type="submit" class="btn" style="width: 100%;">Import Link</button>
+        </form>
+    </div>
+</div>
+
+<!-- ── Main Split Layout ── -->
+<div class="split-layout" style="margin-bottom: 3rem;">
+
+    <!-- ═══ LEFT: Sorted People ═══ -->
+    <aside class="people-panel">
+        <div class="people-panel-header">
+            <div class="people-panel-title">
+                <span style="width: 26px; height: 26px; background: rgba(79,70,229,0.08); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">👥</span>
+                Sorted People
+                {% if clusters %}<span style="font-size: 0.7rem; font-weight: 600; background: rgba(79,70,229,0.1); color: var(--accent-indigo); padding: 2px 8px; border-radius: 20px;">{{ clusters|length }}</span>{% endif %}
+            </div>
+            <div class="people-panel-sub">AI-clustered face groups. Click name to rename.</div>
+        </div>
+        <div class="people-scroll">
+            {% if clusters %}
+                {% for cluster in clusters %}
+                <div class="person-card" id="person-card-{{ cluster.name|slugify }}" onclick="selectPerson('{{ cluster.name|escapejs }}')" style="cursor: pointer;">
+                    <div class="person-card-top">
+                        <span class="person-name-btn" style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary);">
+                            📁 {{ cluster.name }}
+                        </span>
+                        <span class="person-count">{{ cluster.image_count }}</span>
+                    </div>
+                    <div class="person-thumbs">
+                        {% for img in cluster.images|slice:":5" %}
+                            <img class="person-thumb" src="{{ img.file.url }}" alt="{{ cluster.name }}">
+                        {% endfor %}
+                        {% if cluster.image_count > 5 %}
+                            <div class="person-more">+{{ cluster.image_count|add:"-5" }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="person-actions" style="display:flex; justify-content:space-between; align-items:center;" onclick="event.stopPropagation()">
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="sharePersonFolder('{{ cluster.name|escapejs }}')" class="btn btn-sm" style="font-size: 0.7rem; padding: 2px 8px; background: rgba(79, 70, 229, 0.08); color: var(--accent-indigo); border: none; display: flex; align-items: center; gap: 4px;">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                                Share
+                            </button>
+                            <button onclick="renameGroup('{{ cluster.name|escapejs }}')" class="btn btn-sm" style="font-size: 0.7rem; padding: 2px 8px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border-medium); display: flex; align-items: center; gap: 4px;">
+                                ✏️ Rename
+                            </button>
+                        </div>
+                        <button onclick="deleteGroup('{{ cluster.name|escapejs }}')" class="action-delete" style="font-size: 0.7rem;">✕ Delete</button>
+                    </div>
+                </div>
+
+                {% endfor %}
+            {% else %}
+                <div class="people-empty">
+                    <div class="people-empty-icon">🤖</div>
+                    <div class="people-empty-title">No face groups yet</div>
+                    <div class="people-empty-desc">Upload photos to automatically group faces with AI detection.</div>
+                </div>
+            {% endif %}
+        </div>
+    </aside>
+
+    <!-- ═══ RIGHT: Event Photos ═══ -->
+    <section class="photos-panel">
+        <div class="photos-panel-header">
+            <div class="photos-panel-title">
+                <span style="width: 26px; height: 26px; background: rgba(245,158,11,0.08); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">🖼️</span>
+                Event Photos
+            </div>
+            <a href="{% url 'gallery:download_event_zip' event.slug %}" class="btn btn-sm btn-secondary" style="display: inline-flex; align-items: center; gap: 5px;">
+                📦 Download All (ZIP)
+            </a>
+        </div>
+        <div class="photos-grid-wrap">
+            <div class="rich-gallery-grid" id="photoGallery">
+                <!-- JS populates cards here -->
+            </div>
+            <div id="sentinel" style="height: 20px; margin-top: 1.5rem;"></div>
+            <div id="noPhotosMessage" style="display: none;">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🖼️</div>
+                    <h3 class="empty-state-title">No photos yet</h3>
+                    <p class="empty-state-desc">Upload images above to get started with AI face indexing.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    // ── Dropzone & Upload
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    const gdriveForm = document.getElementById('gdriveForm');
+    let selectedFiles = [];
+
+    ['dragenter','dragover'].forEach(n => {
+        dropzone.addEventListener(n, e => { e.preventDefault(); dropzone.classList.add('dragover'); }, false);
+    });
+    ['dragleave','drop'].forEach(n => {
+        dropzone.addEventListener(n, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }, false);
+    });
+    dropzone.addEventListener('drop', e => { handleFiles(e.dataTransfer.files); });
+
+    function handleFiles(files) {
+        selectedFiles = Array.from(files);
+        fileList.innerHTML = '';
+        if (selectedFiles.length > 0) {
+            uploadBtn.style.display = 'block';
+            selectedFiles.forEach(file => {
+                const item = document.createElement('div');
+                item.style.cssText = 'padding: 5px 8px; font-size: 0.75rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 6px;';
+                item.innerHTML = `<span style="color: var(--accent-indigo);">📄</span> ${file.name}`;
+                fileList.appendChild(item);
+            });
+        } else {
+            uploadBtn.style.display = 'none';
+        }
+    }
+
+    function makePhotoCard(img, downloadName, uploading = false) {
+        const item = document.createElement('div');
+        item.className = 'rich-gallery-item';
+        item.id = `image-card-${img.id || 'tmp-' + Date.now()}`;
+        if (uploading) item.style.opacity = '0.6';
+        item.innerHTML = `
+            <div class="rich-thumb-wrap">
+                <img class="rich-thumb" src="${img.url}" alt="${img.filename}">
+                <div class="rich-thumb-actions">
+                    <a href="${img.url}" download="${downloadName}" class="thumb-action-btn" title="Download">⬇</a>
+                    <button class="thumb-action-btn del" onclick="deleteImage(${img.id})" title="Delete">✕</button>
+                </div>
+            </div>
+            <div class="rich-gallery-info">
+                <div class="rich-gallery-name" title="${img.filename}">${img.filename}</div>
+                <div class="rich-gallery-meta">${img.uploaded_at || ''}</div>
+            </div>
+        `;
+        return item;
+    }
+
+    uploadForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const gallery = document.getElementById('photoGallery');
+        document.getElementById('noPhotosMessage').style.display = 'none';
+
+        const previewIds = [];
+        selectedFiles.forEach((file, index) => {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext !== 'zip') {
+                const tempId = `local-preview-${Date.now()}-${index}`;
+                previewIds.push(tempId);
+                const localUrl = URL.createObjectURL(file);
+                const item = document.createElement('div');
+                item.className = 'rich-gallery-item';
+                item.id = tempId;
+                item.style.opacity = '0.55';
+                item.innerHTML = `
+                    <div class="rich-thumb-wrap">
+                        <img class="rich-thumb" src="${localUrl}">
+                        <div class="rich-thumb-actions" style="opacity:1; background: rgba(15,17,23,0.45);">
+                            <span style="font-size:0.7rem; color:white; font-weight:600;">Uploading…</span>
+                        </div>
+                    </div>
+                    <div class="rich-gallery-info">
+                        <div class="rich-gallery-name">${file.name}</div>
+                        <div class="rich-gallery-meta" style="color:var(--accent-indigo);">🔄 Uploading…</div>
+                    </div>`;
+                gallery.insertBefore(item, gallery.firstChild);
+            }
+        });
+
+        const formData = new FormData();
+        selectedFiles.forEach(file => formData.append('photos', file));
+        formData.append('event_id', '{{ event.id }}');
+        formData.append('csrfmiddlewaretoken', document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value);
+        selectedFiles = []; fileList.innerHTML = ''; uploadBtn.style.display = 'none';
+
+        fetch('{% url "gallery:upload" %}', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            previewIds.forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+            if (data.images && data.images.length > 0) {
+                data.images.forEach(img => {
+                    const dotIdx = img.filename.lastIndexOf('.');
+                    const nameOnly = dotIdx !== -1 ? img.filename.substring(0, dotIdx) : img.filename;
+                    const ext = dotIdx !== -1 ? img.filename.substring(dotIdx) : '';
+                    const downloadName = `${nameOnly}_{{ event.slug }}${ext}`;
+                    gallery.insertBefore(makePhotoCard(img, downloadName), gallery.firstChild);
+                });
+            }
+            if (data.has_zip) {
+                customAlert("ZIP Uploaded", "ZIP file uploaded. Extraction and face indexing running in background. Refresh in a moment.");
+            }
+        }).catch(err => showToast("Upload failed: " + err, "error"));
+    });
+
+    gdriveForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const url = document.getElementById('gdriveUrl').value;
+        const formData = new FormData();
+        formData.append('gdrive_url', url);
+        formData.append('event_id', '{{ event.id }}');
+        formData.append('csrfmiddlewaretoken', document.querySelector('#gdriveForm [name=csrfmiddlewaretoken]').value);
+        document.getElementById('gdriveUrl').value = '';
+        fetch('{% url "gallery:gdrive_import" %}', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => customAlert("Google Drive Import", data.message))
+        .catch(err => showToast("Import failed: " + err, "error"));
+    });
+
+    // ── Lazy load photos
+    let page = 1, hasNext = true, loading = false;
+    let activePersonFilter = null;
+    const gallery = document.getElementById('photoGallery');
+    const sentinel = document.getElementById('sentinel');
+    const noPhotosMessage = document.getElementById('noPhotosMessage');
+
+    function loadMorePhotos() {
+        if (loading || !hasNext) return;
+        loading = true;
+        let url = `/api/photos/?page=${page}&event_slug={{ event.slug }}`;
+        if (activePersonFilter) {
+            url += `&person_label=${encodeURIComponent(activePersonFilter)}`;
+        }
+        fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            loading = false;
+            hasNext = data.has_next;
+            if (page === 1 && data.images.length === 0) {
+                noPhotosMessage.style.display = 'block';
+                return;
+            }
+            data.images.forEach(img => {
+                if (document.getElementById(`image-card-${img.id}`)) return;
+                const dotIdx = img.filename.lastIndexOf('.');
+                const nameOnly = dotIdx !== -1 ? img.filename.substring(0, dotIdx) : img.filename;
+                const ext = dotIdx !== -1 ? img.filename.substring(dotIdx) : '';
+                const downloadName = `${nameOnly}_{{ event.slug }}${ext}`;
+                gallery.appendChild(makePhotoCard(img, downloadName));
+            });
+            page++;
+        }).catch(err => { loading = false; console.error(err); });
+    }
+
+    function selectPerson(personName) {
+        // Toggle behavior: if already active, clear it. Otherwise set it.
+        document.querySelectorAll('.person-card').forEach(c => {
+            c.style.borderColor = 'var(--border-light)';
+            c.style.background = 'var(--bg-tertiary)';
+        });
+
+        if (activePersonFilter === personName) {
+            activePersonFilter = null;
+        } else {
+            activePersonFilter = personName;
+            // Highlight selected card visually
+            const slugified = personName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const card = document.getElementById(`person-card-${slugified}`);
+            if (card) {
+                card.style.borderColor = 'var(--accent-indigo)';
+                card.style.background = 'rgba(79, 70, 229, 0.04)';
+            }
+        }
+
+        // Reset page logic and reload
+        page = 1;
+        hasNext = true;
+        gallery.innerHTML = '';
+        noPhotosMessage.style.display = 'none';
+        loadMorePhotos();
+    }
+
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => { if (entry.isIntersecting) loadMorePhotos(); });
+    }, { rootMargin: '150px' });
+    observer.observe(sentinel);
+
+
+    // ── Delete photo
+    function deleteImage(id) {
+        customConfirm("Delete Photo", "Delete this image from the event?", (confirmed) => {
+            if (!confirmed) return;
+            showLoading("Deleting…");
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            fetch(`/delete/${id}/`, { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    document.getElementById(`image-card-${id}`).remove();
+                    showToast("Photo deleted", "success");
+                } else { customAlert("Error", data.message); }
+            }).catch(err => { hideLoading(); showToast("Error: " + err, "error"); });
+        });
+    }
+
+    // ── Rename face group
+    function renameGroup(oldName) {
+        customPrompt("Rename Person", oldName, "Enter new label…", (newName) => {
+            if (!newName || newName.trim() === "" || newName === oldName) return;
+            showLoading("Renaming…");
+            const formData = new FormData();
+            formData.append('old_label', oldName);
+            formData.append('new_label', newName);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            fetch('{% url "gallery:rename_face_group" event.slug %}', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) { showToast(data.message, "success"); setTimeout(() => window.location.reload(), 1000); }
+                else customAlert("Error", data.message);
+            }).catch(err => { hideLoading(); showToast("Error: " + err, "error"); });
+        });
+    }
+
+    // ── Delete face group
+    function deleteGroup(groupName) {
+        customConfirm("Delete Group", `Delete group "${groupName}"? Face indices and folder removed. Original photos remain.`, (confirmed) => {
+            if (!confirmed) return;
+            showLoading("Deleting group…");
+            const formData = new FormData();
+            formData.append('group_label', groupName);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            fetch('{% url "gallery:delete_face_group" event.slug %}', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) { showToast(data.message, "success"); setTimeout(() => window.location.reload(), 1000); }
+                else customAlert("Error", data.message);
+            }).catch(err => { hideLoading(); showToast("Error: " + err, "error"); });
+        });
+    }
+</script>
+
+<!-- ══ SHARE MANAGER MODAL ══ -->
+<div id="shareManagerOverlay" class="share-modal-overlay">
+    <div class="share-modal-box">
+        <!-- Header -->
+        <div class="share-modal-header">
+            <div>
+                <div id="shareModalTitle" style="font-family:'Outfit',sans-serif; font-size:1.25rem; font-weight:800; color:var(--text-primary); margin-bottom:2px;">🔗 Share Event</div>
+                <div id="shareModalSubtitle" style="font-size:0.8rem; color:var(--text-muted);">Create public links for guests. Set password & expiry for control.</div>
+            </div>
+            <button onclick="closeShareManager()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted); padding:4px 8px; border-radius:6px; transition:var(--transition);" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='none'">×</button>
+        </div>
+        <!-- Body -->
+        <div class="share-modal-body">
+            <!-- Create New Link Section -->
+            <div style="background:rgba(79,70,229,0.04); border:1px solid rgba(79,70,229,0.12); border-radius:var(--radius-md); padding:1.25rem; margin-bottom:1.5rem;">
+                <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary); margin-bottom:1rem; display:flex; align-items:center; gap:8px;">
+                    <span style="width:22px; height:22px; background:var(--accent-indigo); border-radius:6px; display:flex; align-items:center; justify-content:center; color:white; font-size:0.7rem;">+</span>
+                    Create New Share Link
+                </div>
+                <input type="hidden" id="newSharePersonLabel" value="">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
+                    <div>
+                        <label class="form-label">Link Label</label>
+                        <input type="text" id="newShareLabel" class="form-input" placeholder="e.g. Guest Access">
+                    </div>
+                    <div>
+                        <label class="form-label">Password <span style="color:var(--text-muted); font-weight:400;">(optional)</span></label>
+                        <input type="password" id="newSharePassword" class="form-input" placeholder="Leave blank for open access">
+                    </div>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label class="form-label">Expiry Date & Time <span style="color:var(--text-muted); font-weight:400;">(optional)</span></label>
+                    <input type="datetime-local" id="newShareExpiry" class="form-input">
+                </div>
+                <button onclick="createShareLink()" class="btn" style="width:100%; background:var(--gradient-primary); border:none; color:white;">
+                    Generate Share Link
+                </button>
+            </div>
+
+            <!-- Existing Links -->
+            <div>
+                <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.75rem;">Active Share Links</div>
+                <div id="shareLinksContainer">
+                    <div style="text-align:center; padding:2rem; color:var(--text-muted); font-size:0.84rem;">Loading links…</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Edit Share Link Modal -->
+<div id="editShareOverlay" style="display:none; position:fixed; inset:0; background:rgba(15,17,23,0.6); backdrop-filter:blur(10px); z-index:9600; align-items:center; justify-content:center; padding:1.5rem;">
+    <div style="background:var(--bg-secondary); border-radius:var(--radius-lg); width:480px; max-width:95vw; padding:2rem; box-shadow:0 40px 100px -20px rgba(15,17,23,0.3); position:relative;">
+        <button onclick="closeEditShare()" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--text-muted);">×</button>
+        <div style="font-family:'Outfit',sans-serif; font-size:1.1rem; font-weight:800; color:var(--text-primary); margin-bottom:0.25rem;">Edit Share Link</div>
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.5rem;">Update this link's settings. Leave password blank to keep existing.</div>
+        <input type="hidden" id="editShareId">
+        <div style="margin-bottom:0.85rem;">
+            <label class="form-label">Label</label>
+            <input type="text" id="editShareLabel" class="form-input" placeholder="Link label">
+        </div>
+        <div style="margin-bottom:0.85rem;">
+            <label class="form-label">New Password <span style="color:var(--text-muted); font-weight:400;">(blank = remove password)</span></label>
+            <input type="password" id="editSharePassword" class="form-input" placeholder="Enter new password or leave blank">
+        </div>
+        <div style="margin-bottom:1.25rem;">
+            <label class="form-label">Expiry Date & Time</label>
+            <input type="datetime-local" id="editShareExpiry" class="form-input">
+        </div>
+        <div style="display:flex; gap:0.65rem;">
+            <button onclick="saveEditShare()" class="btn" style="flex:1;">Save Changes</button>
+            <button onclick="closeEditShare()" style="flex:1; padding:0.7rem; border-radius:var(--radius-sm); border:1px solid var(--border-light); background:none; font-weight:600; cursor:pointer; color:var(--text-secondary);">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Share Manager
+const SLUG = '{{ event.slug }}';
+const BASE_URL = window.location.origin;
+
+function openShareManager(personLabel = '') {
+    const titleEl = document.getElementById('shareModalTitle');
+    const subEl = document.getElementById('shareModalSubtitle');
+    const labelInput = document.getElementById('newShareLabel');
+    const personInput = document.getElementById('newSharePersonLabel');
+
+    if (personLabel) {
+        titleEl.innerHTML = `🔗 Share Folder: ${personLabel}`;
+        subEl.innerHTML = `Create public links specifically for ${personLabel}. Guests will only see their photos.`;
+        labelInput.value = `Access for ${personLabel}`;
+        personInput.value = personLabel;
+    } else {
+        titleEl.innerHTML = `🔗 Share Event`;
+        subEl.innerHTML = `Create public links for guests. Set password & expiry for control.`;
+        labelInput.value = 'Guest Access';
+        personInput.value = '';
+    }
+
+    document.getElementById('shareManagerOverlay').style.display = 'flex';
+    loadShareLinks();
+}
+
+function sharePersonFolder(personLabel) {
+    openShareManager(personLabel);
+}
+
+function closeShareManager() {
+    document.getElementById('shareManagerOverlay').style.display = 'none';
+}
+
+document.getElementById('shareManagerOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeShareManager();
+});
+
+function loadShareLinks() {
+    const container = document.getElementById('shareLinksContainer');
+    container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted); font-size:0.84rem;">Loading…</div>';
+    fetch(`/event/${SLUG}/shares/`)
+    .then(res => res.json())
+    .then(data => {
+        if (data.links.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted); font-size:0.84rem;">No share links yet. Create one above.</div>';
+            return;
+        }
+        container.innerHTML = '';
+        data.links.forEach(lnk => container.appendChild(buildLinkRow(lnk)));
+    });
+}
+
+function buildLinkRow(lnk) {
+    const publicUrl = `${BASE_URL}/share/${lnk.token}/`;
+    const div = document.createElement('div');
+    div.className = 'share-link-row';
+    div.id = `share-row-${lnk.id}`;
+
+    const statusBadge = lnk.is_expired
+        ? '<span style="font-size:0.68rem; background:rgba(217,119,6,0.1); color:var(--accent-amber); padding:2px 8px; border-radius:10px; font-weight:600;">Expired</span>'
+        : lnk.is_active
+            ? '<span style="font-size:0.68rem; background:rgba(5,150,105,0.08); color:var(--accent-emerald); padding:2px 8px; border-radius:10px; font-weight:600;">Active</span>'
+            : '<span style="font-size:0.68rem; background:rgba(117,128,148,0.1); color:var(--text-muted); padding:2px 8px; border-radius:10px; font-weight:600;">Disabled</span>';
+
+    const personBadge = lnk.person_label 
+        ? `<span style="font-size:0.68rem; background:rgba(79, 70, 229, 0.08); color:var(--accent-indigo); padding:2px 8px; border-radius:10px; font-weight:600;">👤 ${lnk.person_label}</span>`
+        : '<span style="font-size:0.68rem; background:rgba(245, 158, 11, 0.08); color:var(--accent-amber); padding:2px 8px; border-radius:10px; font-weight:600;">🖼️ Full Event</span>';
+
+    div.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">${lnk.label}</span>
+                ${personBadge}
+                ${statusBadge}
+                ${lnk.has_password ? '<span style="font-size:0.65rem; color:var(--text-muted);">🔒 Password</span>' : '<span style="font-size:0.65rem; color:var(--text-muted);">🌐 Open</span>'}
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <label style="display:flex; align-items:center; gap:4px; font-size:0.72rem; color:var(--text-muted); cursor:pointer;">
+                    <input type="checkbox" class="share-toggle" ${lnk.is_active ? 'checked' : ''} onchange="toggleShareActive(${lnk.id}, this.checked)">
+                </label>
+                <button onclick="openEditShare(${lnk.id}, '${lnk.label}', '${lnk.expires_at}')" class="action-edit" style="font-size:0.72rem;">✎ Edit</button>
+                <button onclick="deleteShareLink(${lnk.id}, '${lnk.label}')" class="action-delete" style="font-size:0.72rem;">✕</button>
+            </div>
+        </div>
+        <div class="share-link-url">${publicUrl}</div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <button onclick="copyShareUrl('${publicUrl}', this)" style="font-size:0.72rem; padding:4px 12px; border-radius:6px; border:1px solid var(--border-medium); background:var(--bg-secondary); cursor:pointer; font-weight:600; color:var(--text-secondary); transition:var(--transition);">
+                📋 Copy Link
+            </button>
+            <span style="font-size:0.7rem; color:var(--text-muted);">Created ${lnk.created_at}</span>
+            ${lnk.expires_at ? `<span style="font-size:0.7rem; color:var(--accent-amber);">⏰ Expires ${lnk.expires_at.replace('T',' ')}</span>` : ''}
+        </div>
+    `;
+    return div;
+}
+
+function copyShareUrl(url, btn) {
+    navigator.clipboard.writeText(url).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '✅ Copied!';
+        btn.style.color = 'var(--accent-emerald)';
+        setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    });
+}
+
+function toggleShareActive(id, active) {
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    formData.append('is_active', active ? 'true' : 'false');
+    fetch(`/event/${SLUG}/shares/${id}/update/`, { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) showToast(data.message, 'success');
+        else customAlert('Error', data.message);
+    });
+}
+
+function createShareLink() {
+    const label = document.getElementById('newShareLabel').value.trim() || 'Share Link';
+    const password = document.getElementById('newSharePassword').value;
+    const expires_at = document.getElementById('newShareExpiry').value;
+    const person_label = document.getElementById('newSharePersonLabel').value;
+    if (!label) return customAlert('Validation', 'Please enter a label for the link.');
+
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    formData.append('label', label);
+    formData.append('password', password);
+    formData.append('expires_at', expires_at);
+    if (person_label) {
+        formData.append('person_label', person_label);
+    }
+
+    fetch(`/event/${SLUG}/shares/create/`, { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            document.getElementById('newShareLabel').value = '';
+            document.getElementById('newSharePassword').value = '';
+            document.getElementById('newShareExpiry').value = '';
+            document.getElementById('newSharePersonLabel').value = '';
+            loadShareLinks();
+        } else {
+            customAlert('Error', data.message);
+        }
+    });
+}
+
+function openEditShare(id, label, expiresAt) {
+    document.getElementById('editShareId').value = id;
+    document.getElementById('editShareLabel').value = label;
+    document.getElementById('editSharePassword').value = '';
+    document.getElementById('editShareExpiry').value = expiresAt || '';
+    document.getElementById('editShareOverlay').style.display = 'flex';
+}
+
+function closeEditShare() {
+    document.getElementById('editShareOverlay').style.display = 'none';
+}
+
+document.getElementById('editShareOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeEditShare();
+});
+
+function saveEditShare() {
+    const id = document.getElementById('editShareId').value;
+    const label = document.getElementById('editShareLabel').value.trim();
+    const password = document.getElementById('editSharePassword').value;
+    const expires_at = document.getElementById('editShareExpiry').value;
+
+    if (!label) return customAlert('Validation', 'Label cannot be empty.');
+
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    formData.append('label', label);
+    formData.append('password', password);
+    formData.append('expires_at', expires_at);
+
+    fetch(`/event/${SLUG}/shares/${id}/update/`, { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            closeEditShare();
+            loadShareLinks();
+        } else {
+            customAlert('Error', data.message);
+        }
+    });
+}
+
+function deleteShareLink(id, label) {
+    customConfirm('Delete Share Link', `Delete link "${label}"? Anyone with this link will lose access immediately.`, (confirmed) => {
+        if (!confirmed) return;
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        fetch(`/event/${SLUG}/shares/${id}/delete/`, { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                const row = document.getElementById(`share-row-${id}`);
+                if (row) row.remove();
+                const container = document.getElementById('shareLinksContainer');
+                if (!container.children.length) {
+                    container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted); font-size:0.84rem;">No share links yet. Create one above.</div>';
+                }
+            } else {
+                customAlert('Error', data.message);
+            }
+        });
+    });
+}
+</script>
+{% endblock %}

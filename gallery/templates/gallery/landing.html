@@ -1,0 +1,359 @@
+{% extends 'gallery/base.html' %}
+{% load static %}
+
+{% block title %}Photona - AI Powered Event Photography{% endblock %}
+
+{% block content %}
+<style>
+    /* Hero Section with Blobs */
+    .hero-container {
+        position: relative;
+        text-align: center;
+        padding: 8rem 1rem 6rem;
+        max-width: 1100px;
+        margin: 0 auto;
+        overflow: hidden;
+    }
+
+    .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.5;
+        z-index: -1;
+        animation: float 10s infinite ease-in-out alternate;
+    }
+
+    .blob-1 {
+        top: -10%; left: -10%; width: 400px; height: 400px;
+        background: rgba(99, 102, 241, 0.4);
+    }
+    
+    .blob-2 {
+        bottom: -20%; right: -5%; width: 500px; height: 500px;
+        background: rgba(236, 72, 153, 0.3);
+        animation-delay: -5s;
+    }
+
+    @keyframes float {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(30px, 50px) scale(1.1); }
+    }
+
+    .hero-title {
+        font-size: 4.5rem;
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: -0.05em;
+        margin-bottom: 1.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 3.5rem;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Bento Grid */
+    .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 6rem;
+    }
+
+    .bento-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-2xl);
+        padding: 2.5rem;
+        transition: var(--transition-bounce);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .bento-card:hover {
+        transform: translateY(-5px) scale(1.01);
+        box-shadow: var(--shadow-2xl);
+        border-color: var(--border-glow);
+    }
+
+    .bento-large { grid-column: span 8; }
+    .bento-medium { grid-column: span 4; }
+    .bento-wide { grid-column: span 12; display: flex; flex-direction: row; align-items: center; gap: 4rem; }
+
+    .bento-icon-wrap {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .bento-title {
+        font-size: 1.75rem;
+        font-weight: 850;
+        letter-spacing: -0.04em;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+    }
+
+    .bento-desc {
+        font-size: 1.05rem;
+        color: var(--text-muted);
+        line-height: 1.6;
+    }
+
+    /* Pricing Section */
+    .pricing-section {
+        text-align: center;
+        padding: 6rem 0;
+        position: relative;
+    }
+
+    .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        max-width: 1000px;
+        margin: 4rem auto 0;
+    }
+
+    .pricing-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-2xl);
+        padding: 3rem 2rem;
+        transition: var(--transition-bounce);
+        position: relative;
+    }
+
+    .pricing-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-2xl);
+        border-color: var(--border-glow);
+    }
+
+    .pricing-card.popular {
+        background: var(--bg-secondary);
+        border: 2px solid var(--accent-indigo);
+        box-shadow: var(--shadow-glow);
+    }
+
+    .pricing-badge {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--gradient-primary);
+        color: white;
+        padding: 4px 16px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .pricing-plan-name {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
+
+    .pricing-storage {
+        font-size: 3.5rem;
+        font-weight: 900;
+        color: var(--text-primary);
+        letter-spacing: -0.05em;
+        line-height: 1;
+        margin-bottom: 2rem;
+    }
+
+    .pricing-storage span {
+        font-size: 1.25rem;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    .pricing-features {
+        list-style: none;
+        text-align: left;
+        margin-bottom: 3rem;
+    }
+
+    .pricing-feature-item {
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .pricing-feature-bullet {
+        color: var(--accent-emerald);
+        font-weight: 800;
+    }
+
+    /* Brands */
+    .brand-section {
+        padding: 4rem 0;
+        text-align: center;
+        border-top: 1px solid var(--border-light);
+    }
+    
+    .brand-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 3rem;
+        opacity: 0.6;
+        margin-top: 3rem;
+    }
+    
+    .brand-logo {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-secondary);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        font-family: 'Outfit', sans-serif;
+    }
+</style>
+
+<!-- Hero Section -->
+<div class="hero-container">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <h1 class="hero-title">Instant Photo Delivery<br><span class="text-gradient">Powered by AI</span></h1>
+    <p class="hero-subtitle">Deliver high-res media to event attendees in seconds. Sync from camera to cloud, auto-cluster faces, and share beautiful galleries effortlessly.</p>
+    
+    <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem;">
+        <a href="{% url 'gallery:user_login' %}" class="btn" style="padding: 1rem 2.5rem; font-size: 1.1rem; border-radius: 30px; box-shadow: var(--shadow-glow);">Start Free Trial</a>
+        <a href="#features" class="btn btn-secondary" style="padding: 1rem 2.5rem; font-size: 1.1rem; border-radius: 30px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);">Explore Features</a>
+    </div>
+</div>
+
+<!-- Bento Grid Features -->
+<section id="features" style="position: relative; z-index: 10;">
+    <div class="bento-grid">
+        
+        <!-- Large Card -->
+        <div class="bento-card bento-large">
+            <div class="bento-icon-wrap" style="background: rgba(99, 102, 241, 0.1); color: var(--accent-indigo);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <h3 class="bento-title">FAISS AI Selfie Search</h3>
+            <p class="bento-desc" style="max-width: 400px;">Guests simply upload a selfie, and our AI instantly scans thousands of event photos to deliver their personal gallery. Powered by state-of-the-art embedding models.</p>
+            <div style="position: absolute; right: -50px; bottom: -50px; width: 400px; height: 300px; background: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop') center/cover; border-radius: 20px; box-shadow: var(--shadow-2xl); transform: rotate(-5deg);"></div>
+        </div>
+
+        <!-- Medium Card 1 -->
+        <div class="bento-card bento-medium">
+            <div class="bento-icon-wrap" style="background: rgba(236, 72, 153, 0.1); color: var(--accent-rose);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <h3 class="bento-title">Smart Grouping</h3>
+            <p class="bento-desc">Photos are automatically clustered into folders for every unique face detected.</p>
+        </div>
+
+        <!-- Medium Card 2 -->
+        <div class="bento-card bento-medium">
+            <div class="bento-icon-wrap" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <h3 class="bento-title">Real-time Delivery</h3>
+            <p class="bento-desc">From camera capture to attendee smartphone in less than 10 seconds.</p>
+        </div>
+
+        <!-- Wide Card -->
+        <div class="bento-card bento-wide">
+            <div style="flex: 1;">
+                <div class="bento-icon-wrap" style="background: rgba(245, 158, 11, 0.1); color: var(--accent-amber);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </div>
+                <h3 class="bento-title">Seamless Cloud Integration</h3>
+                <p class="bento-desc">Bulk import via Google Drive or direct zip uploads. The system handles extraction and background processing without freezing your browser.</p>
+            </div>
+            <div style="flex: 1; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-xl); aspect-ratio: 16/9;">
+                <img src="https://images.unsplash.com/photo-1493612276216-ee3925520721?q=80&w=1000&auto=format&fit=crop" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- Pricing Section -->
+<section id="pricing" class="pricing-section">
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <span style="font-size: 0.85rem; font-weight: 700; color: var(--accent-indigo); text-transform: uppercase; letter-spacing: 0.1em; background: rgba(99,102,241,0.1); padding: 6px 16px; border-radius: 20px;">Pricing</span>
+        <h2 class="hero-title" style="font-size: 3rem; margin-top: 1rem;">Simple, Transparent Plans</h2>
+    </div>
+    
+    <div class="pricing-grid">
+        {% for plan in plans %}
+            <div class="pricing-card {% if forloop.first %}popular{% endif %}">
+                {% if forloop.first %}
+                    <span class="pricing-badge">Most Popular</span>
+                {% endif %}
+                <h3 class="pricing-plan-name">{{ plan.name }}</h3>
+                <div class="pricing-storage">
+                    {{ plan.storage_limit_mb }}<span> MB</span>
+                </div>
+                
+                <ul class="pricing-features">
+                    <li class="pricing-feature-item">
+                        <span class="pricing-feature-bullet">✓</span> Real-Time AI Search Integration
+                    </li>
+                    <li class="pricing-feature-item">
+                        <span class="pricing-feature-bullet">✓</span> High-Fidelity Image Uploads
+                    </li>
+                    <li class="pricing-feature-item">
+                        <span class="pricing-feature-bullet">✓</span> Automated Face Groupings
+                    </li>
+                    <li class="pricing-feature-item">
+                        <span class="pricing-feature-bullet">✓</span> Password-protected Share Links
+                    </li>
+                </ul>
+                
+                <a href="{% url 'gallery:user_login' %}" class="btn" style="width: 100%; padding: 1rem; border-radius: 12px; {% if not forloop.first %}background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-medium);{% endif %}">
+                    Get Started Now
+                </a>
+            </div>
+        {% empty %}
+            <div class="pricing-card">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
+                <h3 class="bento-title">No plans configured</h3>
+                <p class="bento-desc">Plans created by the super administrator will appear here.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Brands Section -->
+<section class="brand-section">
+    <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text-secondary);">Trusted by Top Event Creators</h2>
+    <div class="brand-grid">
+        <div class="brand-logo">Porsche</div>
+        <div class="brand-logo">Chanel</div>
+        <div class="brand-logo">Dior</div>
+        <div class="brand-logo">Apple</div>
+        <div class="brand-logo">Sony</div>
+        <div class="brand-logo">Vogue</div>
+    </div>
+</section>
+
+{% endblock %}

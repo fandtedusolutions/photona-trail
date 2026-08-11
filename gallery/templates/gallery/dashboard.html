@@ -1,0 +1,201 @@
+{% extends 'gallery/base.html' %}
+{% load static %}
+
+{% block title %}Events Dashboard - Photona{% endblock %}
+
+{% block content %}
+<!-- Welcome Header -->
+<div style="margin-bottom: 2.5rem; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h1 style="font-size: 2.2rem; font-weight: 900; letter-spacing: -0.04em; margin-bottom: 0.3rem;">
+            Welcome back, <span class="text-gradient">{{ request.user.username|title }}</span> 👋
+        </h1>
+        <p style="color: var(--text-muted); font-size: 1rem;">Here's an overview of your photo studio workspace.</p>
+    </div>
+    <div style="background: var(--glass-bg); padding: 0.75rem 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--glass-border); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 10px;">
+        <span style="display: flex; height: 10px; width: 10px; border-radius: 50%; background-color: var(--accent-emerald); box-shadow: 0 0 10px var(--accent-emerald); animation: pulse 2s infinite;"></span>
+        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">System Online</span>
+    </div>
+</div>
+
+<!-- Stat Cards Bento Grid -->
+<div class="stats-grid" style="margin-bottom: 4rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+    <!-- Storage Card -->
+    <div class="glass-panel hover-glow" style="padding: 2rem; border-radius: var(--radius-2xl); position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(99, 102, 241, 0.1); border-radius: 50%; filter: blur(30px);"></div>
+        <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--accent-indigo);">💾</div>
+        <h3 style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;">Storage · {{ profile.subscription_plan.name|default:"No Plan" }}</h3>
+        <div class="value" style="font-size: 2.5rem; font-weight: 900; color: var(--text-primary); margin-bottom: 0.3rem; letter-spacing: -0.03em;">
+            {{ profile.used_storage_mb|floatformat:1 }} <span style="font-size: 1rem; color: var(--text-muted);">MB</span>
+        </div>
+        <span style="font-size: 0.85rem; color: var(--text-muted);">of {{ profile.subscription_plan.storage_limit_mb|default:"0" }} MB total</span>
+        {% if profile.subscription_plan %}
+        <div class="progress-bar" style="margin-top: 1.25rem; height: 6px; background: var(--bg-tertiary); border-radius: 10px; overflow: hidden;">
+            <div class="progress-fill" style="width: {{ profile.storage_percentage }}%; background: var(--gradient-primary); height: 100%; border-radius: 10px;"></div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Images Card -->
+    <div class="glass-panel hover-glow" style="padding: 2rem; border-radius: var(--radius-2xl); position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(16, 185, 129, 0.1); border-radius: 50%; filter: blur(30px);"></div>
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald);">🖼️</div>
+        <h3 style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;">Total Photos</h3>
+        <div class="value" style="font-size: 2.5rem; font-weight: 900; color: var(--text-primary); margin-bottom: 0.3rem; letter-spacing: -0.03em;">{{ total_images }}</div>
+        <span style="font-size: 0.85rem; color: var(--text-muted);">Indexed across all events</span>
+    </div>
+
+    <!-- Faces Card -->
+    <div class="glass-panel hover-glow" style="padding: 2rem; border-radius: var(--radius-2xl); position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(245, 158, 11, 0.1); border-radius: 50%; filter: blur(30px);"></div>
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--accent-amber);">👥</div>
+        <h3 style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;">Detected Faces</h3>
+        <div class="value" style="font-size: 2.5rem; font-weight: 900; color: var(--text-primary); margin-bottom: 0.3rem; letter-spacing: -0.03em;">{{ total_faces }}</div>
+        <span style="font-size: 0.85rem; color: var(--text-muted);">Unique embeddings registered</span>
+    </div>
+</div>
+
+<!-- Events Section Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+    <div>
+        <h2 class="section-title" style="margin-bottom: 0.25rem;">My Events</h2>
+        <p style="color: var(--text-muted); font-size: 0.82rem;">Create and manage your photo events</p>
+    </div>
+    <button class="btn" onclick="openModal('eventModal')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        New Event
+    </button>
+</div>
+
+<!-- Events Grid -->
+<div class="gallery-grid" id="eventsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+    {% for ev in events %}
+        <div class="glass-panel hover-glow" style="border-radius: var(--radius-xl); overflow: hidden; display: flex; flex-direction: column;">
+            <div class="event-card-header" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="padding: 1.5rem; flex: 1; cursor: pointer; position: relative;">
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 80px; background: var(--gradient-primary); opacity: 0.1; border-bottom: 1px solid var(--border-light);"></div>
+                <div style="position: relative; z-index: 2;">
+                    <div class="event-card-title" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                        <span style="display: inline-flex; width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.1); color: var(--accent-indigo); align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">📂</span>
+                        {{ ev.name }}
+                    </div>
+                    <p class="event-card-desc" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">
+                        {{ ev.description|default:"No description provided." }}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="event-card-footer" style="padding: 1rem 1.5rem; background: var(--bg-primary); border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center;">
+                <div class="event-card-meta">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--accent-indigo); background: rgba(99,102,241,0.1); padding: 4px 10px; border-radius: 20px;">🖼️ {{ ev.images.count }} photos</span>
+                </div>
+                <div class="event-card-actions" style="display: flex; gap: 10px;">
+                    <a href="javascript:void(0)" class="btn btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-medium); padding: 4px 12px; font-size: 0.8rem;" onclick="editEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}', '{{ ev.description|escapejs }}')">Edit</a>
+                    <button class="btn btn-sm" style="background: rgba(225,29,72,0.1); color: var(--accent-rose); border: none; padding: 4px 12px; font-size: 0.8rem;" onclick="confirmDeleteEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}')">Delete</button>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="glass-panel" style="grid-column: 1 / -1; padding: 4rem; text-align: center; border-radius: var(--radius-2xl);">
+            <div style="font-size: 3.5rem; margin-bottom: 1rem; color: var(--text-muted);">📅</div>
+            <h3 style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">No events yet</h3>
+            <p style="color: var(--text-secondary); max-width: 400px; margin: 0 auto;">Create your first event to start uploading and organizing photos with AI-powered face recognition.</p>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Create Event Modal -->
+<div id="eventModal" class="modal-overlay">
+    <div class="card" style="width: 100%; max-width: 480px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+            <h3 style="font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em;">Create New Event</h3>
+            <button onclick="closeModal('eventModal')" style="background: none; border: none; color: var(--text-muted); font-size: 1.3rem; cursor: pointer; padding: 4px; border-radius: 6px; transition: var(--transition);" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='none'">✕</button>
+        </div>
+        <form method="post" action="{% url 'gallery:create_event' %}">
+            {% csrf_token %}
+            <div style="margin-bottom: 1.25rem;">
+                <label class="form-label">Event Name</label>
+                <input type="text" name="name" required placeholder="e.g. Wedding, Summer Trip 2026" class="form-input">
+            </div>
+            <div style="margin-bottom: 1.75rem;">
+                <label class="form-label">Description</label>
+                <textarea name="description" placeholder="Optional event details..." rows="3" class="form-input" style="resize: none;"></textarea>
+            </div>
+            <button type="submit" class="btn" style="width: 100%;">Create Event</button>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Event Modal -->
+<div id="editEventModal" class="modal-overlay">
+    <div class="card" style="width: 100%; max-width: 480px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+            <h3 style="font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em;">Edit Event</h3>
+            <button onclick="closeModal('editEventModal')" style="background: none; border: none; color: var(--text-muted); font-size: 1.3rem; cursor: pointer; padding: 4px; border-radius: 6px; transition: var(--transition);" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='none'">✕</button>
+        </div>
+        <form id="editEventForm" method="post">
+            {% csrf_token %}
+            <div style="margin-bottom: 1.25rem;">
+                <label class="form-label">Event Name</label>
+                <input type="text" id="editEventName" name="name" required class="form-input">
+            </div>
+            <div style="margin-bottom: 1.75rem;">
+                <label class="form-label">Description</label>
+                <textarea id="editEventDescription" name="description" rows="3" class="form-input" style="resize: none;"></textarea>
+            </div>
+            <button type="submit" class="btn" style="width: 100%;">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function openModal(id) {
+    const overlay = document.getElementById(id);
+    const card = overlay.querySelector('.card');
+    card.style.transform = 'scale(0.96)';
+    overlay.style.display = 'flex';
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => { card.style.transform = 'scale(1)'; });
+    });
+}
+function closeModal(id) {
+    const overlay = document.getElementById(id);
+    const card = overlay.querySelector('.card');
+    card.style.transform = 'scale(0.96)';
+    setTimeout(() => { overlay.style.display = 'none'; }, 180);
+}
+
+// Close on outside click
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal(overlay.id);
+        });
+    });
+});
+
+function editEvent(slug, name, description) {
+    document.getElementById('editEventForm').action = `/event/update/${slug}/`;
+    document.getElementById('editEventName').value = name;
+    document.getElementById('editEventDescription').value = description;
+    openModal('editEventModal');
+}
+
+function confirmDeleteEvent(slug, name) {
+    customConfirm("Delete Event", `Are you sure you want to delete event "${name}"? This deletes all associated photos and index data.`, (confirmed) => {
+        if (!confirmed) return;
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = `/event/delete/${slug}/`;
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    });
+}
+</script>
+{% endblock %}

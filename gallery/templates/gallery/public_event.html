@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if event %}
+    <title>{{ event.name }} — Shared via Photona</title>
+    <meta name="description" content="View photos from {{ event.name }} shared via Photona.">
+    {% else %}
+    <title>Photona — Shared Event</title>
+    {% endif %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f6f8fa;
+            --surface: #ffffff;
+            --surface2: #f1f3f6;
+            --indigo: #4f46e5;
+            --violet: #7c3aed;
+            --emerald: #059669;
+            --rose: #e11d48;
+            --amber: #d97706;
+            --text: #0f1117;
+            --text2: #3c4354;
+            --muted: #748094;
+            --border: rgba(15,17,23,0.07);
+            --radius: 12px;
+            --shadow: 0 4px 20px -4px rgba(15,17,23,0.06);
+            --shadow-lg: 0 20px 60px -12px rgba(15,17,23,0.12);
+            --grad: linear-gradient(135deg, #4f46e5, #7c3aed, #ec4899);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+        /* ── Header ── */
+        .pub-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+        .pub-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family:'Outfit',sans-serif;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--text);
+            text-decoration: none;
+        }
+        .pub-logo-dot {
+            width: 28px; height: 28px;
+            border-radius: 8px;
+            background: var(--grad);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.85rem;
+        }
+
+        /* ── Gate / Error States ── */
+        .gate-wrap {
+            min-height: calc(100vh - 60px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .gate-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 3rem 2.5rem;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+        }
+        .gate-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .gate-title { font-family:'Outfit',sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--text); margin-bottom: 0.5rem; letter-spacing:-0.03em; }
+        .gate-desc { font-size: 0.88rem; color: var(--muted); line-height:1.6; margin-bottom:1.75rem; }
+        .gate-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.92rem;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 0.75rem;
+            font-family: inherit;
+        }
+        .gate-input:focus { border-color: var(--indigo); }
+        .gate-btn {
+            width: 100%;
+            padding: 0.8rem;
+            border: none;
+            border-radius: var(--radius);
+            background: var(--grad);
+            color: white;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: opacity 0.2s;
+        }
+        .gate-btn:hover { opacity: 0.9; }
+        .pw-error {
+            font-size: 0.8rem;
+            color: var(--rose);
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* ── Event Body ── */
+        .pub-body { max-width: 1400px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+
+        /* ── Event Hero ── */
+        .pub-hero {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .pub-event-title {
+            font-family:'Outfit',sans-serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--text);
+            letter-spacing: -0.04em;
+            margin-bottom: 0.25rem;
+        }
+        .pub-event-desc { font-size: 0.88rem; color: var(--muted); }
+        .pub-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .pub-badge-green { background: rgba(5,150,105,0.08); color: var(--emerald); }
+
+        /* ── Split Layout ── */
+        .pub-split {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        /* ── People Panel ── */
+        .pub-people {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 72px;
+            max-height: calc(100vh - 92px);
+            display: flex;
+            flex-direction: column;
+        }
+        .pub-people-head {
+            padding: 1.25rem 1.25rem 0.9rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .pub-people-title {
+            font-family:'Outfit',sans-serif;
+            font-size: 0.95rem;
+            font-weight: 750;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 3px;
+        }
+        .pub-people-scroll { overflow-y: auto; flex: 1; padding: 0.65rem; }
+
+        .pub-person-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem;
+            margin-bottom: 0.55rem;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .pub-person-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+        .pub-person-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .pub-person-name { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+        .pub-person-count {
+            font-size: 0.68rem; font-weight: 700;
+            color: white; background: var(--indigo);
+            padding: 2px 7px; border-radius: 20px;
+        }
+        .pub-person-thumbs { display: flex; gap: 3px; flex-wrap: wrap; }
+        .pub-thumb {
+            width: 38px; height: 38px;
+            object-fit: cover;
+            border-radius: 7px;
+            border: 1.5px solid var(--border);
+            transition: transform 0.2s;
+        }
+        .pub-thumb:hover { transform: scale(1.12); }
+        .pub-thumb-more {
+            width: 38px; height: 38px;
+            background: rgba(79,70,229,0.08);
+            border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; font-weight: 700; color: var(--indigo);
+        }
+
+        /* ── Photos Panel ── */
+        .pub-photos {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .pub-photos-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1.25rem 1.5rem 0.9rem;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap; gap: 0.65rem;
+        }
+        .pub-photos-title {
+            font-family:'Outfit',sans-serif;
+            font-size: 0.95rem; font-weight: 750; color: var(--text);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .pub-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 0.65rem;
+            padding: 1.1rem 1.25rem;
+        }
+        .pub-photo-item {
+            border-radius: 10px;
+            overflow: hidden;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            transition: transform 0.25s, box-shadow 0.25s;
+            position: relative;
+        }
+        .pub-photo-item:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+        .pub-photo-wrap { position: relative; aspect-ratio: 1; overflow: hidden; }
+        .pub-photo-img {
+            width: 100%; height: 100%;
+            object-fit: cover; display: block;
+            transition: transform 0.4s;
+        }
+        .pub-photo-item:hover .pub-photo-img { transform: scale(1.06); }
+        .pub-photo-overlay {
+            position: absolute; inset: 0;
+            background: rgba(15,17,23,0);
+            display: flex; align-items: flex-end; justify-content: flex-end;
+            padding: 6px;
+            transition: background 0.25s;
+            opacity: 0;
+        }
+        .pub-photo-item:hover .pub-photo-overlay { background: rgba(15,17,23,0.3); opacity: 1; }
+        .pub-dl-btn {
+            width: 28px; height: 28px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.9);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; text-decoration: none; color: var(--text);
+            transition: background 0.2s;
+        }
+        .pub-dl-btn:hover { background: var(--indigo); color: white; }
+        .pub-photo-info { padding: 0.45rem 0.6rem; }
+        .pub-photo-name { font-size: 0.68rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pub-photo-date { font-size: 0.62rem; color: var(--muted); }
+
+        /* ── Empty ── */
+        .pub-empty { text-align: center; padding: 3rem 1.5rem; color: var(--muted); }
+        .pub-empty-icon { font-size: 2.5rem; opacity: 0.35; margin-bottom: 0.75rem; }
+
+        /* ── Watermark footer ── */
+        .pub-footer {
+            text-align: center;
+            padding: 2rem 0 1rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+        .pub-footer a { color: var(--indigo); text-decoration: none; font-weight: 600; }
+
+        @media (max-width: 768px) {
+            .pub-split { grid-template-columns: 1fr; }
+            .pub-people { position: static; max-height: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="pub-header">
+    <a href="/" class="pub-logo">
+        <div class="pub-logo-dot">✦</div>
+        Photona
+    </a>
+    {% if event %}
+    <span class="pub-badge pub-badge-green">🔗 Shared Event</span>
+    {% endif %}
+</header>
+
+<!-- ─── ERROR / GATE STATES ─── -->
+
+{% if error == 'disabled' %}
+<div class="gate-wrap">
+    <div class="gate-card">
+        <div class="gate-icon">🚫</div>
+        <div class="gate-title">Link Disabled</div>
+        <div class="gate-desc">This share link has been disabled by the event organizer. Please contact them for access.</div>
+    </div>
+</div>
+
+{% elif error == 'expired' %}
+<div class="gate-wrap">
+    <div class="gate-card">
+        <div class="gate-icon">⏰</div>
+        <div class="gate-title">Link Expired</div>
+        <div class="gate-desc">This share link has expired. Please contact the event organizer to request a new link.</div>
+    </div>
+</div>
+
+{% elif requires_password %}
+<div class="gate-wrap">
+    <div class="gate-card">
+        <div class="gate-icon">🔒</div>
+        <div class="gate-title">Password Required</div>
+        <div class="gate-desc">This event is protected. Enter the password provided by the organizer to view photos.</div>
+        {% if pw_error %}
+        <div class="pw-error">❌ Incorrect password. Please try again.</div>
+        {% endif %}
+        <form method="POST" action="/share/{{ link.token }}/auth/">
+            {% csrf_token %}
+            <input type="password" name="password" class="gate-input" placeholder="Enter password" autofocus required>
+            <button type="submit" class="gate-btn">Unlock Event →</button>
+        </form>
+    </div>
+</div>
+
+{% else %}
+
+<!-- ─── PUBLIC EVENT VIEW ─── -->
+<div class="pub-body">
+    <!-- Hero -->
+    <div class="pub-hero">
+        <div>
+            <div class="pub-event-title">{{ event.name }}</div>
+            <div class="pub-event-desc">{{ event.description|default:"A curated photo collection." }}</div>
+        </div>
+        <div style="display:flex; gap:0.65rem; align-items:center; flex-wrap:wrap;">
+            {% if clusters %}
+            <div style="text-align:center; background:rgba(79,70,229,0.05); border:1px solid rgba(79,70,229,0.1); border-radius:10px; padding:0.5rem 1rem;">
+                <div style="font-family:'Outfit',sans-serif; font-size:1.4rem; font-weight:900; color:var(--indigo);">{{ clusters|length }}</div>
+                <div style="font-size:0.68rem; color:var(--muted); font-weight:600;">People</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Split Layout -->
+    <div class="pub-split">
+
+        <!-- Left: Sorted People -->
+        <aside class="pub-people">
+            <div class="pub-people-head">
+                <div class="pub-people-title">
+                    <span style="width:24px; height:24px; background:rgba(79,70,229,0.08); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.75rem;">👥</span>
+                    Sorted People
+                    {% if clusters %}<span style="font-size:0.68rem; font-weight:700; background:rgba(79,70,229,0.1); color:var(--indigo); padding:2px 8px; border-radius:20px;">{{ clusters|length }}</span>{% endif %}
+                </div>
+                <div style="font-size:0.72rem; color:var(--muted);">AI-clustered face groups</div>
+            </div>
+            <div class="pub-people-scroll">
+                {% if clusters %}
+                    {% for cluster in clusters %}
+                    <div class="pub-person-card">
+                        <div class="pub-person-top">
+                            <span class="pub-person-name">📁 {{ cluster.name }}</span>
+                            <span class="pub-person-count">{{ cluster.image_count }}</span>
+                        </div>
+                        <div class="pub-person-thumbs">
+                            {% for img in cluster.images|slice:":5" %}
+                            <img class="pub-thumb" src="{{ img.file.url }}" alt="{{ cluster.name }}">
+                            {% endfor %}
+                            {% if cluster.image_count > 5 %}
+                            <div class="pub-thumb-more">+{{ cluster.image_count|add:"-5" }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="pub-empty">
+                    <div class="pub-empty-icon">🤖</div>
+                    <div style="font-size:0.82rem; font-weight:600; color:var(--text2); margin-bottom:4px;">No face groups</div>
+                    <div style="font-size:0.75rem; line-height:1.5;">Face detection hasn't run yet for this event.</div>
+                </div>
+                {% endif %}
+            </div>
+        </aside>
+
+        <!-- Right: Photos -->
+        <section class="pub-photos">
+            <div class="pub-photos-head">
+                <div class="pub-photos-title">
+                    <span style="width:24px; height:24px; background:rgba(245,158,11,0.08); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.75rem;">🖼️</span>
+                    Event Photos
+                </div>
+            </div>
+            <div class="pub-grid" id="pubPhotoGrid">
+                <!-- JS populates -->
+            </div>
+            <div id="pubSentinel" style="height:20px; margin:1rem 0;"></div>
+            <div id="pubEmpty" style="display:none;" class="pub-empty">
+                <div class="pub-empty-icon">🖼️</div>
+                <div style="font-size:0.85rem; font-weight:600; color:var(--text2); margin-bottom:4px;">No photos yet</div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Footer watermark -->
+<div class="pub-footer">
+    Shared via <a href="/">Photona</a> · Powered by AI Face Clustering
+</div>
+
+<script>
+const TOKEN = '{{ link.token }}';
+let page = 1, hasNext = true, loading = false;
+const grid = document.getElementById('pubPhotoGrid');
+const sentinel = document.getElementById('pubSentinel');
+
+function loadPhotos() {
+    if (loading || !hasNext) return;
+    loading = true;
+    fetch(`/api/public-photos/?token=${TOKEN}&page=${page}`)
+    .then(r => r.json())
+    .then(data => {
+        loading = false;
+        if (data.error) return;
+        hasNext = data.has_next;
+        if (page === 1 && data.images.length === 0) {
+            document.getElementById('pubEmpty').style.display = 'block';
+            return;
+        }
+        data.images.forEach(img => {
+            const item = document.createElement('div');
+            item.className = 'pub-photo-item';
+            const ext = img.filename.lastIndexOf('.');
+            const name = ext !== -1 ? img.filename.substring(0, ext) : img.filename;
+            const extStr = ext !== -1 ? img.filename.substring(ext) : '';
+            item.innerHTML = `
+                <div class="pub-photo-wrap">
+                    <img class="pub-photo-img" src="${img.url}" alt="${img.filename}" loading="lazy">
+                    <div class="pub-photo-overlay">
+                        <a href="${img.url}" download="${name}${extStr}" class="pub-dl-btn" title="Download">⬇</a>
+                    </div>
+                </div>
+                <div class="pub-photo-info">
+                    <div class="pub-photo-name" title="${img.filename}">${img.filename}</div>
+                    <div class="pub-photo-date">${img.uploaded_at}</div>
+                </div>`;
+            grid.appendChild(item);
+        });
+        page++;
+    }).catch(() => { loading = false; });
+}
+
+const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) loadPhotos(); });
+}, { rootMargin: '200px' });
+observer.observe(sentinel);
+</script>
+
+{% endif %}
+</body>
+</html>
