@@ -157,8 +157,12 @@ if os.environ.get('AWS_ACCESS_KEY_ID'):
 # Enable HTTPS features in production
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    # If testing over HTTP (no SSL/Domain yet), these must be False!
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+# Trust the EC2 IP for form submissions
+CSRF_TRUSTED_ORIGINS = ['http://15.207.54.112']
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
