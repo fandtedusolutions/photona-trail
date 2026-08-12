@@ -146,7 +146,14 @@ if os.environ.get('AWS_ACCESS_KEY_ID'):
     AWS_S3_FILE_OVERWRITE = False
     
     # Enable S3 for Media storage
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
     MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
 
     # Optional: Enable S3 for Static files too
