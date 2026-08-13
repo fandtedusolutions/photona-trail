@@ -655,7 +655,17 @@
         fetch('{% url "gallery:upload" %}', { method: 'POST', body: formData })
         .then(res => res.json())
         .then(data => {
-            previewIds.forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+            if (data.is_background) {
+                previewIds.forEach(id => { 
+                    const el = document.getElementById(id); 
+                    if (el) {
+                        el.querySelector('.rich-gallery-meta').innerHTML = '⏳ Processing in background...';
+                    }
+                });
+                showToast("Photos uploading to S3 in background!", "success");
+            } else {
+                previewIds.forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+            }
             if (data.images && data.images.length > 0) {
                 data.images.forEach(img => {
                     const dotIdx = img.filename.lastIndexOf('.');
