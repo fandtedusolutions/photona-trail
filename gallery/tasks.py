@@ -42,16 +42,14 @@ def process_image_upload_task(temp_paths, event_id, original_filenames):
                     gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
                     
                 gallery_image.save()
-                image_ids.append(gallery_image.id)
+                
+            from .utils import process_gallery_image
+            process_gallery_image(gallery_image, local_path=temp_path)
+            
+            image_ids.append(gallery_image.id)
             os.remove(temp_path)
     
     if image_ids:
-        from .utils import process_gallery_image
-        for img_id in image_ids:
-            img = GalleryImage.objects.filter(id=img_id).first()
-            if img:
-                process_gallery_image(img)
-        
         if event:
             from .clustering import run_clustering_on_upload
             run_clustering_on_upload(event)
@@ -86,17 +84,15 @@ def process_zip_upload_task(temp_zip_path, event_id=None):
                                 gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
                                 
                             gallery_image.save()
-                            image_ids.append(gallery_image.id)
                             
-            from .utils import process_gallery_image
-            for img_id in image_ids:
-                img = GalleryImage.objects.filter(id=img_id).first()
-                if img:
-                    num_faces = process_gallery_image(img)
-                    img.total_faces = num_faces
-                    img.save(update_fields=['total_faces'])
-                    
-            if event:
+                        from .utils import process_gallery_image
+                        num_faces = process_gallery_image(gallery_image, local_path=full_img_path)
+                        gallery_image.total_faces = num_faces
+                        gallery_image.save(update_fields=['total_faces'])
+                        
+                        image_ids.append(gallery_image.id)
+                            
+            if event and image_ids:
                 from .clustering import run_clustering_on_upload
                 run_clustering_on_upload(event)
     except Exception as e:

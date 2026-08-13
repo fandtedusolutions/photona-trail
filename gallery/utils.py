@@ -16,7 +16,7 @@ def get_face_model():
         _face_app.prepare(ctx_id=0, det_size=DETECTION_SIZE)
     return _face_app
 
-def process_gallery_image(gallery_image):
+def process_gallery_image(gallery_image, local_path=None):
     """
     Process an uploaded gallery image using InsightFace and save embeddings to DB.
     """
@@ -24,13 +24,17 @@ def process_gallery_image(gallery_image):
     import urllib.request
     import numpy as np
     
-    try:
-        req = urllib.request.urlopen(gallery_image.file.url)
-        arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
-        img = cv2.imdecode(arr, -1)
-    except Exception as e:
-        print(f"Error downloading image for face detection: {e}")
-        return 0
+    img = None
+    if local_path and os.path.exists(local_path):
+        img = cv2.imread(local_path)
+    else:
+        try:
+            req = urllib.request.urlopen(gallery_image.file.url)
+            arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
+            img = cv2.imdecode(arr, -1)
+        except Exception as e:
+            print(f"Error downloading image for face detection: {e}")
+            return 0
         
     if img is None:
         return 0
