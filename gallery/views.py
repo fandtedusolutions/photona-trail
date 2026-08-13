@@ -211,10 +211,13 @@ def delete_event(request, slug):
     # Deduct files storage from used_storage
     profile = request.user.profile
     for img in event.images.all():
-        if img.file and os.path.exists(img.file.path):
-            size_mb = os.path.getsize(img.file.path) / (1024 * 1024)
-            profile.used_storage_mb = max(0.0, profile.used_storage_mb - size_mb)
-            os.remove(img.file.path)
+        if img.file:
+            try:
+                size_mb = img.file.size / (1024 * 1024)
+                profile.used_storage_mb = max(0.0, profile.used_storage_mb - size_mb)
+                img.file.delete(save=False)
+            except Exception:
+                pass
     profile.save()
     event.delete()
     return redirect('gallery:dashboard')
@@ -399,12 +402,15 @@ def delete_image(request, image_id):
         return HttpResponseForbidden("Unauthorized")
         
     # Deduct storage
-    if gallery_image.file and os.path.exists(gallery_image.file.path):
-        size_mb = os.path.getsize(gallery_image.file.path) / (1024 * 1024)
-        profile = request.user.profile
-        profile.used_storage_mb = max(0.0, profile.used_storage_mb - size_mb)
-        profile.save()
-        os.remove(gallery_image.file.path)
+    if gallery_image.file:
+        try:
+            size_mb = gallery_image.file.size / (1024 * 1024)
+            profile = request.user.profile
+            profile.used_storage_mb = max(0.0, profile.used_storage_mb - size_mb)
+            profile.save()
+            gallery_image.file.delete(save=False)
+        except Exception:
+            pass
         
     gallery_image.delete()
     return JsonResponse({'success': True, 'message': 'Image deleted successfully.'})
