@@ -646,39 +646,86 @@
             }
         });
 
-        const formData = new FormData();
-        selectedFiles.forEach(file => formData.append('photos', file));
-        formData.append('event_id', '{{ event.id }}');
-        formData.append('csrfmiddlewaretoken', document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value);
+        const filesToUpload = [...selectedFiles];
+        const previewMap = [];
+        
+        let zipFile = null;
+        filesToUpload.forEach((file, index) => {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'zip') {
+                zipFile = file;
+            } else {
+                previewMap.push({ file: file, id: previewIds[previewMap.length] });
+            }
+        });
+
+        const csrfToken = document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value;
+        const eventId = '{{ event.id }}';
+        
         selectedFiles = []; fileList.innerHTML = ''; uploadBtn.style.display = 'none';
 
-        fetch('{% url "gallery:upload" %}', { method: 'POST', body: formData })
-        .then(res => res.json())
-        .then(data => {
-            if (data.is_background) {
-                previewIds.forEach(id => { 
-                    const el = document.getElementById(id); 
-                    if (el) {
-                        el.querySelector('.rich-gallery-meta').innerHTML = '⏳ Processing in background...';
+        // 1. Upload ZIP if exists (Synchronously one request)
+        if (zipFile) {
+            const zipData = new FormData();
+            zipData.append('photos', zipFile);
+            zipData.append('event_id', eventId);
+            zipData.append('csrfmiddlewaretoken', csrfToken);
+            fetch('{% url "gallery:upload" %}', { method: 'POST', body: zipData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.has_zip) {
+                    showToast("ZIP archive is processing in the background.", "info");
+                }
+            });
+        }
+
+        // 2. Upload Images Concurrently
+        const CONCURRENT_UPLOADS = 3;
+        let currentIndex = 0;
+
+        function uploadNextImage() {
+            if (currentIndex >= previewMap.length) return;
+            
+            const currentItem = previewMap[currentIndex++];
+            const formData = new FormData();
+            formData.append('photos', currentItem.file);
+            formData.append('event_id', eventId);
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            fetch('{% url "gallery:upload" %}', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                const el = document.getElementById(currentItem.id);
+                if (data.is_background) {
+                    if (el) el.querySelector('.rich-gallery-meta').innerHTML = '⏳ Processing in background...';
+                } else {
+                    if (el) el.remove();
+                    if (data.images && data.images.length > 0) {
+                        data.images.forEach(img => {
+                            const dotIdx = img.filename.lastIndexOf('.');
+                            const nameOnly = dotIdx !== -1 ? img.filename.substring(0, dotIdx) : img.filename;
+                            const ext = dotIdx !== -1 ? img.filename.substring(dotIdx) : '';
+                            const downloadName = `${nameOnly}_{{ event.slug }}${ext}`;
+                            gallery.insertBefore(makePhotoCard(img, downloadName), gallery.firstChild);
+                        });
                     }
-                });
-                showToast("Photos uploading to S3 in background!", "success");
-            } else {
-                previewIds.forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
-            }
-            if (data.images && data.images.length > 0) {
-                data.images.forEach(img => {
-                    const dotIdx = img.filename.lastIndexOf('.');
-                    const nameOnly = dotIdx !== -1 ? img.filename.substring(0, dotIdx) : img.filename;
-                    const ext = dotIdx !== -1 ? img.filename.substring(dotIdx) : '';
-                    const downloadName = `${nameOnly}_{{ event.slug }}${ext}`;
-                    gallery.insertBefore(makePhotoCard(img, downloadName), gallery.firstChild);
-                });
-            }
-            if (data.has_zip) {
-                customAlert("ZIP Uploaded", "ZIP file uploaded. Extraction and face indexing running in background. Refresh in a moment.");
-            }
-        }).catch(err => showToast("Upload failed: " + err, "error"));
+                }
+                uploadNextImage(); // trigger next
+            })
+            .catch(err => {
+                showToast("Upload failed: " + err, "error");
+                uploadNextImage();
+            });
+        }
+
+        // Start initial workers
+        for (let i = 0; i < Math.min(CONCURRENT_UPLOADS, previewMap.length); i++) {
+            uploadNextImage();
+        }
+        
+        if (previewMap.length > 0) {
+            showToast("Photos uploading to S3 in background!", "success");
+        }
     });
 
     gdriveForm.addEventListener('submit', e => {
