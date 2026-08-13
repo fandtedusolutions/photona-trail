@@ -634,13 +634,9 @@
                 const item = document.createElement('div');
                 item.className = 'rich-gallery-item';
                 item.id = tempId;
-                item.style.opacity = '0.55';
                 item.innerHTML = `
                     <div class="rich-thumb-wrap">
                         <img class="rich-thumb" src="${localUrl}">
-                        <div class="rich-thumb-actions" style="opacity:1; background: rgba(15,17,23,0.45);">
-                            <span style="font-size:0.7rem; color:white; font-weight:600;">Uploading…</span>
-                        </div>
                     </div>
                     <div class="rich-gallery-info">
                         <div class="rich-gallery-name">${file.name}</div>
