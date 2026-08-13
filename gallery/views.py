@@ -17,7 +17,7 @@ from django.contrib.auth.models import User
 from config import VALID_IMAGE_EXTENSIONS
 from .models import GalleryImage, FaceEmbedding, Event, UserProfile, SubscriptionPlan, EventShareLink
 from .utils import process_gallery_image, search_person_by_selfie
-
+from .tasks import process_image_upload_task, process_zip_upload_task, process_gdrive_import_task
 # -------------------------------------------------------------
 # Authentication Views
 # -------------------------------------------------------------
@@ -275,102 +275,6 @@ def photos_api(request):
 
 
 # -------------------------------------------------------------
-# Background Process Thread Helpers
-# -------------------------------------------------------------
-def run_face_detection_and_clustering(image_ids, event_id=None):
-    from django.db import connection
-    connection.close()
-    
-    try:
-        images = GalleryImage.objects.filter(id__in=image_ids)
-        for img in images:
-            process_gallery_image(img)
-            
-        if event_id:
-            event = Event.objects.filter(id=event_id).first()
-            if event:
-                from .clustering import run_clustering_on_upload
-                run_clustering_on_upload(event)
-    except Exception as e:
-        print(f"[ERROR] Background face extraction error: {e}")
-
-def run_zip_processing_in_background(temp_zip_path, event_id=None):
-    from django.db import connection
-    connection.close()
-    
-    try:
-        event = None
-        if event_id:
-            event = Event.objects.filter(id=event_id).first()
-            
-        temp_dir = os.path.dirname(temp_zip_path)
-        extract_path = temp_zip_path.replace('.zip', '_extracted')
-        
-        if zipfile.is_zipfile(temp_zip_path):
-            with zipfile.ZipFile(temp_zip_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_path)
-                
-            image_ids = []
-            for root, dirs, extracted_files in os.walk(extract_path):
-                for file_name in extracted_files:
-                    file_ext = os.path.splitext(file_name)[1].lower()
-                    if file_ext in VALID_IMAGE_EXTENSIONS:
-                        full_img_path = os.path.join(root, file_name)
-                        with open(full_img_path, 'rb') as img_f:
-                            gallery_image = GalleryImage(filename=file_name, event=event, total_faces=-1)
-                            gallery_image.file.save(file_name, File(img_f), save=True)
-                            image_ids.append(gallery_image.id)
-                            
-            # Process faces on extracted images
-            for img_id in image_ids:
-                img = GalleryImage.objects.filter(id=img_id).first()
-                if img:
-                    num_faces = process_gallery_image(img)
-                    img.total_faces = num_faces
-                    img.save(update_fields=['total_faces'])
-                    
-            if event:
-                from .clustering import run_clustering_on_upload
-                run_clustering_on_upload(event)
-    except Exception as e:
-        print(f"[ERROR] Background ZIP processing error: {e}")
-    finally:
-        if os.path.exists(extract_path):
-            shutil.rmtree(extract_path)
-        if os.path.exists(temp_zip_path):
-            os.remove(temp_zip_path)
-
-def run_gdrive_import_in_background(url, event_id=None):
-    from django.db import connection
-    connection.close()
-    
-    try:
-        from gallery.models import Event
-        event = Event.objects.filter(id=event_id).first()
-        if not event or not event.owner:
-            return
-            
-        profile = event.owner.profile
-        
-        # Measure size before
-        size_before = sum([img.file.size for img in event.images.all() if img.file and os.path.exists(img.file.path)])
-        
-        from .utils import download_and_index_gdrive_link
-        download_and_index_gdrive_link(url, event_id=event_id)
-        
-        # Measure size after
-        size_after = sum([img.file.size for img in event.images.all() if img.file and os.path.exists(img.file.path)])
-        diff_mb = (size_after - size_before) / (1024 * 1024)
-        
-        profile.used_storage_mb += diff_mb
-        profile.save()
-        
-        from .clustering import run_clustering_on_upload
-        run_clustering_on_upload(event)
-    except Exception as e:
-        print(f"[ERROR] Background GDrive import error: {e}")
-
-# -------------------------------------------------------------
 # Views Actions
 # -------------------------------------------------------------
 @login_required
@@ -399,10 +303,12 @@ def upload_photos(request):
         profile.used_storage_mb += incoming_size_mb
         profile.save()
             
-        uploaded_images = []
-        image_ids = []
         has_zip = False
+        has_background_images = False
+        temp_paths = []
+        original_filenames = []
         
+        import time
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
         os.makedirs(temp_dir, exist_ok=True)
         
@@ -416,31 +322,26 @@ def upload_photos(request):
                     for chunk in file.chunks():
                         f.write(chunk)
                 
-                thread = threading.Thread(target=run_zip_processing_in_background, args=(temp_zip_path, event_id))
-                thread.daemon = True
-                thread.start()
+                process_zip_upload_task.delay(temp_zip_path, event_id)
             else:
-                gallery_image = GalleryImage(file=file, filename=file.name, event=event, total_faces=-1)
-                gallery_image.save()
-                image_ids.append(gallery_image.id)
-                uploaded_images.append({
-                    'id': gallery_image.id,
-                    'filename': gallery_image.filename,
-                    'url': gallery_image.file.url,
-                    'total_faces': -1,
-                    'uploaded_at': gallery_image.uploaded_at.strftime("%b %d, %H:%M")
-                })
+                has_background_images = True
+                safe_name = file.name.replace(' ', '_')
+                temp_path = os.path.join(temp_dir, f"tmp_{int(time.time()*1000)}_{safe_name}")
+                with open(temp_path, 'wb') as f:
+                    for chunk in file.chunks():
+                        f.write(chunk)
+                temp_paths.append(temp_path)
+                original_filenames.append(file.name)
                 
-        if image_ids:
-            thread = threading.Thread(target=run_face_detection_and_clustering, args=(image_ids, event_id))
-            thread.daemon = True
-            thread.start()
+        if has_background_images:
+            process_image_upload_task.delay(temp_paths, event_id, original_filenames)
             
         return JsonResponse({
             'success': True,
-            'images': uploaded_images,
+            'images': [],
             'has_zip': has_zip,
-            'message': 'Upload successful. Face processing is running in the background.'
+            'is_background': has_background_images,
+            'message': 'Upload successful. Photos are processing in the background.'
         })
         
     return render(request, 'gallery/upload.html')
@@ -515,9 +416,7 @@ def gdrive_import(request):
     try:
         # Note: GDrive downloads will run in the background. Since we cannot check size beforehand, 
         # size calculation and storage limit deduction happens after background download is complete.
-        thread = threading.Thread(target=run_gdrive_import_in_background, args=(url, event_id))
-        thread.daemon = True
-        thread.start()
+        process_gdrive_import_task.delay(url, event_id)
         
         return JsonResponse({
             'success': True,
