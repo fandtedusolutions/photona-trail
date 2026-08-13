@@ -536,11 +536,16 @@ def download_event_zip(request, slug):
         
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
+        import urllib.request
         for img in images:
-            if img.file and os.path.exists(img.file.path):
+            if img.file:
                 name_only, ext = os.path.splitext(img.filename)
                 zip_filename = f"{name_only}_{event.slug}{ext}"
-                zip_file.write(img.file.path, zip_filename)
+                try:
+                    req = urllib.request.urlopen(img.file.url)
+                    zip_file.writestr(zip_filename, req.read())
+                except Exception as e:
+                    print(f"Error zipping image: {e}")
                 
     zip_buffer.seek(0)
     response = HttpResponse(zip_buffer.read(), content_type='application/zip')
@@ -565,10 +570,15 @@ def download_images_zip(request):
                 img = GalleryImage.objects.get(id=img_id)
                 if not request.user.is_superuser and img.event.owner != request.user:
                     continue
-                if img.file and os.path.exists(img.file.path):
+                if img.file:
                     name_only, ext = os.path.splitext(img.filename)
                     zip_filename = f"{name_only}_{img.event.slug}{ext}"
-                    zip_file.write(img.file.path, zip_filename)
+                    import urllib.request
+                    try:
+                        req = urllib.request.urlopen(img.file.url)
+                        zip_file.writestr(zip_filename, req.read())
+                    except Exception as e:
+                        print(f"Error zipping image: {e}")
             except GalleryImage.DoesNotExist:
                 continue
                 

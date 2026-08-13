@@ -69,12 +69,6 @@ def run_clustering_on_upload(event):
         for face_rec in cluster['faces']:
             face_rec.person_label = person_name
             face_rec.save(update_fields=['person_label'])
-            
-        # Copy original files to disk subfolder
-        cluster_images = GalleryImage.objects.filter(id__in=cluster['image_ids'])
-        for img in cluster_images:
-            if img.file and os.path.exists(img.file.path):
-                shutil.copy2(img.file.path, os.path.join(person_dir, img.filename))
 
 def get_cached_clusters_for_event(event):
     """

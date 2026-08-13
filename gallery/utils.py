@@ -21,10 +21,17 @@ def process_gallery_image(gallery_image):
     Process an uploaded gallery image using InsightFace and save embeddings to DB.
     """
     app = get_face_model()
-    image_path = gallery_image.file.path
+    import urllib.request
+    import numpy as np
     
-    # Read image
-    img = cv2.imread(image_path)
+    try:
+        req = urllib.request.urlopen(gallery_image.file.url)
+        arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
+        img = cv2.imdecode(arr, -1)
+    except Exception as e:
+        print(f"Error downloading image for face detection: {e}")
+        return 0
+        
     if img is None:
         return 0
     
