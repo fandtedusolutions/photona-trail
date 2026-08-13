@@ -218,6 +218,13 @@ def delete_event(request, slug):
                 img.file.delete(save=False)
             except Exception:
                 pass
+        if img.thumbnail:
+            try:
+                thumb_size_mb = img.thumbnail.size / (1024 * 1024)
+                profile.used_storage_mb = max(0.0, profile.used_storage_mb - thumb_size_mb)
+                img.thumbnail.delete(save=False)
+            except Exception:
+                pass
     profile.save()
     event.delete()
     return redirect('gallery:dashboard')
@@ -409,6 +416,16 @@ def delete_image(request, image_id):
             profile.used_storage_mb = max(0.0, profile.used_storage_mb - size_mb)
             profile.save()
             gallery_image.file.delete(save=False)
+        except Exception:
+            pass
+            
+    if gallery_image.thumbnail:
+        try:
+            thumb_size_mb = gallery_image.thumbnail.size / (1024 * 1024)
+            profile = request.user.profile
+            profile.used_storage_mb = max(0.0, profile.used_storage_mb - thumb_size_mb)
+            profile.save()
+            gallery_image.thumbnail.delete(save=False)
         except Exception:
             pass
         
