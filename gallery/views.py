@@ -362,8 +362,14 @@ def search_person(request):
 
     if request.method == 'POST' and request.FILES.get('selfie'):
         selfie = request.FILES['selfie']
-        temp_path = default_storage.save(f'temp/{selfie.name}', ContentFile(selfie.read()))
-        full_temp_path = os.path.join(default_storage.location, temp_path)
+        import time
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        safe_name = selfie.name.replace(' ', '_')
+        full_temp_path = os.path.join(temp_dir, f"search_{int(time.time()*1000)}_{safe_name}")
+        with open(full_temp_path, 'wb') as f:
+            for chunk in selfie.chunks():
+                f.write(chunk)
         
         try:
             results = search_person_by_selfie(full_temp_path, event_id=selected_event.id, tenant_user=request.user)
@@ -442,8 +448,14 @@ def group_by_face(request):
 
     if request.method == 'POST' and request.FILES.get('selfie'):
         selfie = request.FILES['selfie']
-        temp_path = default_storage.save(f'temp/group_{selfie.name}', ContentFile(selfie.read()))
-        full_temp_path = os.path.join(default_storage.location, temp_path)
+        import time
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        safe_name = selfie.name.replace(' ', '_')
+        full_temp_path = os.path.join(temp_dir, f"group_{int(time.time()*1000)}_{safe_name}")
+        with open(full_temp_path, 'wb') as f:
+            for chunk in selfie.chunks():
+                f.write(chunk)
         
         try:
             results = search_person_by_selfie(full_temp_path, event_id=selected_event.id, tenant_user=request.user)
