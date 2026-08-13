@@ -266,7 +266,7 @@ def photos_api(request):
         data.append({
             'id': img.id,
             'filename': img.filename,
-            'url': img.file.url,
+            'url': img.thumbnail.url if img.thumbnail else img.file.url,
             'total_faces': img.total_faces,
             'uploaded_at': img.uploaded_at.strftime("%b %d, %H:%M")
         })
@@ -801,7 +801,7 @@ def public_photos_api(request):
     for img in page_obj.object_list:
         data.append({
             'id': img.id,
-            'url': request.build_absolute_uri(img.file.url),
+            'url': request.build_absolute_uri(img.thumbnail.url if img.thumbnail else img.file.url),
             'filename': img.filename,
             'uploaded_at': img.uploaded_at.strftime('%b %d, %H:%M'),
         })

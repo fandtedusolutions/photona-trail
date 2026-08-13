@@ -53,6 +53,7 @@ class Event(models.Model):
 
 class GalleryImage(models.Model):
     file = models.ImageField(upload_to='events/')
+    thumbnail = models.ImageField(upload_to='thumbnails/', null=True, blank=True)
     filename = models.CharField(max_length=255)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='images', null=True, blank=True)
     total_faces = models.IntegerField(default=0)
