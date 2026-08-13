@@ -168,8 +168,8 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
 
-# Trust the EC2 IP for form submissions
-CSRF_TRUSTED_ORIGINS = ['http://15.207.54.112']
+# Trust the EC2 IP and Domain for form submissions
+CSRF_TRUSTED_ORIGINS = ['http://15.207.54.112', 'https://phototna.weddinghillage.com', 'http://phototna.weddinghillage.com', 'https://photona.weddinghillage.com', 'http://photona.weddinghillage.com']
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
