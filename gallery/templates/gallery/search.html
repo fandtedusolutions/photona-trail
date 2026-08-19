@@ -79,7 +79,7 @@
                         <a href="{{ res.image.file.url }}" target="_blank">
                             <img class="gallery-thumb" src="{{ res.image.file.url }}" alt="{{ res.image.filename }}">
                         </a>
-                        <a href="{{ res.image.file.url }}" download="{{ res.download_filename }}" class="download-img-btn" title="Download Photo" style="position: absolute; bottom: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; font-size: 0.85rem; transition: var(--transition); border: 1px solid rgba(255,255,255,0.15);" onmouseover="this.style.background='rgba(99, 102, 241, 0.9)'" onmouseout="this.style.background='rgba(15, 23, 42, 0.6)'">⬇️</a>
+                        <a href="{% url 'gallery:download_single_image' res.image.id %}" class="download-img-btn" title="Download Photo" style="position: absolute; bottom: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; font-size: 0.85rem; transition: var(--transition); border: 1px solid rgba(255,255,255,0.15);" onmouseover="this.style.background='rgba(99, 102, 241, 0.9)'" onmouseout="this.style.background='rgba(15, 23, 42, 0.6)'">⬇️</a>
                     </div>
                     <div class="gallery-info">
                         <div class="name" title="{{ res.image.filename }}">{{ res.image.filename }}</div>

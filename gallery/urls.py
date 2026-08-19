@@ -48,4 +48,5 @@ urlpatterns = [
     path('group-by-face/', views.group_by_face, name='group_by_face'),
     path('event/<slug:slug>/download/', views.download_event_zip, name='download_event_zip'),
     path('download-zip/', views.download_images_zip, name='download_images_zip'),
+    path('download/image/<int:image_id>/', views.download_single_image, name='download_single_image'),
 ]

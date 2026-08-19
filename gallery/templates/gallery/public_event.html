@@ -479,7 +479,7 @@ function loadPhotos() {
                 <div class="pub-photo-wrap">
                     <img class="pub-photo-img" src="${img.url}" alt="${img.filename}" loading="lazy">
                     <div class="pub-photo-overlay">
-                        <a href="${img.url}" download="${name}${extStr}" class="pub-dl-btn" title="Download">⬇</a>
+                        <a href="/download/image/${img.id}/?token={{ share.token }}" class="pub-dl-btn" title="Download">⬇</a>
                     </div>
                 </div>
                 <div class="pub-photo-info">

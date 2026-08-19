@@ -575,6 +575,35 @@ def download_event_zip(request, slug):
     response['Content-Disposition'] = f'attachment; filename="{event.slug}_photos.zip"'
     return response
 
+def download_single_image(request, image_id):
+    img = get_object_or_404(GalleryImage, id=image_id)
+    
+    is_authorized = False
+    if request.user.is_authenticated:
+        if request.user.is_superuser or img.event.owner == request.user:
+            is_authorized = True
+            
+    token = request.GET.get('token')
+    if token and not is_authorized:
+        share_link = EventShareLink.objects.filter(token=token, event=img.event).first()
+        if share_link and share_link.is_valid():
+            is_authorized = True
+            
+    if not is_authorized:
+        return HttpResponseForbidden("Unauthorized")
+        
+    name_only, ext = os.path.splitext(img.filename)
+    download_name = f"{name_only}_{img.event.slug}{ext}"
+    
+    import urllib.request
+    try:
+        req = urllib.request.urlopen(img.file.url)
+        response = HttpResponse(req.read(), content_type='application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filename="{download_name}"'
+        return response
+    except Exception as e:
+        return HttpResponse("Failed to download image", status=500)
+
 @login_required
 def download_images_zip(request):
     image_ids = request.POST.getlist('image_ids')
