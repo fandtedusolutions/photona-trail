@@ -984,7 +984,17 @@
         }
 
         showToast(`All ${totalFiles} photos processed & indexed!`, "success");
-        loadPeople();
+        
+        queueCountText.innerText = `🧠 Grouping faces into Sorted People...`;
+        
+        fetch('{% url "gallery:trigger_clustering" event.slug %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(() => {
+            loadPeople();
+        }).catch(() => {
+            loadPeople();
+        });
 
         setTimeout(() => {
             queueContainer.style.display = 'none';

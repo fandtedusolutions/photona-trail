@@ -28,6 +28,7 @@ urlpatterns = [
     path('event/<slug:slug>/', views.event_detail, name='event_detail'),
     path('event/<slug:slug>/group/rename/', views.rename_face_group, name='rename_face_group'),
     path('event/<slug:slug>/group/delete/', views.delete_face_group, name='delete_face_group'),
+    path('event/<slug:slug>/trigger-clustering/', views.trigger_clustering, name='trigger_clustering'),
 
     # Event Share Links (Organizer CRUD)
     path('event/<slug:slug>/shares/', views.manage_shares, name='manage_shares'),

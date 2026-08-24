@@ -471,6 +471,21 @@ def upload_single_photo(request):
         return JsonResponse({'success': False, 'message': str(e)})
 
 @login_required
+@require_POST
+def trigger_clustering(request, slug):
+    if request.user.is_superuser:
+        event = get_object_or_404(Event, slug=slug)
+    else:
+        event = get_object_or_404(Event, slug=slug, owner=request.user)
+        
+    from .clustering import run_clustering_on_upload
+    try:
+        run_clustering_on_upload(event)
+        return JsonResponse({'success': True, 'message': 'Clustering complete.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@login_required
 def search_person(request):
     results = None
     error_message = None
@@ -635,6 +650,18 @@ def gdrive_import(request):
             try:
                 indexed, faces = download_and_index_gdrive_link(url, event_id=target_event_id, job_id=job_id, jobs_dict=IMPORT_JOBS)
                 print(f"[SUCCESS] Google Drive import finished for '{target_event_name}': {indexed} images, {faces} faces indexed.")
+                
+                # Run AI clustering on the newly imported faces
+                from .clustering import run_clustering_on_upload
+                re_fetched_event = Event.objects.filter(id=target_event_id).first()
+                if re_fetched_event:
+                    run_clustering_on_upload(re_fetched_event)
+                    
+                if job_id in IMPORT_JOBS:
+                    IMPORT_JOBS[job_id]['active'] = False
+                    IMPORT_JOBS[job_id]['percent'] = 100
+                    IMPORT_JOBS[job_id]['message'] = 'Import finished!'
+                    
             except Exception as ex:
                 print(f"[DEBUG] Background GDrive import thread error: {ex}")
                 if job_id in IMPORT_JOBS:
