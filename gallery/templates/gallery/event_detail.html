@@ -63,6 +63,7 @@
         max-height: calc(100vh - 110px);
         display: flex;
         flex-direction: column;
+        contain: content;
     }
 
     .people-panel-header {
@@ -90,8 +91,10 @@
 
     .people-scroll {
         overflow-y: auto;
+        overscroll-behavior: contain;
         flex: 1;
         padding: 0.75rem;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* ── Face Person Card ── */
@@ -101,8 +104,11 @@
         border-radius: var(--radius-md);
         padding: 0.85rem;
         margin-bottom: 0.65rem;
-        transition: var(--transition);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
         cursor: default;
+        contain: content;
+        content-visibility: auto;
+        contain-intrinsic-size: 110px;
     }
 
     .person-card:hover {
@@ -190,7 +196,7 @@
         background: var(--bg-secondary);
         border: 1px solid var(--border-light);
         border-radius: var(--radius-lg);
-        overflow: hidden;
+        overflow: visible;
         box-shadow: var(--shadow-sm);
     }
 
@@ -230,8 +236,11 @@
         overflow: hidden;
         background: var(--bg-tertiary);
         border: 1px solid var(--border-light);
-        transition: var(--transition);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
         position: relative;
+        contain: content;
+        content-visibility: auto;
+        contain-intrinsic-size: 200px;
     }
 
     .rich-gallery-item:hover {
@@ -330,22 +339,23 @@
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(15,17,23,0.5);
-        backdrop-filter: blur(10px);
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         z-index: 9500;
         align-items: center;
         justify-content: center;
         padding: 1.5rem;
     }
     .share-modal-box {
-        background: var(--bg-secondary);
+        background: #ffffff;
         border-radius: var(--radius-xl);
         width: 680px;
         max-width: 96vw;
         max-height: 90vh;
         display: flex;
         flex-direction: column;
-        box-shadow: 0 40px 100px -20px rgba(15,17,23,0.3);
+        box-shadow: 0 35px 90px -15px rgba(15, 23, 42, 0.25);
         overflow: hidden;
     }
     .share-modal-header {
@@ -439,45 +449,92 @@
 
 <!-- ── Upload Strip ── -->
 <div class="upload-strip">
-    <!-- Local Upload -->
-    <div class="card" style="padding: 1.5rem;">
-        <h3 class="card-title" style="margin-bottom: 1rem;">
-            <span style="display: inline-flex; width: 28px; height: 28px; border-radius: 7px; background: rgba(99, 102, 241, 0.08); align-items: center; justify-content: center; font-size: 0.85rem;">📤</span>
-            Upload Photos
-        </h3>
-        <form id="uploadForm" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" name="event_id" value="{{ event.id }}">
-            <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-                <div class="dropzone-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                </div>
-                <p style="font-size: 0.84rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 3px;">Drop files or click to browse</p>
-                <p style="font-size: 0.72rem; color: var(--text-muted);">Images & ZIP archives</p>
-                <input type="file" id="fileInput" name="photos" multiple accept="image/*,.zip" style="display: none;" onchange="handleFiles(this.files)">
+    <!-- Local Upload Card -->
+    <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <h3 class="card-title" style="margin-bottom: 0;">
+                    <span style="display: inline-flex; width: 32px; height: 32px; border-radius: 9px; background: rgba(99, 102, 241, 0.1); align-items: center; justify-content: center; font-size: 0.95rem;">📤</span>
+                    Upload Photos
+                </h3>
+                <span style="font-size: 0.72rem; font-weight: 750; color: #4f46e5; background: rgba(99, 102, 241, 0.08); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(99, 102, 241, 0.2);">✦ AUTO AI INDEX</span>
             </div>
-            <div id="fileList" style="margin-top: 0.6rem; max-height: 80px; overflow-y: auto;"></div>
-            <button type="submit" class="btn" id="uploadBtn" style="display: none; margin-top: 0.6rem; width: 100%;">Upload & Process</button>
-        </form>
+            <form id="uploadForm" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="event_id" value="{{ event.id }}">
+                <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()" style="border: 2px dashed rgba(99, 102, 241, 0.35); border-radius: 16px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.03), rgba(236, 72, 153, 0.03)); padding: 1.25rem; text-align: center; cursor: pointer; transition: all 0.3s ease;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(236, 72, 153, 0.12)); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.6rem; color: #4f46e5; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                    </div>
+                    <div style="font-size: 0.9rem; font-weight: 800; color: #0f172a; margin-bottom: 3px;">Drag & Drop Photos or <span style="color: #4f46e5; text-decoration: underline;">Browse Files</span></div>
+                    <div style="font-size: 0.74rem; color: #64748b; font-weight: 500;">Supports JPG, PNG, WebP & ZIP Archives</div>
+                    <input type="file" id="fileInput" name="photos" multiple accept="image/*,.zip" style="display: none;" onchange="handleFiles(this.files)">
+                </div>
+                <div id="fileList" style="margin-top: 0.6rem; max-height: 80px; overflow-y: auto;"></div>
+                <button type="submit" class="btn" id="uploadBtn" style="display: none; margin-top: 0.75rem; width: 100%; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; font-weight: 800; padding: 0.75rem; border-radius: 12px; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+                    ⚡ Upload & Process Selected Files
+                </button>
+            </form>
+        </div>
+
+        <!-- Real-Time Upload Queue Container -->
+        <div id="uploadQueueContainer" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(79, 70, 229, 0.04); border: 1px solid rgba(79, 70, 229, 0.18); border-radius: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.82rem; font-weight: 750; color: #4f46e5;">
+                <span id="queueCountText">⚡ Processing Queue (0 / 0)</span>
+                <span id="queuePercentText" style="font-weight: 850;">0%</span>
+            </div>
+            <div style="width: 100%; height: 7px; background: rgba(79, 70, 229, 0.15); border-radius: 9999px; overflow: hidden; margin-bottom: 0.75rem;">
+                <div id="queueProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4f46e5, #ec4899); border-radius: 9999px; transition: width 0.3s ease;"></div>
+            </div>
+            <div id="queueItemsList" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+        </div>
     </div>
 
-    <!-- Google Drive -->
-    <div class="card" style="padding: 1.5rem;">
-        <h3 class="card-title" style="margin-bottom: 1rem;">
-            <span style="display: inline-flex; width: 28px; height: 28px; border-radius: 7px; background: rgba(16, 185, 129, 0.08); align-items: center; justify-content: center; font-size: 0.85rem;">🔗</span>
-            Import from Drive
-        </h3>
-        <form id="gdriveForm" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="event_id" value="{{ event.id }}">
-            <p style="color: var(--text-muted); font-size: 0.78rem; margin-bottom: 0.85rem; line-height: 1.5;">Paste a public Google Drive link to import images or ZIP archives directly.</p>
-            <input type="url" id="gdriveUrl" name="gdrive_url" placeholder="https://drive.google.com/file/d/.../view" required class="form-input" style="margin-bottom: 0.65rem;">
-            <button type="submit" class="btn" style="width: 100%;">Import Link</button>
-        </form>
+    <!-- Google Drive Card -->
+    <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <h3 class="card-title" style="margin-bottom: 0;">
+                    <span style="display: inline-flex; width: 32px; height: 32px; border-radius: 9999px; background: rgba(5, 150, 105, 0.1); align-items: center; justify-content: center; font-size: 0.95rem;">🔗</span>
+                    Import from Drive
+                </h3>
+                <span style="font-size: 0.72rem; font-weight: 750; color: #059669; background: rgba(5, 150, 105, 0.08); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(5, 150, 105, 0.2);">🟢 LIVE STREAM</span>
+            </div>
+            <form id="gdriveForm" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="event_id" value="{{ event.id }}">
+                <div style="border: 2px dashed rgba(5, 150, 105, 0.35); border-radius: 16px; background: linear-gradient(135deg, rgba(5, 150, 105, 0.03), rgba(16, 185, 129, 0.03)); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem;">
+                    <p style="color: #64748b; font-size: 0.78rem; line-height: 1.55; margin: 0; font-weight: 500;">
+                        Paste a public Google Drive folder link or file URL. Photos download and index in real-time.
+                    </p>
+                    <div style="position: relative; width: 100%;">
+                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1rem; color: #059669;">🌐</span>
+                        <input type="url" id="gdriveUrl" name="gdrive_url" placeholder="https://drive.google.com/drive/folders/..." required class="form-input" style="width: 100%; padding-left: 2.4rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.85rem; color: #0f172a; height: 42px;">
+                    </div>
+                    <button type="submit" class="btn" style="width: 100%; background: linear-gradient(135deg, #059669, #10b981); color: white; font-weight: 800; padding: 0.75rem; border-radius: 10px; border: none; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        ⚡ Start Drive Import
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Live Import Progress Bar -->
+        <div id="gdriveProgressContainer" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(79, 70, 229, 0.06); border: 1px solid rgba(79, 70, 229, 0.2); border-radius: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.55rem; font-size: 0.82rem; font-weight: 750; color: #4f46e5;">
+                <span id="gdriveStatusText">⚡ Connecting to Google Drive...</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="gdrivePercentText" style="font-weight: 850;">0%</span>
+                    <button type="button" onclick="cancelActiveImport()" style="background: rgba(225, 29, 72, 0.1); color: #e11d48; border: 1px solid rgba(225, 29, 72, 0.3); padding: 2px 8px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">✕ Cancel</button>
+                </div>
+            </div>
+            <div style="width: 100%; height: 8px; background: rgba(79, 70, 229, 0.15); border-radius: 9999px; overflow: hidden;">
+                <div id="gdriveProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4f46e5, #ec4899); border-radius: 9999px; transition: width 0.4s ease;"></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -540,18 +597,48 @@
     <!-- ═══ RIGHT: Event Photos ═══ -->
     <section class="photos-panel">
         <div class="photos-panel-header">
-            <div class="photos-panel-title">
-                <span style="width: 26px; height: 26px; background: rgba(245,158,11,0.08); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">🖼️</span>
-                Event Photos
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div class="photos-panel-title">
+                    <span style="width: 26px; height: 26px; background: rgba(245,158,11,0.08); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">🖼️</span>
+                    <span id="photosSectionTitle">Event Photos</span>
+                </div>
+                <button type="button" id="clearFilterBtn" onclick="clearPersonFilter()" style="display: none; align-items: center; gap: 5px; background: rgba(79, 70, 229, 0.1); color: var(--accent-indigo); border: 1px solid rgba(79, 70, 229, 0.25); border-radius: 20px; padding: 4px 14px; font-size: 0.78rem; font-weight: 750; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(79, 70, 229, 0.18)'" onmouseout="this.style.background='rgba(79, 70, 229, 0.1)'">
+                    ← Show All Photos
+                </button>
             </div>
-            <a href="{% url 'gallery:download_event_zip' event.slug %}" class="btn btn-sm btn-secondary" style="display: inline-flex; align-items: center; gap: 5px;">
-                📦 Download All (ZIP)
-            </a>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" id="selectAllBtn" onclick="toggleSelectAllPhotos()" class="btn btn-sm" style="font-size: 0.78rem; font-weight: 800; background: #e0e7ff !important; color: #3730a3 !important; border: 1.5px solid #6366f1 !important; border-radius: 20px; padding: 5px 14px; cursor: pointer; transition: all 0.2s;">
+                    ☐ Select All
+                </button>
+                <button type="button" id="deleteSelectedHeaderBtn" onclick="executeBulkDelete()" class="btn btn-sm" style="display: none; font-size: 0.78rem; font-weight: 800; background: linear-gradient(135deg, #e11d48, #be123c) !important; color: #ffffff !important; border: none !important; border-radius: 20px; padding: 5px 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);">
+                    🗑 Delete Selected (<span id="headerSelectedCount">0</span>)
+                </button>
+                <a href="{% url 'gallery:download_event_zip' event.slug %}" class="btn btn-sm btn-secondary" style="display: inline-flex; align-items: center; gap: 5px;">
+                    📦 Download All (ZIP)
+                </a>
+            </div>
         </div>
-        <div class="photos-grid-wrap">
+        <div class="photos-grid-wrap" style="position: relative;">
+            <!-- Event Photos Section Sticky Bulk Selection Action Bar -->
+            <div id="bulkActionBar" style="display: none; position: sticky; top: 80px; z-index: 900; background: #ffffff; color: #0f172a; border-radius: 16px; padding: 0.85rem 1.5rem; box-shadow: 0 12px 35px rgba(225, 29, 72, 0.12), 0 4px 12px rgba(15, 23, 42, 0.06); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin: 0.75rem 0 1.25rem 0; border: 1.5px solid rgba(225, 29, 72, 0.3);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="display: inline-flex; width: 32px; height: 32px; border-radius: 8px; background: rgba(225, 29, 72, 0.1); align-items: center; justify-content: center; font-size: 0.95rem;">☑️</span>
+                    <span id="bulkSelectedCount" style="font-weight: 800; font-size: 0.88rem; color: #e11d48; background: rgba(225, 29, 72, 0.08); padding: 5px 14px; border-radius: 9999px; border: 1px solid rgba(225, 29, 72, 0.2);">0 photos selected</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button onclick="executeBulkDelete()" class="btn btn-sm" style="background: linear-gradient(135deg, #e11d48, #be123c); color: white; border: none; font-weight: 800; padding: 7px 18px; cursor: pointer; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.4); border-radius: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                        🗑 Delete Selected
+                    </button>
+                    <button onclick="clearPhotoSelection()" class="btn btn-sm" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 600; padding: 7px 14px; cursor: pointer; border-radius: 10px;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
             <div class="rich-gallery-grid" id="photoGallery">
                 <!-- JS populates cards here -->
             </div>
+
             <div id="sentinel" style="height: 20px; margin-top: 1.5rem;"></div>
             <div id="noPhotosMessage" style="display: none;">
                 <div class="empty-state">
@@ -598,149 +685,439 @@
         }
     }
 
+    function loadPeople() {
+        setTimeout(() => window.location.reload(), 1000);
+    }
+
+    let selectedPhotoIds = new Set();
+
+    function onPhotoCheckboxChange(e, id) {
+        e.stopPropagation();
+        const cb = e.target;
+        const checkmark = document.getElementById(`photo-chk-${id}`);
+        const card = document.getElementById(`image-card-${id}`);
+
+        if (cb.checked) {
+            selectedPhotoIds.add(id);
+            if (checkmark) { checkmark.style.background = '#4f46e5'; checkmark.innerHTML = '✓'; }
+            if (card) { card.style.border = '2px solid #4f46e5'; card.style.boxShadow = '0 8px 25px rgba(79, 70, 229, 0.25)'; }
+        } else {
+            selectedPhotoIds.delete(id);
+            if (checkmark) { checkmark.style.background = 'rgba(15, 23, 42, 0.45)'; checkmark.innerHTML = ''; }
+            if (card) { card.style.border = '1px solid var(--border-light)'; card.style.boxShadow = 'none'; }
+        }
+        updateBulkActionBar();
+    }
+
+    function updateBulkActionBar() {
+        const bar = document.getElementById('bulkActionBar');
+        const countText = document.getElementById('bulkSelectedCount');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const headerBtn = document.getElementById('deleteSelectedHeaderBtn');
+        const headerCount = document.getElementById('headerSelectedCount');
+        const count = selectedPhotoIds.size;
+
+        if (headerBtn) {
+            if (count > 0) {
+                headerBtn.style.display = 'inline-flex';
+                if (headerCount) headerCount.innerText = count;
+            } else {
+                headerBtn.style.display = 'none';
+            }
+        }
+
+        if (count > 0) {
+            bar.style.display = 'flex';
+            countText.innerText = `${count} photo${count > 1 ? 's' : ''} selected`;
+            if (selectAllBtn) {
+                selectAllBtn.innerHTML = '☑ Deselect All';
+                selectAllBtn.style.setProperty('background', 'linear-gradient(135deg, #4f46e5, #4338ca)', 'important');
+                selectAllBtn.style.setProperty('color', '#ffffff', 'important');
+                selectAllBtn.style.setProperty('border', '1.5px solid #3730a3', 'important');
+                selectAllBtn.style.setProperty('box-shadow', '0 4px 14px rgba(79, 70, 229, 0.4)', 'important');
+            }
+        } else {
+            bar.style.display = 'none';
+            if (selectAllBtn) {
+                selectAllBtn.innerHTML = '☐ Select All';
+                selectAllBtn.style.setProperty('background', '#e0e7ff', 'important');
+                selectAllBtn.style.setProperty('color', '#3730a3', 'important');
+                selectAllBtn.style.setProperty('border', '1.5px solid #6366f1', 'important');
+                selectAllBtn.style.setProperty('box-shadow', 'none', 'important');
+            }
+        }
+    }
+
+    function toggleSelectAllPhotos() {
+        const checkboxes = document.querySelectorAll('.photo-select-checkbox');
+        const allChecked = selectedPhotoIds.size > 0 && selectedPhotoIds.size === checkboxes.length;
+
+        checkboxes.forEach(cb => {
+            cb.checked = !allChecked;
+            const id = parseInt(cb.getAttribute('data-id'));
+            const checkmark = document.getElementById(`photo-chk-${id}`);
+            const card = document.getElementById(`image-card-${id}`);
+
+            if (!allChecked) {
+                selectedPhotoIds.add(id);
+                if (checkmark) { checkmark.style.background = '#4f46e5'; checkmark.innerHTML = '✓'; }
+                if (card) { card.style.border = '2px solid #4f46e5'; card.style.boxShadow = '0 8px 25px rgba(79, 70, 229, 0.25)'; }
+            } else {
+                selectedPhotoIds.delete(id);
+                if (checkmark) { checkmark.style.background = 'rgba(15, 23, 42, 0.45)'; checkmark.innerHTML = ''; }
+                if (card) { card.style.border = '1px solid var(--border-light)'; card.style.boxShadow = 'none'; }
+            }
+        });
+        updateBulkActionBar();
+    }
+
+    function clearPhotoSelection() {
+        selectedPhotoIds.clear();
+        document.querySelectorAll('.photo-select-checkbox').forEach(cb => {
+            cb.checked = false;
+            const id = parseInt(cb.getAttribute('data-id'));
+            const checkmark = document.getElementById(`photo-chk-${id}`);
+            const card = document.getElementById(`image-card-${id}`);
+            if (checkmark) { checkmark.style.background = 'rgba(15, 23, 42, 0.45)'; checkmark.innerHTML = ''; }
+            if (card) { card.style.border = '1px solid var(--border-light)'; card.style.boxShadow = 'none'; }
+        });
+        updateBulkActionBar();
+    }
+
+    function executeBulkDelete() {
+        const count = selectedPhotoIds.size;
+        if (count === 0) return;
+
+        customConfirm("Delete Selected Photos", `Are you sure you want to delete ${count} photo${count > 1 ? 's' : ''} from this event? Associated face indices and storage usage will be updated.`, (confirmed) => {
+            if (!confirmed) return;
+
+            showLoading(`Deleting ${count} photos…`);
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            formData.append('image_ids', JSON.stringify(Array.from(selectedPhotoIds)));
+
+            fetch('{% url "gallery:bulk_delete_images" %}', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    data.deleted_ids.forEach(id => {
+                        const el = document.getElementById(`image-card-${id}`);
+                        if (el) el.remove();
+                    });
+                    showToast(data.message, "success");
+                    clearPhotoSelection();
+                    loadPeople();
+                } else {
+                    customAlert("Error", data.message);
+                }
+            })
+            .catch(err => {
+                hideLoading();
+                showToast("Error during bulk delete: " + err, "error");
+            });
+        });
+    }
+
     function makePhotoCard(img, downloadName, uploading = false) {
         const item = document.createElement('div');
         item.className = 'rich-gallery-item';
         item.id = `image-card-${img.id || 'tmp-' + Date.now()}`;
         if (uploading) item.style.opacity = '0.6';
+
+        const tag = img.id ? `#${img.id}` : '#new';
+        const eventName = img.event_name || '{{ event.name }}';
+        const isChecked = img.id && selectedPhotoIds.has(img.id);
+
+        if (isChecked) {
+            item.style.border = '2px solid #4f46e5';
+            item.style.boxShadow = '0 8px 25px rgba(79, 70, 229, 0.25)';
+        }
+
         item.innerHTML = `
-            <div class="rich-thumb-wrap">
-                <img class="rich-thumb" src="${img.url}" alt="${img.filename}">
+            <div class="rich-thumb-wrap" style="position: relative;">
+                ${img.id ? `
+                <label onclick="event.stopPropagation();" style="position: absolute; top: 10px; left: 10px; z-index: 15; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <input type="checkbox" class="photo-select-checkbox" data-id="${img.id}" ${isChecked ? 'checked' : ''} onchange="onPhotoCheckboxChange(event, ${img.id})" style="display: none;">
+                    <span id="photo-chk-${img.id}" style="width: 26px; height: 26px; border-radius: 50%; background: ${isChecked ? '#4f46e5' : 'rgba(15, 23, 42, 0.45)'}; backdrop-filter: blur(4px); border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 900; transition: all 0.2s ease; box-shadow: 0 3px 8px rgba(0,0,0,0.3);">
+                        ${isChecked ? '✓' : ''}
+                    </span>
+                </label>
+                ` : ''}
+                <img class="rich-thumb" src="${img.url}" alt="${eventName}" loading="lazy" decoding="async">
                 <div class="rich-thumb-actions">
                     <a href="/download/image/${img.id}/" class="thumb-action-btn" title="Download">⬇</a>
                     <button class="thumb-action-btn del" onclick="deleteImage(${img.id})" title="Delete">✕</button>
                 </div>
             </div>
             <div class="rich-gallery-info">
-                <div class="rich-gallery-name" title="${img.filename}">${img.filename}</div>
+                <div class="rich-gallery-name" title="${eventName} ${tag}">${eventName} <span style="color: var(--accent-indigo); font-size: 0.78rem;">${tag}</span></div>
                 <div class="rich-gallery-meta">${img.uploaded_at || ''}</div>
             </div>
         `;
         return item;
     }
 
-    uploadForm.addEventListener('submit', e => {
+    uploadForm.addEventListener('submit', async e => {
         e.preventDefault();
+        if (!selectedFiles || selectedFiles.length === 0) return;
+
         const gallery = document.getElementById('photoGallery');
-        document.getElementById('noPhotosMessage').style.display = 'none';
+        const noPhotosMsg = document.getElementById('noPhotosMessage');
+        const queueContainer = document.getElementById('uploadQueueContainer');
+        const queueItemsList = document.getElementById('queueItemsList');
+        const queueCountText = document.getElementById('queueCountText');
+        const queuePercentText = document.getElementById('queuePercentText');
+        const queueProgressBar = document.getElementById('queueProgressBar');
 
-        const previewIds = [];
-        selectedFiles.forEach((file, index) => {
-            const ext = file.name.split('.').pop().toLowerCase();
-            if (ext !== 'zip') {
-                const tempId = `local-preview-${Date.now()}-${index}`;
-                previewIds.push(tempId);
-                const localUrl = URL.createObjectURL(file);
-                const item = document.createElement('div');
-                item.className = 'rich-gallery-item';
-                item.id = tempId;
-                item.innerHTML = `
-                    <div class="rich-thumb-wrap">
-                        <img class="rich-thumb" src="${localUrl}">
-                    </div>
-                    <div class="rich-gallery-info">
-                        <div class="rich-gallery-name">${file.name}</div>
-                        <div class="rich-gallery-meta" style="color:var(--accent-indigo);">🔄 Uploading…</div>
-                    </div>`;
-                gallery.insertBefore(item, gallery.firstChild);
-            }
-        });
+        const filesToProcess = [...selectedFiles];
+        selectedFiles = [];
+        fileList.innerHTML = '';
+        uploadBtn.style.display = 'none';
 
-        const filesToUpload = [...selectedFiles];
-        const previewMap = [];
-        
-        let zipFile = null;
-        filesToUpload.forEach((file, index) => {
-            const ext = file.name.split('.').pop().toLowerCase();
-            if (ext === 'zip') {
-                zipFile = file;
-            } else {
-                previewMap.push({ file: file, id: previewIds[previewMap.length] });
-            }
+        queueItemsList.innerHTML = '';
+        queueContainer.style.display = 'block';
+
+        const totalFiles = filesToProcess.length;
+        let completedCount = 0;
+
+        queueCountText.innerText = `⚡ Processing Queue (0 / ${totalFiles})`;
+        queuePercentText.innerText = `0%`;
+        queueProgressBar.style.width = `0%`;
+
+        // 1. Build Queue UI Items
+        filesToProcess.forEach((file, idx) => {
+            const isZip = file.name.split('.').pop().toLowerCase() === 'zip';
+            const localUrl = isZip ? '' : URL.createObjectURL(file);
+            
+            const item = document.createElement('div');
+            item.id = `queue-item-${idx}`;
+            item.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.85rem; background: var(--bg-tertiary); border: 1px solid var(--border-light); border-radius: 12px; font-size: 0.78rem; transition: all 0.3s ease;`;
+            item.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                    ${isZip ? '<span style="font-size: 1.1rem;">📦</span>' : `<img src="${localUrl}" style="width: 28px; height: 28px; border-radius: 7px; object-fit: cover;">`}
+                    <span style="font-weight: 700; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 160px;">${file.name}</span>
+                </div>
+                <span id="queue-status-${idx}" class="badge badge-amber" style="font-size: 0.7rem;">⏳ In Queue</span>
+            `;
+            queueItemsList.appendChild(item);
         });
 
         const csrfToken = document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value;
         const eventId = '{{ event.id }}';
-        
-        selectedFiles = []; fileList.innerHTML = ''; uploadBtn.style.display = 'none';
 
-        // 1. Upload ZIP if exists (Synchronously one request)
-        if (zipFile) {
-            const zipData = new FormData();
-            zipData.append('photos', zipFile);
-            zipData.append('event_id', eventId);
-            zipData.append('csrfmiddlewaretoken', csrfToken);
-            fetch('{% url "gallery:upload" %}', { method: 'POST', body: zipData })
-            .then(res => res.json())
-            .then(data => {
-                if (data.has_zip) {
-                    showToast("ZIP archive is processing in the background.", "info");
-                }
-            });
-        }
+        // 2. Sequential Upload Queue Loop
+        for (let idx = 0; idx < totalFiles; idx++) {
+            const file = filesToProcess[idx];
+            const isZip = file.name.split('.').pop().toLowerCase() === 'zip';
+            const statusBadge = document.getElementById(`queue-status-${idx}`);
 
-        // 2. Upload Images Concurrently
-        const CONCURRENT_UPLOADS = 3;
-        let currentIndex = 0;
+            if (statusBadge) {
+                statusBadge.className = 'badge badge-purple';
+                statusBadge.innerText = '🔄 AI Processing...';
+            }
 
-        function uploadNextImage() {
-            if (currentIndex >= previewMap.length) return;
-            
-            const currentItem = previewMap[currentIndex++];
-            const formData = new FormData();
-            formData.append('photos', currentItem.file);
-            formData.append('event_id', eventId);
-            formData.append('csrfmiddlewaretoken', csrfToken);
+            try {
+                if (isZip) {
+                    const zipData = new FormData();
+                    zipData.append('photos', file);
+                    zipData.append('event_id', eventId);
+                    zipData.append('csrfmiddlewaretoken', csrfToken);
 
-            fetch('{% url "gallery:upload" %}', { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => {
-                const el = document.getElementById(currentItem.id);
-                if (data.is_background) {
-                    if (el) el.querySelector('.rich-gallery-meta').innerHTML = '⏳ Processing in background...';
+                    const res = await fetch('{% url "gallery:upload" %}', { method: 'POST', body: zipData });
+                    const data = await res.json();
+                    
+                    if (statusBadge) {
+                        statusBadge.className = 'badge badge-emerald';
+                        statusBadge.innerText = '✅ ZIP Extracting';
+                    }
                 } else {
-                    if (el) el.remove();
-                    if (data.images && data.images.length > 0) {
-                        data.images.forEach(img => {
+                    const singleData = new FormData();
+                    singleData.append('photo', file);
+                    singleData.append('event_id', eventId);
+                    singleData.append('csrfmiddlewaretoken', csrfToken);
+
+                    const res = await fetch('{% url "gallery:upload_single" %}', { method: 'POST', body: singleData });
+                    const data = await res.json();
+
+                    if (data.success && data.image) {
+                        const img = data.image;
+                        if (statusBadge) {
+                            statusBadge.className = 'badge badge-emerald';
+                            statusBadge.innerText = `✅ Finished (👤 ${img.total_faces} faces)`;
+                        }
+
+                        // Stream & Add photo to Event Photos section at the same time!
+                        if (noPhotosMsg) noPhotosMsg.style.display = 'none';
+                        if (!knownPhotoIds.has(img.id)) {
+                            knownPhotoIds.add(img.id);
                             const dotIdx = img.filename.lastIndexOf('.');
                             const nameOnly = dotIdx !== -1 ? img.filename.substring(0, dotIdx) : img.filename;
                             const ext = dotIdx !== -1 ? img.filename.substring(dotIdx) : '';
                             const downloadName = `${nameOnly}_{{ event.slug }}${ext}`;
-                            gallery.insertBefore(makePhotoCard(img, downloadName), gallery.firstChild);
-                        });
+                            const card = makePhotoCard(img, downloadName);
+                            if (gallery) {
+                                gallery.insertBefore(card, gallery.firstChild);
+                            }
+                        }
+                    } else {
+                        const errMsg = data.message || 'Upload failed';
+                        if (statusBadge) {
+                            statusBadge.className = 'badge badge-rose';
+                            statusBadge.innerText = `✕ ${errMsg}`;
+                            statusBadge.title = errMsg;
+                        }
                     }
                 }
-                uploadNextImage(); // trigger next
-            })
-            .catch(err => {
-                showToast("Upload failed: " + err, "error");
-                uploadNextImage();
-            });
+            } catch (err) {
+                if (statusBadge) {
+                    statusBadge.className = 'badge badge-rose';
+                    statusBadge.innerText = `✕ Failed`;
+                }
+            }
+
+            completedCount++;
+            const pct = Math.round((completedCount / totalFiles) * 100);
+            queueCountText.innerText = `⚡ Processing Queue (${completedCount} / ${totalFiles})`;
+            queuePercentText.innerText = `${pct}%`;
+            queueProgressBar.style.width = `${pct}%`;
         }
 
-        // Start initial workers
-        for (let i = 0; i < Math.min(CONCURRENT_UPLOADS, previewMap.length); i++) {
-            uploadNextImage();
-        }
-        
-        if (previewMap.length > 0) {
-            showToast("Photos uploading to S3 in background!", "success");
-        }
+        showToast(`All ${totalFiles} photos processed & indexed!`, "success");
+        loadPeople();
+
+        setTimeout(() => {
+            queueContainer.style.display = 'none';
+        }, 5000);
     });
+
+    let knownPhotoIds = new Set();
+    let pollInterval = null;
+
+    function checkImportStatus() {
+        fetch('{% url "gallery:gdrive_import_status" event.slug %}')
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('gdriveProgressContainer');
+            const statusText = document.getElementById('gdriveStatusText');
+            const percentText = document.getElementById('gdrivePercentText');
+            const progressBar = document.getElementById('gdriveProgressBar');
+            const gallery = document.getElementById('photoGallery');
+            const noPhotosMsg = document.getElementById('noPhotosMessage');
+
+            if (data.active) {
+                if (container) container.style.display = 'block';
+                if (statusText) statusText.innerText = '⚡ ' + (data.message || 'Importing photos...');
+                if (percentText) percentText.innerText = (data.percent || 0) + '%';
+                if (progressBar) progressBar.style.width = (data.percent || 0) + '%';
+
+                if (!pollInterval) {
+                    pollInterval = setInterval(checkImportStatus, 2000);
+                }
+
+                // Stream new photos into Event Photos grid in real-time using makePhotoCard!
+                if (data.new_photos && data.new_photos.length > 0) {
+                    if (noPhotosMsg) noPhotosMsg.style.display = 'none';
+                    data.new_photos.forEach(photo => {
+                        if (!knownPhotoIds.has(photo.id) && !document.getElementById(`image-card-${photo.id}`)) {
+                            knownPhotoIds.add(photo.id);
+                            const dotIdx = photo.filename.lastIndexOf('.');
+                            const nameOnly = dotIdx !== -1 ? photo.filename.substring(0, dotIdx) : photo.filename;
+                            const ext = dotIdx !== -1 ? photo.filename.substring(dotIdx) : '';
+                            const downloadName = `${nameOnly}_{{ event.slug }}${ext}`;
+                            const photoCard = makePhotoCard(photo, downloadName);
+                            if (gallery) {
+                                gallery.insertBefore(photoCard, gallery.firstChild);
+                            }
+                        }
+                    });
+                }
+            } else {
+                // Import is NOT active — stop background polling immediately!
+                let wasPolling = false;
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                    wasPolling = true;
+                }
+                if (data.percent === 100 && data.message === 'Import finished!') {
+                    if (statusText) statusText.innerText = '✅ Import Complete!';
+                    if (percentText) percentText.innerText = '100%';
+                    if (progressBar) progressBar.style.width = '100%';
+                    setTimeout(() => {
+                        if (container) container.style.display = 'none';
+                        if (wasPolling) {
+                            loadPeople();
+                        }
+                    }, 2000);
+                } else if (container) {
+                    container.style.display = 'none';
+                }
+            }
+        })
+        .catch(err => {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        });
+    }
+
+    function cancelActiveImport() {
+        customConfirm("Cancel Import", "Are you sure you want to stop this Google Drive import?", (confirmed) => {
+            if (!confirmed) return;
+            const formData = new FormData();
+            formData.append('event_id', '{{ event.id }}');
+            formData.append('csrfmiddlewaretoken', document.querySelector('#gdriveForm [name=csrfmiddlewaretoken]').value);
+
+            fetch('{% url "gallery:cancel_gdrive_import" %}', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('gdriveProgressContainer');
+                if (container) container.style.display = 'none';
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                }
+                showToast("Import cancelled!", "info");
+            });
+        });
+    }
 
     gdriveForm.addEventListener('submit', e => {
         e.preventDefault();
-        const url = document.getElementById('gdriveUrl').value;
+        const urlInput = document.getElementById('gdriveUrl');
+        const url = urlInput.value;
+        if (!url) return;
+
+        const container = document.getElementById('gdriveProgressContainer');
+        if (container) container.style.display = 'block';
+
         const formData = new FormData();
         formData.append('gdrive_url', url);
         formData.append('event_id', '{{ event.id }}');
         formData.append('csrfmiddlewaretoken', document.querySelector('#gdriveForm [name=csrfmiddlewaretoken]').value);
-        document.getElementById('gdriveUrl').value = '';
+        urlInput.value = '';
+
         fetch('{% url "gallery:gdrive_import" %}', { method: 'POST', body: formData })
         .then(res => res.json())
-        .then(data => customAlert("Google Drive Import", data.message))
-        .catch(err => showToast("Import failed: " + err, "error"));
+        .then(data => {
+            if (data.success) {
+                showToast("Google Drive import started!", "success");
+                if (pollInterval) clearInterval(pollInterval);
+                pollInterval = setInterval(checkImportStatus, 1200);
+                checkImportStatus();
+            } else {
+                customAlert("Import Failed", data.message);
+            }
+        })
+        .catch(err => {
+            showToast("Import error: " + err, "error");
+        });
     });
+
+    // Check status on initial page load
+    checkImportStatus();
 
     // ── Lazy load photos
     let page = 1, hasNext = true, loading = false;
@@ -761,11 +1138,15 @@
         .then(data => {
             loading = false;
             hasNext = data.has_next;
+            if (!hasNext && typeof observer !== 'undefined' && observer && sentinel) {
+                observer.unobserve(sentinel);
+            }
             if (page === 1 && data.images.length === 0) {
                 noPhotosMessage.style.display = 'block';
                 return;
             }
             data.images.forEach(img => {
+                knownPhotoIds.add(img.id);
                 if (document.getElementById(`image-card-${img.id}`)) return;
                 const dotIdx = img.filename.lastIndexOf('.');
                 const nameOnly = dotIdx !== -1 ? img.filename.substring(0, dotIdx) : img.filename;
@@ -777,8 +1158,33 @@
         }).catch(err => { loading = false; console.error(err); });
     }
 
+    function updatePhotosHeaderTitle() {
+        const titleEl = document.getElementById('photosSectionTitle');
+        const clearBtn = document.getElementById('clearFilterBtn');
+        if (activePersonFilter) {
+            if (titleEl) titleEl.innerText = `Photos of ${activePersonFilter}`;
+            if (clearBtn) clearBtn.style.display = 'inline-flex';
+        } else {
+            if (titleEl) titleEl.innerText = 'Event Photos';
+            if (clearBtn) clearBtn.style.display = 'none';
+        }
+    }
+
+    function clearPersonFilter() {
+        activePersonFilter = null;
+        document.querySelectorAll('.person-card').forEach(c => {
+            c.style.borderColor = 'var(--border-light)';
+            c.style.background = 'var(--bg-tertiary)';
+        });
+        updatePhotosHeaderTitle();
+        page = 1;
+        hasNext = true;
+        gallery.innerHTML = '';
+        noPhotosMessage.style.display = 'none';
+        loadMorePhotos();
+    }
+
     function selectPerson(personName) {
-        // Toggle behavior: if already active, clear it. Otherwise set it.
         document.querySelectorAll('.person-card').forEach(c => {
             c.style.borderColor = 'var(--border-light)';
             c.style.background = 'var(--bg-tertiary)';
@@ -788,7 +1194,6 @@
             activePersonFilter = null;
         } else {
             activePersonFilter = personName;
-            // Highlight selected card visually
             const slugified = personName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
             const card = document.getElementById(`person-card-${slugified}`);
             if (card) {
@@ -797,7 +1202,7 @@
             }
         }
 
-        // Reset page logic and reload
+        updatePhotosHeaderTitle();
         page = 1;
         hasNext = true;
         gallery.innerHTML = '';
@@ -876,6 +1281,9 @@
             <div>
                 <div id="shareModalTitle" style="font-family:'Outfit',sans-serif; font-size:1.25rem; font-weight:800; color:var(--text-primary); margin-bottom:2px;">🔗 Share Event</div>
                 <div id="shareModalSubtitle" style="font-size:0.8rem; color:var(--text-muted);">Create public links for guests. Set password & expiry for control.</div>
+                <div style="font-size:0.78rem; background:rgba(79,70,229,0.06); border:1px solid rgba(79,70,229,0.15); border-radius:8px; padding:8px 12px; margin-top:8px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                    <span>✨</span> <b>AI Selfie Search Included:</b> Guests can upload a selfie on shared links to instantly find all photos they appear in.
+                </div>
             </div>
             <button onclick="closeShareManager()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted); padding:4px 8px; border-radius:6px; transition:var(--transition);" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='none'">×</button>
         </div>
@@ -1001,6 +1409,7 @@ function loadShareLinks() {
 
 function buildLinkRow(lnk) {
     const publicUrl = `${BASE_URL}/share/${lnk.token}/`;
+    const searchUrl = `${BASE_URL}/share/${lnk.token}/search/`;
     const div = document.createElement('div');
     div.className = 'share-link-row';
     div.id = `share-row-${lnk.id}`;
@@ -1032,9 +1441,12 @@ function buildLinkRow(lnk) {
             </div>
         </div>
         <div class="share-link-url">${publicUrl}</div>
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <button onclick="copyShareUrl('${publicUrl}', this)" style="font-size:0.72rem; padding:4px 12px; border-radius:6px; border:1px solid var(--border-medium); background:var(--bg-secondary); cursor:pointer; font-weight:600; color:var(--text-secondary); transition:var(--transition);">
-                📋 Copy Link
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px;">
+            <button onclick="copyShareUrl('${publicUrl}', this)" style="font-size:0.72rem; padding:5px 12px; border-radius:6px; border:1px solid var(--border-medium); background:var(--bg-secondary); cursor:pointer; font-weight:600; color:var(--text-secondary); transition:var(--transition);">
+                📋 Copy Gallery Link
+            </button>
+            <button onclick="copyShareUrl('${searchUrl}', this)" style="font-size:0.72rem; padding:5px 12px; border-radius:6px; border:1px solid rgba(79,70,229,0.3); background:rgba(79,70,229,0.08); cursor:pointer; font-weight:700; color:var(--accent-indigo); transition:var(--transition);">
+                🔍 Copy AI Search Link
             </button>
             <span style="font-size:0.7rem; color:var(--text-muted);">Created ${lnk.created_at}</span>
             ${lnk.expires_at ? `<span style="font-size:0.7rem; color:var(--accent-amber);">⏰ Expires ${lnk.expires_at.replace('T',' ')}</span>` : ''}

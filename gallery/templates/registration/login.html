@@ -39,7 +39,9 @@
     .auth-visual-overlay {
         position: absolute;
         inset: 0;
-        background: linear-gradient(135deg, rgba(99,102,241,0.8), rgba(236,72,153,0.8));
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(79, 70, 229, 0.88) 50%, rgba(147, 51, 234, 0.9) 100%);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -88,8 +90,31 @@
         <!-- Left Side Visual -->
         <div class="auth-visual">
             <div class="auth-visual-overlay">
-                <h2 style="font-size: 2.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 1rem; letter-spacing: -0.04em;">Capture the Moment.<br>Share the Magic.</h2>
-                <p style="font-size: 1.1rem; opacity: 0.9; line-height: 1.6;">Sign in to access your AI-powered photo delivery workspace.</p>
+                <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 50px; padding: 6px 16px; width: fit-content; margin-bottom: 1.5rem;">
+                    <span style="font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; color: #ffffff; text-transform: uppercase;">✦ AI PHOTO PLATFORM</span>
+                </div>
+                <h2 style="font-size: 2.65rem; font-weight: 900; line-height: 1.15; margin-bottom: 1.25rem; letter-spacing: -0.03em; color: #ffffff;">
+                    Capture the Moment.<br>
+                    <span style="background: linear-gradient(135deg, #a5b4fc 0%, #c084fc 50%, #f472b6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 10px 30px rgba(192, 132, 252, 0.3);">Share the Magic.</span>
+                </h2>
+                <p style="font-size: 1.05rem; color: rgba(255, 255, 255, 0.9); line-height: 1.6; font-weight: 400; margin-bottom: 2rem;">
+                    Sign in to access your AI-powered photo delivery workspace and smart gallery management.
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.9rem; color: rgba(255, 255, 255, 0.95); font-weight: 500;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">✓</div>
+                        Instant AI Face Recognition & Search
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">✓</div>
+                        High-Resolution Bulk Zip Downloads
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">✓</div>
+                        Secure Private Guest Gallery Sharing
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -122,6 +147,10 @@
                 </div>
                 <button type="submit" class="btn hover-glow" style="width: 100%; padding: 1rem; font-size: 1rem; border-radius: var(--radius-md); box-shadow: var(--shadow-glow);">Sign In</button>
             </form>
+
+            <div style="text-align: center; margin-top: 1.75rem; font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">
+                Don't have an account? <a href="{% url 'gallery:user_register' %}" style="color: var(--accent-indigo); font-weight: 750; text-decoration: none;">Sign Up</a>
+            </div>
         </div>
     </div>
 </div>

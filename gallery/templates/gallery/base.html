@@ -19,15 +19,16 @@
         }
 
         .custom-toast {
-            background: #ffffff;
-            border: 1px solid var(--border-light);
+            background: rgba(18, 24, 38, 0.92);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             padding: 1rem 1.5rem;
             border-radius: var(--radius-md);
-            box-shadow: var(--shadow-lg);
+            box-shadow: var(--shadow-xl);
             display: flex;
             align-items: center;
             gap: 10px;
-            color: var(--text-primary);
+            color: #ffffff;
             font-size: 0.9rem;
             font-weight: 500;
             min-width: 300px;
@@ -54,8 +55,9 @@
         .custom-modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(16px);
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             z-index: 99999;
             display: none;
             align-items: center;
@@ -65,15 +67,16 @@
 
         .custom-modal-card {
             background: #ffffff;
-            border: 1px solid var(--border-light);
+            border: 1px solid rgba(226, 232, 240, 0.9);
             border-radius: var(--radius-xl);
             width: 100%;
             max-width: 440px;
-            padding: 2rem;
-            box-shadow: var(--shadow-xl);
-            transform: scale(0.92);
-            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            padding: 2.25rem 2rem;
+            box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.25);
+            transform: scale(0.94);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             display: block;
+            color: #0f172a;
         }
 
         .custom-modal-overlay.show {
@@ -85,18 +88,19 @@
         }
 
         .custom-modal-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 0.65rem;
             letter-spacing: -0.02em;
         }
 
         .custom-modal-body {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
+            font-size: 0.92rem;
+            color: #475569;
             line-height: 1.55;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.75rem;
+            font-weight: 450;
         }
 
         .custom-modal-actions {
@@ -106,10 +110,10 @@
         }
 
         .custom-modal-btn {
-            padding: 0.55rem 1.2rem;
+            padding: 0.6rem 1.35rem;
             border-radius: var(--radius-sm);
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.86rem;
+            font-weight: 700;
             cursor: pointer;
             transition: var(--transition);
             font-family: inherit;
@@ -117,24 +121,25 @@
 
         .custom-modal-btn.primary {
             background: var(--gradient-primary);
-            color: white;
+            color: #ffffff;
             border: none;
-            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
         }
 
         .custom-modal-btn.primary:hover {
-            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45);
             transform: translateY(-1px);
         }
 
         .custom-modal-btn.secondary {
-            background: var(--bg-tertiary);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-light);
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
         }
 
         .custom-modal-btn.secondary:hover {
-            background: rgba(15, 23, 42, 0.06);
+            background: #e2e8f0;
+            color: #0f172a;
         }
 
         .custom-modal-input {
@@ -164,10 +169,17 @@
     </style>
 </head>
 <body>
-    <header class="glass-panel" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 2.5rem; position: sticky; top: 0; z-index: 100; margin-bottom: 2.5rem; border-bottom: 1px solid var(--glass-border); background: var(--glass-bg); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);">
-        <a href="{% if request.user.is_superuser %}{% url 'gallery:super_admin_dashboard' %}{% elif request.user.is_authenticated %}{% url 'gallery:dashboard' %}{% else %}/{% endif %}" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
-            <div class="logo" style="display: flex; align-items: center; gap: 10px; font-size: 1.6rem; font-weight: 850; letter-spacing: -0.05em;">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 6px rgba(99, 102, 241, 0.3));">
+    <!-- Background Mesh Gradient Orbs for Glassmorphism Depth -->
+    <div class="bg-mesh-container">
+        <div class="bg-orb bg-orb-1"></div>
+        <div class="bg-orb bg-orb-2"></div>
+        <div class="bg-orb bg-orb-3"></div>
+    </div>
+
+    <header class="glass-panel" style="display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 2.5rem; position: sticky; top: 0; z-index: 100; margin-bottom: 2.5rem; border-bottom: 1px solid var(--glass-border); background: var(--glass-bg); backdrop-filter: blur(28px) saturate(200%); -webkit-backdrop-filter: blur(28px) saturate(200%);">
+        <a href="{% if request.user.is_superuser %}{% url 'gallery:super_admin_dashboard' %}{% elif request.user.is_authenticated %}{% url 'gallery:dashboard' %}{% else %}/{% endif %}" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
+            <div class="logo" style="display: flex; align-items: center; gap: 10px; font-size: 1.65rem; font-weight: 850; letter-spacing: -0.05em;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 6px 12px rgba(99, 102, 241, 0.4));">
                     <rect x="2" y="2" width="20" height="20" rx="8" fill="url(#grad_logo)"/>
                     <circle cx="12" cy="12" r="4.5" fill="white" opacity="0.95"/>
                     <circle cx="17.5" cy="6.5" r="1.5" fill="white" opacity="0.8"/>
@@ -181,30 +193,85 @@
                 <span class="text-gradient">Photona</span>
             </div>
         </a>
-        <nav style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255, 255, 255, 0.5); padding: 0.35rem 0.5rem; border-radius: var(--radius-xl); border: 1px solid var(--border-light); box-shadow: var(--shadow-sm);">
+        <nav style="display: flex; align-items: center; gap: 0.4rem; background: rgba(241, 245, 249, 0.85); padding: 0.35rem 0.6rem; border-radius: 9999px; border: 1px solid rgba(226, 232, 240, 0.9); box-shadow: var(--shadow-sm); backdrop-filter: blur(16px);">
             {% if request.user.is_authenticated %}
-                {% if request.user.is_superuser %}
-                    <a href="{% url 'gallery:super_admin_dashboard' %}" class="nav-link {% if request.resolver_match.view_name == 'gallery:super_admin_dashboard' %}active{% endif %}" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">Dashboard</a>
-                {% else %}
-                    <a href="{% url 'gallery:dashboard' %}" class="nav-link {% if request.resolver_match.view_name == 'gallery:dashboard' %}active{% endif %}" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">Events</a>
+                {% if not request.user.is_superuser %}
+                    <a href="{% url 'gallery:dashboard' %}" class="nav-link {% if request.resolver_match.view_name == 'gallery:dashboard' %}active{% endif %}" style="border-radius: 9999px; padding: 0.55rem 1.25rem;">Events</a>
                     {% if request.resolver_match.view_name == 'gallery:event_detail' or request.resolver_match.view_name == 'gallery:search' or request.resolver_match.view_name == 'gallery:group_by_face' %}
                         {% with ev=selected_event|default:event %}
                             {% if ev %}
-                                <a href="{% url 'gallery:search' %}?event={{ ev.slug }}" class="nav-link {% if request.resolver_match.view_name == 'gallery:search' %}active{% endif %}" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">AI Search</a>
+                                <a href="{% url 'gallery:search' %}?event={{ ev.slug }}" class="nav-link {% if request.resolver_match.view_name == 'gallery:search' %}active{% endif %}" style="border-radius: 9999px; padding: 0.55rem 1.25rem;">AI Search</a>
                             {% endif %}
                         {% endwith %}
                     {% endif %}
+                    <div style="width: 1px; height: 16px; background: #cbd5e1; margin: 0 0.25rem;"></div>
                 {% endif %}
-                <div style="width: 1px; height: 16px; background: var(--border-medium); margin: 0 0.25rem;"></div>
-                <a href="{% url 'gallery:user_logout' %}" class="nav-link" style="color: var(--accent-rose); border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">Logout</a>
+
+                <!-- Profile Section with Logout inside -->
+                <div class="profile-dropdown-container" style="position: relative; display: inline-block;">
+                    <button type="button" onclick="toggleProfileDropdown(event)" class="nav-link profile-trigger-btn" style="display: inline-flex; align-items: center; gap: 8px; border-radius: 9999px; padding: 0.45rem 1.1rem; border: 1px solid #cbd5e1; background: #ffffff; cursor: pointer; color: #0f172a; font-size: 0.88rem; font-weight: 750; box-shadow: var(--shadow-sm); transition: var(--transition);">
+                        <div style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 850; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);">
+                            {{ request.user.username|make_list|first|upper }}
+                        </div>
+                        <span>Profile</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="margin-left: 2px;"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+
+                    <!-- Dropdown Menu Content -->
+                    <div id="profileDropdownMenu" class="profile-dropdown-menu" style="display: none; position: absolute; right: 0; top: calc(100% + 10px); width: 250px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 20px; padding: 1.1rem; box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.15); z-index: 9999; backdrop-filter: blur(24px);">
+                        <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 0.85rem; border-bottom: 1px solid #f1f5f9; margin-bottom: 0.85rem;">
+                            <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 850; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+                                {{ request.user.username|make_list|first|upper }}
+                            </div>
+                            <div style="overflow: hidden;">
+                                <div style="font-weight: 850; color: #0f172a; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ request.user.username|title }}</div>
+                                <div style="font-size: 0.74rem; color: #4f46e5; font-weight: 750; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">
+                                    {% if request.user.is_superuser %}Super Admin{% else %}{{ request.user.profile.get_role_display|default:"Studio Admin" }}{% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if request.user.email %}
+                            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 1rem; padding: 0 4px; word-break: break-all; font-weight: 500;">
+                                ✉️ {{ request.user.email }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Logout Action inside Profile section -->
+                        <a href="{% url 'gallery:user_logout' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 0.7rem 1rem; border-radius: 12px; background: rgba(225, 29, 72, 0.08); color: #e11d48; border: 1px solid rgba(225, 29, 72, 0.25); font-size: 0.88rem; font-weight: 750; text-decoration: none; transition: var(--transition);" onmouseover="this.style.background='#e11d48'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(225, 29, 72, 0.08)'; this.style.color='#e11d48';">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.0203 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M11 11L15 7M15 7L11 3M15 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Logout
+                        </a>
+                    </div>
+                </div>
             {% else %}
-                <a href="/#features" class="nav-link" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">Features</a>
-                <a href="/#pricing" class="nav-link" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem;">Pricing</a>
-                <div style="width: 1px; height: 16px; background: var(--border-medium); margin: 0 0.25rem;"></div>
-                <a href="{% url 'gallery:user_login' %}" class="nav-link {% if request.resolver_match.view_name == 'gallery:user_login' %}active{% endif %}" style="border-radius: var(--radius-lg); padding: 0.6rem 1.25rem; font-weight: 700; color: var(--accent-indigo);">Sign In</a>
+                <a href="/#features" class="nav-link" style="border-radius: 9999px; padding: 0.55rem 1.2rem; color: #475569;">Features</a>
+                <a href="/#pricing" class="nav-link" style="border-radius: 9999px; padding: 0.55rem 1.2rem; color: #475569;">Pricing</a>
+                <div style="width: 1px; height: 16px; background: #cbd5e1; margin: 0 0.25rem;"></div>
+                <a href="{% url 'gallery:user_login' %}" class="nav-link {% if request.resolver_match.view_name == 'gallery:user_login' %}active{% endif %}" style="border-radius: 9999px; padding: 0.55rem 1.35rem; font-weight: 800; {% if request.resolver_match.view_name == 'gallery:user_login' %}color: #ffffff !important; background: linear-gradient(135deg, #4f46e5, #7c3aed); box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);{% else %}color: #4f46e5 !important; border: 1px solid rgba(79, 70, 229, 0.3);{% endif %}">Sign In</a>
+                <a href="{% url 'gallery:user_register' %}" class="nav-link {% if request.resolver_match.view_name == 'gallery:user_register' %}active{% endif %}" style="border-radius: 9999px; padding: 0.55rem 1.35rem; font-weight: 800; {% if request.resolver_match.view_name == 'gallery:user_register' %}color: #ffffff !important; background: linear-gradient(135deg, #4f46e5, #7c3aed); box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);{% else %}color: #4f46e5 !important; border: 1px solid rgba(79, 70, 229, 0.3);{% endif %}">Sign Up</a>
             {% endif %}
-        </nav>
     </header>
+
+    {% if request.user.is_authenticated %}
+    <!-- Global Sticky Background Import Banner -->
+    <div id="globalImportBanner" style="display: none; position: sticky; top: 80px; z-index: 999; margin: 0 auto 1.5rem auto; width: calc(100% - 5rem); max-width: 1200px; background: rgba(79, 70, 229, 0.95); backdrop-filter: blur(20px); color: #ffffff; padding: 0.75rem 1.5rem; border-radius: 18px; box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3); border: 1px solid rgba(255, 255, 255, 0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px; font-size: 0.88rem; font-weight: 750; flex: 1; min-width: 280px;">
+                <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #ffffff; border-radius: 50%; animation: spin 0.7s linear infinite;"></span>
+                <span id="globalImportText">⚡ Importing photos in background...</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 140px; height: 8px; background: rgba(255, 255, 255, 0.25); border-radius: 9999px; overflow: hidden;">
+                    <div id="globalImportBar" style="width: 0%; height: 100%; background: #ffffff; border-radius: 9999px; transition: width 0.4s ease;"></div>
+                </div>
+                <span id="globalImportPercent" style="font-size: 0.82rem; font-weight: 850; min-width: 35px;">0%</span>
+                <a id="globalImportViewBtn" href="#" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 0.35rem 0.85rem; border-radius: 12px; font-size: 0.78rem; font-weight: 800; text-decoration: none;">View Album →</a>
+                <button type="button" onclick="cancelActiveGlobalImport()" style="background: rgba(225, 29, 72, 0.9); color: white; border: none; padding: 0.35rem 0.85rem; border-radius: 12px; font-size: 0.78rem; font-weight: 800; cursor: pointer; transition: background 0.2s;">✕ Cancel</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="app-container">
         <main style="width: 100%;">
@@ -339,6 +406,89 @@
             closeCustomModal();
             if (callback) callback(null);
         });
+
+        // Toggle Profile Dropdown Menu
+        function toggleProfileDropdown(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('profileDropdownMenu');
+            if (menu) {
+                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('profileDropdownMenu');
+            if (menu && !menu.contains(e.target)) {
+                menu.style.display = 'none';
+            }
+        });
+
+        // ── Global Background Import Tracker ──
+        let globalActiveEventSlug = null;
+        let globalActiveEventId = null;
+
+        let globalPollInterval = null;
+
+        function checkGlobalImportStatus() {
+            {% if request.user.is_authenticated %}
+            fetch('{% url "gallery:active_imports_api" %}')
+            .then(res => res.json())
+            .then(data => {
+                const banner = document.getElementById('globalImportBanner');
+                if (!banner) return;
+                
+                if (data.active && data.job) {
+                    const job = data.job;
+                    globalActiveEventSlug = job.event_slug;
+                    globalActiveEventId = job.event_id;
+                    
+                    banner.style.display = 'block';
+                    document.getElementById('globalImportText').innerText = `⚡ Importing to '${job.event_name}': ${job.message}`;
+                    document.getElementById('globalImportPercent').innerText = (job.percent || 0) + '%';
+                    document.getElementById('globalImportBar').style.width = (job.percent || 0) + '%';
+                    document.getElementById('globalImportViewBtn').href = `/event/${job.event_slug}/`;
+
+                    if (!globalPollInterval) {
+                        globalPollInterval = setInterval(checkGlobalImportStatus, 3000);
+                    }
+                } else {
+                    banner.style.display = 'none';
+                    if (globalPollInterval) {
+                        clearInterval(globalPollInterval);
+                        globalPollInterval = null;
+                    }
+                }
+            })
+            .catch(err => {
+                if (globalPollInterval) {
+                    clearInterval(globalPollInterval);
+                    globalPollInterval = null;
+                }
+            });
+            {% endif %}
+        }
+
+        function cancelActiveGlobalImport() {
+            if (!globalActiveEventId && !globalActiveEventSlug) return;
+            customConfirm("Cancel Import", "Are you sure you want to stop this Google Drive import?", (confirmed) => {
+                if (!confirmed) return;
+                const formData = new FormData();
+                if (globalActiveEventId) formData.append('event_id', globalActiveEventId);
+                if (globalActiveEventSlug) formData.append('event_slug', globalActiveEventSlug);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch('{% url "gallery:cancel_gdrive_import" %}', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    showToast("Import cancelled!", "info");
+                    checkGlobalImportStatus();
+                });
+            });
+        }
+
+        {% if request.user.is_authenticated and request.resolver_match.url_name != 'event_detail' %}
+        checkGlobalImportStatus();
+        {% endif %}
     </script>
 </body>
 </html>

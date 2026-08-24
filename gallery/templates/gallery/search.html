@@ -72,19 +72,25 @@
     </div>
     
     {% if results %}
-        <div class="gallery-grid">
+        <div class="rich-gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem;">
             {% for res in results %}
-                <div class="gallery-item">
-                    <div style="position: relative;">
+                <div class="rich-gallery-item" style="border-radius: 18px; overflow: hidden; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06); transition: transform 0.25s ease, box-shadow 0.25s ease;">
+                    <div class="rich-thumb-wrap" style="position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: #0f172a;">
                         <a href="{{ res.image.file.url }}" target="_blank">
-                            <img class="gallery-thumb" src="{{ res.image.file.url }}" alt="{{ res.image.filename }}">
+                            <img class="rich-thumb" src="{% if res.image.thumbnail %}{{ res.image.thumbnail.url }}{% else %}{{ res.image.file.url }}{% endif %}" alt="{{ res.image.filename }}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
                         </a>
-                        <a href="{% url 'gallery:download_single_image' res.image.id %}" class="download-img-btn" title="Download Photo" style="position: absolute; bottom: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; font-size: 0.85rem; transition: var(--transition); border: 1px solid rgba(255,255,255,0.15);" onmouseover="this.style.background='rgba(99, 102, 241, 0.9)'" onmouseout="this.style.background='rgba(15, 23, 42, 0.6)'">⬇️</a>
+                        <div style="position: absolute; top: 10px; right: 10px; background: rgba(5, 150, 105, 0.9); color: white; font-size: 0.72rem; font-weight: 850; padding: 4px 10px; border-radius: 12px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2);">
+                            🎯 Match: {{ res.score|floatformat:2 }}
+                        </div>
+                        <a href="{% url 'gallery:download_single_image' res.image.id %}" class="thumb-action-btn" title="Download Photo" style="position: absolute; bottom: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(15, 23, 42, 0.75); color: white; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 0.9rem; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(15, 23, 42, 0.75)'">⬇</a>
                     </div>
-                    <div class="gallery-info">
-                        <div class="name" title="{{ res.image.filename }}">{{ res.image.filename }}</div>
-                        <div class="details">
-                            <span class="badge badge-emerald">Score: {{ res.score|floatformat:4 }}</span>
+                    <div class="rich-gallery-info" style="padding: 0.85rem 1rem;">
+                        <div class="rich-gallery-name" title="{{ res.image.event.name }} #{{ res.image.id }}" style="font-weight: 750; font-size: 0.85rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            {{ res.image.event.name }} <span style="color: var(--accent-indigo); font-size: 0.78rem;">#{{ res.image.id }}</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 3px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>👤 {{ res.image.total_faces }} faces</span>
+                            <span>{{ res.image.uploaded_at|date:"M d, H:i" }}</span>
                         </div>
                     </div>
                 </div>

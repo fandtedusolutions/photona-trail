@@ -14,6 +14,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 
+from django.utils.text import slugify
 from config import VALID_IMAGE_EXTENSIONS
 from .models import GalleryImage, FaceEmbedding, Event, UserProfile, SubscriptionPlan, EventShareLink
 from .utils import process_gallery_image, search_person_by_selfie
@@ -44,10 +45,67 @@ def user_login(request):
 
 def user_logout(request):
     logout(request)
-    return redirect('gallery:user_login')
+    return redirect('/')
+
+def user_register(request):
+    if request.user.is_authenticated:
+        return redirect('gallery:dashboard')
+        
+    error = None
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        password_confirm = request.POST.get('password_confirm', '').strip()
+        role = request.POST.get('role', 'studio_man')
+        plan_id = request.POST.get('plan_id')
+
+        if not username or not password:
+            error = "Username and password are required."
+        elif password != password_confirm:
+            error = "Passwords do not match."
+        elif User.objects.filter(username=username).exists():
+            error = "Username is already taken."
+        else:
+            user = User.objects.create_user(username=username, email=email, password=password)
+            plan = None
+            if plan_id:
+                plan = SubscriptionPlan.objects.filter(id=plan_id).first()
+            if not plan:
+                plan = SubscriptionPlan.objects.first()
+                
+            UserProfile.objects.create(user=user, role=role, subscription_plan=plan)
+            login(request, user)
+            return redirect('gallery:dashboard')
+
+    plans = SubscriptionPlan.objects.all()
+    roles = UserProfile.ROLE_CHOICES
+    return render(request, 'registration/register.html', {
+        'error': error,
+        'plans': plans,
+        'roles': roles
+    })
 
 # -------------------------------------------------------------
 # Tenant Dashboard
+def recalculate_user_storage(user):
+    if not user or not hasattr(user, 'profile') or not user.profile:
+        return 0.0
+    user_images = GalleryImage.objects.filter(event__owner=user)
+    total_bytes = 0
+    for img in user_images:
+        try:
+            if img.file and hasattr(img.file, 'size'):
+                total_bytes += img.file.size
+            if img.thumbnail and hasattr(img.thumbnail, 'size'):
+                total_bytes += img.thumbnail.size
+        except Exception:
+            pass
+    actual_mb = total_bytes / (1024 * 1024)
+    user.profile.used_storage_mb = actual_mb
+    user.profile.save()
+    return actual_mb
+
 # -------------------------------------------------------------
 def dashboard(request):
     if not request.user.is_authenticated:
@@ -59,6 +117,10 @@ def dashboard(request):
         
     # Get or create profile for tenant
     profile, _ = UserProfile.objects.get_or_create(user=request.user, defaults={'role': 'event_organizer'})
+    
+    # Recalculate actual storage used from disk files
+    recalculate_user_storage(request.user)
+    profile.refresh_from_db()
     
     total_images = GalleryImage.objects.filter(event__owner=request.user).count()
     total_faces = FaceEmbedding.objects.filter(image__event__owner=request.user).count()
@@ -207,26 +269,26 @@ def update_event(request, slug):
 @login_required
 @require_POST
 def delete_event(request, slug):
-    event = get_object_or_404(Event, slug=slug, owner=request.user)
-    # Deduct files storage from used_storage
-    profile = request.user.profile
+    if request.user.is_superuser:
+        event = get_object_or_404(Event, slug=slug)
+    else:
+        event = get_object_or_404(Event, slug=slug, owner=request.user)
+
+    owner = event.owner
     for img in event.images.all():
         if img.file:
             try:
-                size_mb = img.file.size / (1024 * 1024)
-                profile.used_storage_mb = max(0.0, profile.used_storage_mb - size_mb)
                 img.file.delete(save=False)
             except Exception:
                 pass
         if img.thumbnail:
             try:
-                thumb_size_mb = img.thumbnail.size / (1024 * 1024)
-                profile.used_storage_mb = max(0.0, profile.used_storage_mb - thumb_size_mb)
                 img.thumbnail.delete(save=False)
             except Exception:
                 pass
-    profile.save()
     event.delete()
+    if owner:
+        recalculate_user_storage(owner)
     return redirect('gallery:dashboard')
 
 @login_required
@@ -273,6 +335,8 @@ def photos_api(request):
         data.append({
             'id': img.id,
             'filename': img.filename,
+            'event_name': img.event.name if img.event else "Event",
+            'organiser_name': img.event.owner.username.title() if (img.event and img.event.owner) else "Studio",
             'url': img.thumbnail.url if img.thumbnail else img.file.url,
             'total_faces': img.total_faces,
             'uploaded_at': img.uploaded_at.strftime("%b %d, %H:%M")
@@ -357,6 +421,56 @@ def upload_photos(request):
     return render(request, 'gallery/upload.html')
 
 @login_required
+@require_POST
+def upload_single_photo(request):
+    file = request.FILES.get('photo')
+    event_id = request.POST.get('event_id')
+    
+    if not file or not event_id:
+        return JsonResponse({'success': False, 'message': 'File and event ID required.'})
+        
+    try:
+        if request.user.is_superuser:
+            event = get_object_or_404(Event, id=event_id)
+        else:
+            event = get_object_or_404(Event, id=event_id, owner=request.user)
+
+        # Handle user profile & storage check
+        if hasattr(request.user, 'profile') and request.user.profile and not request.user.is_superuser:
+            profile = request.user.profile
+            if profile.subscription_plan:
+                limit_mb = profile.subscription_plan.storage_limit_mb
+                file_size_mb = file.size / (1024 * 1024)
+                if (profile.used_storage_mb + file_size_mb) > limit_mb:
+                    return JsonResponse({
+                        'success': False,
+                        'message': f"Storage limit reached ({limit_mb} MB limit)."
+                    })
+                profile.used_storage_mb += file_size_mb
+                profile.save()
+
+        gallery_image = GalleryImage(filename=file.name, event=event)
+        gallery_image.file.save(file.name, file, save=True)
+        
+        num_faces = process_gallery_image(gallery_image)
+        
+        return JsonResponse({
+            'success': True,
+            'image': {
+                'id': gallery_image.id,
+                'filename': gallery_image.filename,
+                'event_name': event.name if event else "Event",
+                'organiser_name': event.owner.username.title() if (event and event.owner) else "Studio",
+                'url': gallery_image.thumbnail.url if gallery_image.thumbnail else gallery_image.file.url,
+                'total_faces': gallery_image.total_faces,
+                'uploaded_at': gallery_image.uploaded_at.strftime("%b %d, %H:%M")
+            }
+        })
+    except Exception as e:
+        print(f"[DEBUG] upload_single_photo error: {e}")
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@login_required
 def search_person(request):
     results = None
     error_message = None
@@ -408,52 +522,192 @@ def delete_image(request, image_id):
     if not request.user.is_superuser and gallery_image.event.owner != request.user:
         return HttpResponseForbidden("Unauthorized")
         
-    # Deduct storage
+    owner = gallery_image.event.owner if gallery_image.event else None
+
     if gallery_image.file:
         try:
-            size_mb = gallery_image.file.size / (1024 * 1024)
-            profile = request.user.profile
-            profile.used_storage_mb = max(0.0, profile.used_storage_mb - size_mb)
-            profile.save()
             gallery_image.file.delete(save=False)
         except Exception:
             pass
             
     if gallery_image.thumbnail:
         try:
-            thumb_size_mb = gallery_image.thumbnail.size / (1024 * 1024)
-            profile = request.user.profile
-            profile.used_storage_mb = max(0.0, profile.used_storage_mb - thumb_size_mb)
-            profile.save()
             gallery_image.thumbnail.delete(save=False)
         except Exception:
             pass
         
     gallery_image.delete()
+    if owner:
+        recalculate_user_storage(owner)
     return JsonResponse({'success': True, 'message': 'Image deleted successfully.'})
+
+@login_required
+@require_POST
+def bulk_delete_images(request):
+    import json
+    try:
+        raw_ids = request.POST.get('image_ids')
+        if raw_ids:
+            try:
+                image_ids = json.loads(raw_ids)
+            except Exception:
+                image_ids = [i.strip() for i in raw_ids.split(',') if i.strip()]
+        else:
+            image_ids = request.POST.getlist('image_ids[]')
+            
+        if not image_ids:
+            return JsonResponse({'success': False, 'message': 'No image IDs provided.'})
+
+        deleted_ids = []
+        owner = None
+        for img_id in image_ids:
+            try:
+                gallery_image = GalleryImage.objects.get(id=img_id)
+                if not request.user.is_superuser and gallery_image.event.owner != request.user:
+                    continue
+                
+                if gallery_image.event:
+                    owner = gallery_image.event.owner
+                    
+                if gallery_image.file:
+                    try:
+                        gallery_image.file.delete(save=False)
+                    except Exception:
+                        pass
+                if gallery_image.thumbnail:
+                    try:
+                        gallery_image.thumbnail.delete(save=False)
+                    except Exception:
+                        pass
+                gallery_image.delete()
+                deleted_ids.append(int(img_id))
+            except (GalleryImage.DoesNotExist, ValueError):
+                continue
+
+        if owner:
+            recalculate_user_storage(owner)
+
+        return JsonResponse({
+            'success': True,
+            'deleted_ids': deleted_ids,
+            'message': f'{len(deleted_ids)} photos deleted successfully.'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+IMPORT_JOBS = {}
 
 @login_required
 @require_POST
 def gdrive_import(request):
     url = request.POST.get('gdrive_url')
     event_id = request.POST.get('event_id')
-    event = get_object_or_404(Event, id=event_id, owner=request.user)
     
     if not url:
         return JsonResponse({'success': False, 'message': 'No Google Drive URL provided.'})
         
+    event = None
+    if event_id:
+        event = Event.objects.filter(id=event_id, owner=request.user).first()
+    if not event:
+        event = Event.objects.filter(owner=request.user).first()
+        if not event:
+            event = Event.objects.create(name="Drive Imports", description="Imported from Google Drive", owner=request.user)
+        
     try:
-        # Note: GDrive downloads will run in the background. Since we cannot check size beforehand, 
-        # size calculation and storage limit deduction happens after background download is complete.
-        process_gdrive_import_task.delay(url, event_id)
+        import threading
+        from .utils import download_and_index_gdrive_link
+        
+        target_event_id = event.id
+        target_event_name = event.name
+        job_id = f"import_{event.id}"
+        
+        IMPORT_JOBS[job_id] = {
+            'active': True,
+            'current': 0,
+            'total': 0,
+            'percent': 0,
+            'message': 'Connecting to Google Drive...',
+            'new_photos': []
+        }
+        
+        def run_import():
+            try:
+                indexed, faces = download_and_index_gdrive_link(url, event_id=target_event_id, job_id=job_id, jobs_dict=IMPORT_JOBS)
+                print(f"[SUCCESS] Google Drive import finished for '{target_event_name}': {indexed} images, {faces} faces indexed.")
+            except Exception as ex:
+                print(f"[DEBUG] Background GDrive import thread error: {ex}")
+                if job_id in IMPORT_JOBS:
+                    IMPORT_JOBS[job_id]['active'] = False
+                    IMPORT_JOBS[job_id]['message'] = f"Import error: {ex}"
+                
+        thread = threading.Thread(target=run_import)
+        thread.daemon = True
+        thread.start()
         
         return JsonResponse({
             'success': True,
-            'message': "Import started. Photos are being downloaded and indexed in the background."
+            'message': f"Google Drive import started for '{event.name}'!",
+            'event_slug': event.slug,
+            'job_id': job_id
         })
     except Exception as e:
         print(f"[DEBUG] Google Drive import spawn error: {e}")
         return JsonResponse({'success': False, 'message': str(e)})
+
+@login_required
+def gdrive_import_status(request, slug):
+    event = get_object_or_404(Event, slug=slug)
+    job_id = f"import_{event.id}"
+    job_data = IMPORT_JOBS.get(job_id, {'active': False, 'current': 0, 'total': 0, 'percent': 0, 'message': '', 'new_photos': []})
+    return JsonResponse(job_data)
+
+@login_required
+@require_POST
+def cancel_gdrive_import(request):
+    event_id = request.POST.get('event_id')
+    slug = request.POST.get('event_slug')
+    if slug and not event_id:
+        event = Event.objects.filter(slug=slug, owner=request.user).first()
+        if event:
+            event_id = event.id
+            
+    if not event_id:
+        return JsonResponse({'success': False, 'message': 'Event ID or slug required.'})
+        
+    job_id = f"import_{event_id}"
+    if job_id in IMPORT_JOBS:
+        IMPORT_JOBS[job_id]['cancelled'] = True
+        IMPORT_JOBS[job_id]['active'] = False
+        IMPORT_JOBS[job_id]['message'] = "Import cancelled by user."
+        return JsonResponse({'success': True, 'message': 'Import cancelled.'})
+    return JsonResponse({'success': False, 'message': 'No active import found.'})
+
+@login_required
+def active_imports_api(request):
+    if request.user.is_superuser:
+        user_events = Event.objects.all()
+    else:
+        user_events = Event.objects.filter(owner=request.user)
+        
+    active_job = None
+    for ev in user_events:
+        job_id = f"import_{ev.id}"
+        job = IMPORT_JOBS.get(job_id)
+        if job and job.get('active'):
+            active_job = {
+                'event_id': ev.id,
+                'event_name': ev.name,
+                'event_slug': ev.slug,
+                'current': job.get('current', 0),
+                'total': job.get('total', 0),
+                'percent': job.get('percent', 0),
+                'message': job.get('message', ''),
+                'new_photos': job.get('new_photos', [])
+            }
+            break
+            
+    return JsonResponse({'active': active_job is not None, 'job': active_job})
 
 @login_required
 def group_by_face(request):
@@ -571,8 +825,10 @@ def download_event_zip(request, slug):
                     print(f"Error zipping image: {e}")
                 
     zip_buffer.seek(0)
+    evt_slug = slugify(event.name) if event.name else event.slug
+    zip_filename = f"{evt_slug}_photos.zip"
     response = HttpResponse(zip_buffer.read(), content_type='application/zip')
-    response['Content-Disposition'] = f'attachment; filename="{event.slug}_photos.zip"'
+    response['Content-Disposition'] = f'attachment; filename="{zip_filename}"'
     return response
 
 def download_single_image(request, image_id):
@@ -580,63 +836,135 @@ def download_single_image(request, image_id):
     
     is_authorized = False
     if request.user.is_authenticated:
-        if request.user.is_superuser or img.event.owner == request.user:
+        if request.user.is_superuser or (img.event and img.event.owner == request.user):
             is_authorized = True
             
     token = request.GET.get('token')
-    if token and not is_authorized:
+    if token and not is_authorized and img.event:
         share_link = EventShareLink.objects.filter(token=token, event=img.event).first()
-        if share_link and share_link.is_valid():
+        if share_link and share_link.is_accessible:
             is_authorized = True
             
     if not is_authorized:
         return HttpResponseForbidden("Unauthorized")
         
     name_only, ext = os.path.splitext(img.filename)
-    download_name = f"{name_only}_{img.event.slug}{ext}"
+    evt_tag = slugify(img.event.name) if (img.event and img.event.name) else (img.event.slug if img.event else 'photo')
+    download_name = f"{name_only}_{evt_tag}{ext}"
     
-    import urllib.request
-    try:
-        req = urllib.request.urlopen(img.file.url)
-        response = HttpResponse(req.read(), content_type='application/octet-stream')
-        response['Content-Disposition'] = f'attachment; filename="{download_name}"'
-        return response
-    except Exception as e:
+    content = None
+    if hasattr(img.file, 'path') and os.path.exists(img.file.path):
+        with open(img.file.path, 'rb') as f:
+            content = f.read()
+    else:
+        import urllib.request
+        try:
+            req = urllib.request.urlopen(img.file.url)
+            content = req.read()
+        except Exception as e:
+            print(f"Error fetching single image file: {e}")
+            
+    if content is None:
         return HttpResponse("Failed to download image", status=500)
+        
+    response = HttpResponse(content, content_type='application/octet-stream')
+    response['Content-Disposition'] = f'attachment; filename="{download_name}"'
+    return response
 
-@login_required
 def download_images_zip(request):
+    token = request.GET.get('token') or request.POST.get('token')
     image_ids = request.POST.getlist('image_ids')
     if not image_ids:
         image_ids_str = request.GET.get('ids', '')
         if image_ids_str:
-            image_ids = image_ids_str.split(',')
+            image_ids = [i.strip() for i in image_ids_str.split(',') if i.strip()]
             
+    if not image_ids and token:
+        share_link = EventShareLink.objects.filter(token=token).first()
+        if share_link and share_link.is_accessible:
+            has_session = hasattr(request, 'session')
+            if share_link.password and (not has_session or not request.session.get(f'share_auth_{share_link.token}')):
+                return HttpResponseForbidden("Password required for share link.")
+            if share_link.person_label:
+                image_ids = list(GalleryImage.objects.filter(
+                    event=share_link.event,
+                    embeddings__person_label=share_link.person_label
+                ).distinct().values_list('id', flat=True))
+            else:
+                image_ids = list(GalleryImage.objects.filter(event=share_link.event).values_list('id', flat=True))
+
     if not image_ids:
         return redirect('gallery:dashboard')
-        
+
     zip_buffer = BytesIO()
+    file_added = False
+    added_events = set()
     with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
         for img_id in image_ids:
             try:
-                img = GalleryImage.objects.get(id=img_id)
-                if not request.user.is_superuser and img.event.owner != request.user:
+                img = GalleryImage.objects.select_related('event').get(id=img_id)
+                
+                is_authorized = False
+                if hasattr(request, 'user') and request.user.is_authenticated:
+                    if request.user.is_superuser or (img.event and img.event.owner == request.user):
+                        is_authorized = True
+                
+                if token and not is_authorized and img.event:
+                    share_link = EventShareLink.objects.filter(token=token, event=img.event).first()
+                    if share_link and share_link.is_accessible:
+                        is_authorized = True
+                        
+                if not is_authorized:
                     continue
+
                 if img.file:
                     name_only, ext = os.path.splitext(img.filename)
-                    zip_filename = f"{name_only}_{img.event.slug}{ext}"
-                    import urllib.request
-                    try:
-                        req = urllib.request.urlopen(img.file.url)
-                        zip_file.writestr(zip_filename, req.read())
-                    except Exception as e:
-                        print(f"Error zipping image: {e}")
+                    evt_tag = slugify(img.event.name) if (img.event and img.event.name) else (img.event.slug if img.event else 'photo')
+                    zip_filename = f"{name_only}_{evt_tag}{ext}"
+                    content = None
+                    if hasattr(img.file, 'path') and os.path.exists(img.file.path):
+                        with open(img.file.path, 'rb') as f:
+                            content = f.read()
+                    else:
+                        import urllib.request
+                        try:
+                            req = urllib.request.urlopen(img.file.url)
+                            content = req.read()
+                        except Exception as e:
+                            print(f"Error fetching zip image file: {e}")
+
+                    if content:
+                        zip_file.writestr(zip_filename, content)
+                        file_added = True
+                        if img.event:
+                            added_events.add(img.event)
             except GalleryImage.DoesNotExist:
                 continue
-                
+
+    if not file_added:
+        return HttpResponseForbidden("Unauthorized or no valid images selected.")
+
+    if len(added_events) == 1:
+        evt = list(added_events)[0]
+        if token:
+            link_obj = EventShareLink.objects.filter(token=token).first()
+            if link_obj and link_obj.person_label:
+                person_tag = slugify(link_obj.person_label)
+                download_zip_name = f"{person_tag}_photos.zip"
+            else:
+                evt_slug = slugify(evt.name) if evt.name else evt.slug
+                download_zip_name = f"{evt_slug}_photos.zip"
+        else:
+            evt_slug = slugify(evt.name) if evt.name else evt.slug
+            download_zip_name = f"{evt_slug}_photos.zip"
+    elif len(added_events) > 1:
+        download_zip_name = "photona_multiple_events_photos.zip"
+    else:
+        download_zip_name = "photona_photos.zip"
+
     zip_buffer.seek(0)
-    response = HttpResponse(zip_buffer.read(), content_type='application/zip')
-    response['Content-Disposition'] = 'attachment; filename="photona_downloads.zip"'
+    response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{download_zip_name}"'
     return response
 
 
@@ -814,6 +1142,72 @@ def public_event_auth(request, token):
         request.session[f'share_auth_{link.token}'] = True
         return redirect(f'/share/{token}/')
     return redirect(f'/share/{token}/?pw_error=wrong')
+
+
+def public_search_person(request, token):
+    """Public face search for an event share link."""
+    link = get_object_or_404(EventShareLink, token=token)
+
+    if not link.is_active:
+        return render(request, 'gallery/public_event.html', {'error': 'disabled', 'link': link})
+    if link.is_expired:
+        return render(request, 'gallery/public_event.html', {'error': 'expired', 'link': link})
+
+    if link.password:
+        session_key = f'share_auth_{link.token}'
+        if not request.session.get(session_key):
+            return render(request, 'gallery/public_event.html', {
+                'requires_password': True,
+                'link': link,
+                'pw_error': request.GET.get('pw_error', ''),
+            })
+
+    event = link.event
+    results = None
+    error_message = None
+    search_image_b64 = None
+
+    if request.method == 'POST' and request.FILES.get('selfie'):
+        selfie = request.FILES['selfie']
+        import time
+        import base64
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        safe_name = selfie.name.replace(' ', '_')
+        full_temp_path = os.path.join(temp_dir, f"public_search_{int(time.time()*1000)}_{safe_name}")
+
+        with open(full_temp_path, 'wb') as f:
+            for chunk in selfie.chunks():
+                f.write(chunk)
+
+        try:
+            with open(full_temp_path, 'rb') as img_f:
+                search_image_b64 = base64.b64encode(img_f.read()).decode('utf-8')
+
+            results = search_person_by_selfie(full_temp_path, event_id=event.id)
+            if link.person_label:
+                results = [
+                    res for res in results
+                    if res['image'].embeddings.filter(person_label=link.person_label).exists()
+                ]
+            for res in results:
+                name_only, ext = os.path.splitext(res['image'].filename)
+                res['download_filename'] = f"{name_only}_{event.slug}{ext}"
+        except Exception as e:
+            error_message = str(e)
+        finally:
+            if os.path.exists(full_temp_path):
+                os.remove(full_temp_path)
+
+    return render(request, 'gallery/public_search.html', {
+        'results': results,
+        'error_message': error_message,
+        'selected_event': event,
+        'event': event,
+        'link': link,
+        'search_image_b64': search_image_b64,
+    })
+
 
 
 def public_photos_api(request):

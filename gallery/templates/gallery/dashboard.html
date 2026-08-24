@@ -1,148 +1,194 @@
 {% extends 'gallery/base.html' %}
 {% load static %}
 
-{% block title %}Events Dashboard - Photona{% endblock %}
+{% block title %}Events Dashboard - Photona Studio{% endblock %}
 
 {% block content %}
-<!-- Welcome Header -->
-<div style="margin-bottom: 2.5rem; display: flex; align-items: center; justify-content: space-between;">
-    <div>
-        <h1 style="font-size: 2.2rem; font-weight: 900; letter-spacing: -0.04em; margin-bottom: 0.3rem;">
+<!-- Welcome Header Banner -->
+<div class="glass-panel" style="padding: 2.25rem 2.75rem; border-radius: 24px; margin-bottom: 3rem; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.88);">
+    <div style="position: absolute; top: -60px; right: -60px; width: 260px; height: 260px; background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+    <div style="position: relative; z-index: 2;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #4f46e5; background: rgba(79, 70, 229, 0.1); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(79, 70, 229, 0.25);">Workspace Console</span>
+            <span style="color: #94a3b8; font-size: 0.8rem;">•</span>
+            <span style="font-size: 0.82rem; color: #64748b; font-weight: 600;">{{ profile.subscription_plan.name|default:"Standard Plan" }}</span>
+        </div>
+        <h1 style="font-size: 2.35rem; font-weight: 850; letter-spacing: -0.04em; margin-bottom: 0.4rem; color: #0f172a;">
             Welcome back, <span class="text-gradient">{{ request.user.username|title }}</span> 👋
         </h1>
-        <p style="color: var(--text-muted); font-size: 1rem;">Here's an overview of your photo studio workspace.</p>
+        <p style="color: #64748b; font-size: 0.95rem; max-width: 600px; line-height: 1.5; font-weight: 500;">Here is an overview of your events, AI face indexing engine status, and storage usage.</p>
     </div>
-    <div style="background: var(--glass-bg); padding: 0.75rem 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--glass-border); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 10px;">
-        <span style="display: flex; height: 10px; width: 10px; border-radius: 50%; background-color: var(--accent-emerald); box-shadow: 0 0 10px var(--accent-emerald); animation: pulse 2s infinite;"></span>
-        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">System Online</span>
+    <div style="position: relative; z-index: 2; display: flex; align-items: center; gap: 12px;">
+        <div style="background: rgba(5, 150, 105, 0.08); padding: 0.75rem 1.35rem; border-radius: 16px; border: 1px solid rgba(5, 150, 105, 0.2); backdrop-filter: blur(16px); display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow-sm);">
+            <span style="display: flex; height: 10px; width: 10px; border-radius: 50%; background-color: #059669; box-shadow: 0 0 10px #059669; animation: pulse 2s infinite;"></span>
+            <span style="font-size: 0.88rem; font-weight: 700; color: #059669;">AI Engine Online</span>
+        </div>
     </div>
 </div>
 
 <!-- Stat Cards Bento Grid -->
-<div class="stats-grid" style="margin-bottom: 4rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+<div class="stats-grid" style="margin-bottom: 3.5rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem;">
     <!-- Storage Card -->
-    <div class="glass-panel hover-glow" style="padding: 2rem; border-radius: var(--radius-2xl); position: relative; overflow: hidden;">
-        <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(99, 102, 241, 0.1); border-radius: 50%; filter: blur(30px);"></div>
-        <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--accent-indigo);">💾</div>
-        <h3 style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;">Storage · {{ profile.subscription_plan.name|default:"No Plan" }}</h3>
-        <div class="value" style="font-size: 2.5rem; font-weight: 900; color: var(--text-primary); margin-bottom: 0.3rem; letter-spacing: -0.03em;">
-            {{ profile.used_storage_mb|floatformat:1 }} <span style="font-size: 1rem; color: var(--text-muted);">MB</span>
+    <div class="glass-panel glass-panel-interactive" style="padding: 2rem 2.25rem; border-radius: 24px; position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+            <div>
+                <h3 style="font-size: 0.78rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em;">Storage Usage</h3>
+                <div style="font-size: 0.82rem; color: #4f46e5; font-weight: 700; margin-top: 2px;">{{ profile.subscription_plan.name|default:"Free Tier" }}</div>
+            </div>
+            <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5; width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; border: 1px solid rgba(79, 70, 229, 0.2);">💾</div>
         </div>
-        <span style="font-size: 0.85rem; color: var(--text-muted);">of {{ profile.subscription_plan.storage_limit_mb|default:"0" }} MB total</span>
+        <div class="value" style="font-size: 2.75rem; font-weight: 900; color: #0f172a; margin-bottom: 0.3rem; letter-spacing: -0.04em;">
+            {{ profile.used_storage_mb|floatformat:1 }} <span style="font-size: 1rem; font-weight: 600; color: #64748b;">MB</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.82rem; color: #64748b; margin-bottom: 0.75rem; font-weight: 600;">
+            <span>Quota Limit</span>
+            <span style="font-weight: 800; color: #0f172a;">{{ profile.subscription_plan.storage_limit_mb|default:"0" }} MB</span>
+        </div>
         {% if profile.subscription_plan %}
-        <div class="progress-bar" style="margin-top: 1.25rem; height: 6px; background: var(--bg-tertiary); border-radius: 10px; overflow: hidden;">
-            <div class="progress-fill" style="width: {{ profile.storage_percentage }}%; background: var(--gradient-primary); height: 100%; border-radius: 10px;"></div>
+        <div class="progress-bar" style="height: 8px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
+            <div class="progress-fill" style="width: {{ profile.storage_percentage }}%;"></div>
         </div>
         {% endif %}
     </div>
 
     <!-- Images Card -->
-    <div class="glass-panel hover-glow" style="padding: 2rem; border-radius: var(--radius-2xl); position: relative; overflow: hidden;">
-        <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(16, 185, 129, 0.1); border-radius: 50%; filter: blur(30px);"></div>
-        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald);">🖼️</div>
-        <h3 style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;">Total Photos</h3>
-        <div class="value" style="font-size: 2.5rem; font-weight: 900; color: var(--text-primary); margin-bottom: 0.3rem; letter-spacing: -0.03em;">{{ total_images }}</div>
-        <span style="font-size: 0.85rem; color: var(--text-muted);">Indexed across all events</span>
+    <div class="glass-panel glass-panel-interactive" style="padding: 2rem 2.25rem; border-radius: 24px; position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(5, 150, 105, 0.15) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+            <div>
+                <h3 style="font-size: 0.78rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em;">Total Photos</h3>
+                <div style="font-size: 0.82rem; color: #059669; font-weight: 700; margin-top: 2px;">Gallery Index</div>
+            </div>
+            <div class="stat-icon" style="background: rgba(5, 150, 105, 0.1); color: #059669; width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; border: 1px solid rgba(5, 150, 105, 0.2);">🖼️</div>
+        </div>
+        <div class="value" style="font-size: 2.75rem; font-weight: 900; color: #0f172a; margin-bottom: 0.3rem; letter-spacing: -0.04em;">{{ total_images }}</div>
+        <span style="font-size: 0.84rem; color: #64748b; font-weight: 500;">High-resolution images stored</span>
     </div>
 
     <!-- Faces Card -->
-    <div class="glass-panel hover-glow" style="padding: 2rem; border-radius: var(--radius-2xl); position: relative; overflow: hidden;">
-        <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(245, 158, 11, 0.1); border-radius: 50%; filter: blur(30px);"></div>
-        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--accent-amber);">👥</div>
-        <h3 style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;">Detected Faces</h3>
-        <div class="value" style="font-size: 2.5rem; font-weight: 900; color: var(--text-primary); margin-bottom: 0.3rem; letter-spacing: -0.03em;">{{ total_faces }}</div>
-        <span style="font-size: 0.85rem; color: var(--text-muted);">Unique embeddings registered</span>
+    <div class="glass-panel glass-panel-interactive" style="padding: 2rem 2.25rem; border-radius: 24px; position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(217, 119, 6, 0.15) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+            <div>
+                <h3 style="font-size: 0.78rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em;">Detected Faces</h3>
+                <div style="font-size: 0.82rem; color: #d97706; font-weight: 700; margin-top: 2px;">FAISS Embedding Index</div>
+            </div>
+            <div class="stat-icon" style="background: rgba(217, 119, 6, 0.1); color: #d97706; width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; border: 1px solid rgba(217, 119, 6, 0.2);">👥</div>
+        </div>
+        <div class="value" style="font-size: 2.75rem; font-weight: 900; color: #0f172a; margin-bottom: 0.3rem; letter-spacing: -0.04em;">{{ total_faces }}</div>
+        <span style="font-size: 0.84rem; color: #64748b; font-weight: 500;">Unique face vectors indexed</span>
     </div>
 </div>
 
 <!-- Events Section Header -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
     <div>
-        <h2 class="section-title" style="margin-bottom: 0.25rem;">My Events</h2>
-        <p style="color: var(--text-muted); font-size: 0.82rem;">Create and manage your photo events</p>
+        <h2 class="section-title" style="margin-bottom: 0.2rem; font-size: 1.6rem; color: #0f172a;">Event Collections</h2>
+        <p style="color: #64748b; font-size: 0.88rem; font-weight: 500;">Create, share, and organize photo albums with AI indexing</p>
     </div>
-    <button class="btn" onclick="openModal('eventModal')">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <button class="btn" onclick="openModal('eventModal')" style="padding: 0.75rem 1.5rem; font-weight: 700;">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
         New Event
     </button>
 </div>
 
 <!-- Events Grid -->
-<div class="gallery-grid" id="eventsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+<div class="gallery-grid" id="eventsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.75rem;">
     {% for ev in events %}
-        <div class="glass-panel hover-glow" style="border-radius: var(--radius-xl); overflow: hidden; display: flex; flex-direction: column;">
-            <div class="event-card-header" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="padding: 1.5rem; flex: 1; cursor: pointer; position: relative;">
-                <div style="position: absolute; top: 0; left: 0; right: 0; height: 80px; background: var(--gradient-primary); opacity: 0.1; border-bottom: 1px solid var(--border-light);"></div>
-                <div style="position: relative; z-index: 2;">
-                    <div class="event-card-title" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
-                        <span style="display: inline-flex; width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.1); color: var(--accent-indigo); align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">📂</span>
-                        {{ ev.name }}
+        <div class="glass-panel glass-panel-interactive" style="border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #e2e8f0; background: #ffffff; box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05); transition: var(--transition);">
+            {% with first_img=ev.images.first %}
+                {% if first_img %}
+                    <div onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="height: 160px; position: relative; overflow: hidden; background: #0f172a; cursor: pointer;">
+                        <img src="{% if first_img.thumbnail %}{{ first_img.thumbnail.url }}{% else %}{{ first_img.file.url }}{% endif %}" alt="{{ ev.name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;" class="card-cover-img">
+                        <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(15, 23, 42, 0.6) 0%, transparent 60%);"></div>
+                        <span style="position: absolute; top: 12px; right: 12px; font-size: 0.76rem; font-weight: 800; color: #ffffff; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.2);">🖼️ {{ ev.images.count }} photos</span>
                     </div>
-                    <p class="event-card-desc" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">
-                        {{ ev.description|default:"No description provided." }}
-                    </p>
+                {% else %}
+                    <div onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="height: 130px; position: relative; overflow: hidden; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%); padding: 1.25rem; display: flex; align-items: flex-end; cursor: pointer;">
+                        <div style="position: absolute; top: -30px; right: -30px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%); border-radius: 50%;"></div>
+                        <span style="position: absolute; top: 12px; right: 12px; font-size: 0.76rem; font-weight: 800; color: #ffffff; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(12px); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.3);">📷 0 photos</span>
+                        <div style="width: 44px; height: 44px; border-radius: 14px; background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; color: #4f46e5; box-shadow: 0 6px 16px rgba(0,0,0,0.15);">📂</div>
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Card Body Content -->
+            <div onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="padding: 1.5rem; flex: 1; cursor: pointer;">
+                <div style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 850; color: #0f172a; margin-bottom: 0.4rem; letter-spacing: -0.02em;">
+                    {{ ev.name|title }}
+                </div>
+                <p style="color: #64748b; font-size: 0.88rem; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 500; margin-bottom: 0.85rem;">
+                    {{ ev.description|default:"No description provided for this collection." }}
+                </p>
+                <div style="font-size: 0.78rem; color: #94a3b8; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <span>📅</span> {{ ev.created_at|date:"M d, Y" }}
                 </div>
             </div>
             
-            <div class="event-card-footer" style="padding: 1rem 1.5rem; background: var(--bg-primary); border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center;">
-                <div class="event-card-meta">
-                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--accent-indigo); background: rgba(99,102,241,0.1); padding: 4px 10px; border-radius: 20px;">🖼️ {{ ev.images.count }} photos</span>
-                </div>
-                <div class="event-card-actions" style="display: flex; gap: 10px;">
-                    <a href="javascript:void(0)" class="btn btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-medium); padding: 4px 12px; font-size: 0.8rem;" onclick="editEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}', '{{ ev.description|escapejs }}')">Edit</a>
-                    <button class="btn btn-sm" style="background: rgba(225,29,72,0.1); color: var(--accent-rose); border: none; padding: 4px 12px; font-size: 0.8rem;" onclick="confirmDeleteEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}')">Delete</button>
+            <!-- Card Footer Bar -->
+            <div style="padding: 0.9rem 1.5rem; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                <a href="{% url 'gallery:event_detail' ev.slug %}" style="font-size: 0.84rem; font-weight: 800; color: #4f46e5; text-decoration: none; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.color='#7c3aed';" onmouseout="this.style.color='#4f46e5';">
+                    View Album →
+                </a>
+                <div class="event-card-actions" style="display: flex; gap: 8px;">
+                    <a href="javascript:void(0)" class="action-edit" onclick="editEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}', '{{ ev.description|escapejs }}')">✎ Edit</a>
+                    <button class="action-delete" onclick="confirmDeleteEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}')">✕ Delete</button>
                 </div>
             </div>
         </div>
     {% empty %}
-        <div class="glass-panel" style="grid-column: 1 / -1; padding: 4rem; text-align: center; border-radius: var(--radius-2xl);">
-            <div style="font-size: 3.5rem; margin-bottom: 1rem; color: var(--text-muted);">📅</div>
-            <h3 style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">No events yet</h3>
-            <p style="color: var(--text-secondary); max-width: 400px; margin: 0 auto;">Create your first event to start uploading and organizing photos with AI-powered face recognition.</p>
+        <div class="glass-panel" style="grid-column: 1 / -1; padding: 4.5rem 2rem; text-align: center; border-radius: 24px;">
+            <div style="font-size: 3.8rem; margin-bottom: 1.25rem;">📅</div>
+            <h3 style="font-size: 1.55rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem;">No events created yet</h3>
+            <p style="color: #64748b; max-width: 440px; margin: 0 auto 1.75rem auto; line-height: 1.6; font-size: 0.92rem; font-weight: 500;">Create your first photo event collection to start uploading and running AI-powered face detection.</p>
+            <button class="btn" onclick="openModal('eventModal')" style="padding: 0.8rem 2rem; font-weight: 700;">
+                Create First Event →
+            </button>
         </div>
     {% endfor %}
 </div>
 
 <!-- Create Event Modal -->
 <div id="eventModal" class="modal-overlay">
-    <div class="card" style="width: 100%; max-width: 480px;">
+    <div class="card glass-panel" style="width: 100%; max-width: 500px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
-            <h3 style="font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em;">Create New Event</h3>
-            <button onclick="closeModal('eventModal')" style="background: none; border: none; color: var(--text-muted); font-size: 1.3rem; cursor: pointer; padding: 4px; border-radius: 6px; transition: var(--transition);" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='none'">✕</button>
+            <h3 style="font-size: 1.35rem; font-weight: 850; letter-spacing: -0.02em; color: #0f172a;">Create New Event</h3>
+            <button onclick="closeModal('eventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: var(--transition);" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
         </div>
         <form method="post" action="{% url 'gallery:create_event' %}">
             {% csrf_token %}
-            <div style="margin-bottom: 1.25rem;">
+            <div style="margin-bottom: 1.35rem;">
                 <label class="form-label">Event Name</label>
-                <input type="text" name="name" required placeholder="e.g. Wedding, Summer Trip 2026" class="form-input">
+                <input type="text" name="name" required placeholder="e.g. Annual Gala 2026, Wedding Photos" class="form-input">
             </div>
-            <div style="margin-bottom: 1.75rem;">
+            <div style="margin-bottom: 2rem;">
                 <label class="form-label">Description</label>
-                <textarea name="description" placeholder="Optional event details..." rows="3" class="form-input" style="resize: none;"></textarea>
+                <textarea name="description" placeholder="Optional details about this photo album..." rows="3" class="form-input" style="resize: none;"></textarea>
             </div>
-            <button type="submit" class="btn" style="width: 100%;">Create Event</button>
+            <button type="submit" class="btn" style="width: 100%; padding: 0.85rem;">Create Event Collection</button>
         </form>
     </div>
 </div>
 
 <!-- Edit Event Modal -->
 <div id="editEventModal" class="modal-overlay">
-    <div class="card" style="width: 100%; max-width: 480px;">
+    <div class="card glass-panel" style="width: 100%; max-width: 500px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
-            <h3 style="font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em;">Edit Event</h3>
-            <button onclick="closeModal('editEventModal')" style="background: none; border: none; color: var(--text-muted); font-size: 1.3rem; cursor: pointer; padding: 4px; border-radius: 6px; transition: var(--transition);" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='none'">✕</button>
+            <h3 style="font-size: 1.35rem; font-weight: 850; letter-spacing: -0.02em; color: #0f172a;">Edit Event Details</h3>
+            <button onclick="closeModal('editEventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: var(--transition);" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
         </div>
         <form id="editEventForm" method="post">
             {% csrf_token %}
-            <div style="margin-bottom: 1.25rem;">
+            <div style="margin-bottom: 1.35rem;">
                 <label class="form-label">Event Name</label>
                 <input type="text" id="editEventName" name="name" required class="form-input">
             </div>
-            <div style="margin-bottom: 1.75rem;">
+            <div style="margin-bottom: 2rem;">
                 <label class="form-label">Description</label>
                 <textarea id="editEventDescription" name="description" rows="3" class="form-input" style="resize: none;"></textarea>
             </div>
-            <button type="submit" class="btn" style="width: 100%;">Save Changes</button>
+            <button type="submit" class="btn" style="width: 100%; padding: 0.85rem;">Save Changes</button>
         </form>
     </div>
 </div>
@@ -151,20 +197,20 @@
 function openModal(id) {
     const overlay = document.getElementById(id);
     const card = overlay.querySelector('.card');
-    card.style.transform = 'scale(0.96)';
+    card.style.transform = 'scale(0.95)';
     overlay.style.display = 'flex';
     requestAnimationFrame(() => {
         requestAnimationFrame(() => { card.style.transform = 'scale(1)'; });
     });
 }
+
 function closeModal(id) {
     const overlay = document.getElementById(id);
     const card = overlay.querySelector('.card');
-    card.style.transform = 'scale(0.96)';
+    card.style.transform = 'scale(0.95)';
     setTimeout(() => { overlay.style.display = 'none'; }, 180);
 }
 
-// Close on outside click
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
@@ -181,7 +227,7 @@ function editEvent(slug, name, description) {
 }
 
 function confirmDeleteEvent(slug, name) {
-    customConfirm("Delete Event", `Are you sure you want to delete event "${name}"? This deletes all associated photos and index data.`, (confirmed) => {
+    customConfirm("Delete Event Collection", `Are you sure you want to delete event "${name}"? All associated photos and index data will be permanently removed.`, (confirmed) => {
         if (!confirmed) return;
         const form = document.createElement('form');
         form.method = 'post';
