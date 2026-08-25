@@ -845,11 +845,19 @@ def download_event_zip(request, slug):
             if img.file:
                 name_only, ext = os.path.splitext(img.filename)
                 zip_filename = f"{name_only}_{event.slug}{ext}"
-                try:
-                    req = urllib.request.urlopen(img.file.url)
-                    zip_file.writestr(zip_filename, req.read())
-                except Exception as e:
-                    print(f"Error zipping image: {e}")
+                content = None
+                if hasattr(img.file, 'path') and os.path.exists(img.file.path):
+                    with open(img.file.path, 'rb') as f:
+                        content = f.read()
+                else:
+                    try:
+                        req = urllib.request.urlopen(img.file.url)
+                        content = req.read()
+                    except Exception as e:
+                        print(f"Error zipping image from URL: {e}")
+                        
+                if content:
+                    zip_file.writestr(zip_filename, content)
                 
     zip_buffer.seek(0)
     evt_slug = slugify(event.name) if event.name else event.slug
