@@ -666,6 +666,7 @@ def gdrive_import(request):
                 print(f"[DEBUG] Background GDrive import thread error: {ex}")
                 update_job(job_id, {
                     'active': False,
+                    'percent': 0,
                     'message': f"Import error: {ex}"
                 })
                 

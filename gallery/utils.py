@@ -336,12 +336,7 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
         print(f"[DEBUG] Google Drive import error: {e}")
         raise e
     finally:
-        if job_id:
-            update_job(job_id, {
-                'active': False,
-                'percent': 100,
-                'message': "Import finished!"
-            })
+        # Only clean up temp files — job status is managed by the caller (views.py)
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)
             

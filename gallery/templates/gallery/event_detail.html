@@ -1072,6 +1072,20 @@
                             loadPeople();
                         }
                     }, 2000);
+                } else if (data.message && data.message.startsWith('Import error:')) {
+                    // Show the actual error to the user
+                    if (container) container.style.display = 'block';
+                    if (statusText) {
+                        statusText.innerText = '❌ ' + data.message;
+                        statusText.style.color = '#e11d48';
+                    }
+                    if (percentText) percentText.innerText = '';
+                    if (progressBar) progressBar.style.width = '0%';
+                    showToast(data.message, "error");
+                    setTimeout(() => {
+                        if (container) container.style.display = 'none';
+                        if (statusText) statusText.style.color = '';
+                    }, 5000);
                 } else if (container) {
                     container.style.display = 'none';
                 }
