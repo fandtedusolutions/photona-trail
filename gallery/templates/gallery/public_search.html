@@ -1,0 +1,156 @@
+{% extends 'gallery/base.html' %}
+{% load static %}
+
+{% block title %}AI Search - Photona{% endblock %}
+
+{% block content %}
+{% if link %}
+<div style="max-width: 560px; margin: 0 auto 1rem auto;">
+    <a href="/share/{{ link.token }}/" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-decoration: none; padding: 6px 12px; border-radius: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-light); transition: var(--transition);" onmouseover="this.style.color='var(--accent-indigo)'" onmouseout="this.style.color='var(--text-secondary)'">
+        ← Back to Event Gallery
+    </a>
+</div>
+{% endif %}
+<div class="card" style="max-width: 560px; margin: 0 auto 3rem auto;">
+    <h2 class="card-title">
+        <span style="display: inline-flex; width: 32px; height: 32px; border-radius: 8px; background: rgba(99, 102, 241, 0.08); align-items: center; justify-content: center; font-size: 0.9rem;">🔍</span>
+        Find Your Photos
+    </h2>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; line-height: 1.5;">
+        Upload a clear selfie. Our AI will scan the FAISS index and retrieve every photo you appear in.
+    </p>
+
+    {% if error_message %}
+        <div style="background: rgba(244, 63, 94, 0.06); border: 1px solid rgba(244, 63, 94, 0.15); padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--accent-rose); font-size: 0.82rem; font-weight: 500; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px;">
+            <span>⚠️</span> {{ error_message }}
+        </div>
+    {% endif %}
+
+    <form id="searchForm" method="post" enctype="multipart/form-data" action="{% if link %}{% url 'gallery:public_search' token=link.token %}{% else %}{% url 'gallery:search' %}?event={{ selected_event.slug }}{% endif %}">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); background: var(--bg-tertiary); border: 1px solid var(--border-light); display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.9rem;">📂</span>
+            <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-primary);">
+                Searching inside Event: <span style="color: var(--accent-indigo);">{{ selected_event.name }}</span>
+            </div>
+            <input type="hidden" name="event_slug" value="{{ selected_event.slug }}">
+        </div>
+
+        <div class="dropzone" id="selfieDropzone" onclick="document.getElementById('selfieInput').click()" style="position: relative; overflow: hidden;">
+            <div id="previewContainer" style="display: none; position: absolute; inset: 0; background: var(--bg-secondary); z-index: 10; flex-direction: column; align-items: center; justify-content: center; padding: 1rem;">
+                <img id="selfiePreview" src="" style="max-height: 120px; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); margin-bottom: 0.5rem; object-fit: contain;">
+                <div id="selfieStatus" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-indigo);"></div>
+            </div>
+            
+            <div id="uploadPrompt" style="display: flex; flex-direction: column; align-items: center;">
+                <div class="dropzone-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+                <p style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);">Drop your selfie here or click to select</p>
+            </div>
+            <input type="file" id="selfieInput" name="selfie" accept="image/*" style="display: none;" onchange="updateSelfieStatus(this.files)">
+        </div>
+
+        <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Search Matches</button>
+    </form>
+</div>
+
+{% if results is not None %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            {% if search_image_b64 %}
+                <img src="data:image/jpeg;base64,{{ search_image_b64 }}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-light); box-shadow: var(--shadow-sm);" alt="Search Image">
+            {% endif %}
+            <h2 class="section-title" style="margin-bottom: 0;">Matches Found</h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="badge badge-purple">{{ results|length }} results</span>
+            {% if results %}
+                <a href="{% url 'gallery:download_images_zip' %}?ids={% for res in results %}{{ res.image.id }}{% if not forloop.last %},{% endif %}{% endfor %}{% if link %}&token={{ link.token }}{% endif %}" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 0.78rem;">
+                    📦 Download All
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if results %}
+        <div class="rich-gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem;">
+            {% for res in results %}
+                <div class="rich-gallery-item" style="border-radius: 18px; overflow: hidden; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06); transition: transform 0.25s ease, box-shadow 0.25s ease;">
+                    <div class="rich-thumb-wrap" style="position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: #0f172a;">
+                        <a href="{{ res.image.file.url }}" target="_blank">
+                            <img class="rich-thumb" src="{% if res.image.thumbnail %}{{ res.image.thumbnail.url }}{% else %}{{ res.image.file.url }}{% endif %}" alt="{{ res.image.filename }}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+                        </a>
+                        <div style="position: absolute; top: 10px; right: 10px; background: rgba(5, 150, 105, 0.9); color: white; font-size: 0.72rem; font-weight: 850; padding: 4px 10px; border-radius: 12px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2);">
+                            🎯 Match: {{ res.score|floatformat:2 }}
+                        </div>
+                        <a href="{% url 'gallery:download_single_image' res.image.id %}{% if link %}?token={{ link.token }}{% endif %}" class="thumb-action-btn" title="Download Photo" style="position: absolute; bottom: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(15, 23, 42, 0.75); color: white; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 0.9rem; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(15, 23, 42, 0.75)'">⬇</a>
+                    </div>
+                    <div class="rich-gallery-info" style="padding: 0.85rem 1rem;">
+                        <div class="rich-gallery-name" title="{{ res.image.event.name }} #{{ res.image.id }}" style="font-weight: 750; font-size: 0.85rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            {{ res.image.event.name }} <span style="color: var(--accent-indigo); font-size: 0.78rem;">#{{ res.image.id }}</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 3px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>👤 {{ res.image.total_faces }} faces</span>
+                            <span>{{ res.image.uploaded_at|date:"M d, H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <h3 class="empty-state-title">No matches found</h3>
+            <p class="empty-state-desc">We couldn't find any photos matching the uploaded face in the index.</p>
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+    const selfieDropzone = document.getElementById('selfieDropzone');
+    const selfieStatus = document.getElementById('selfieStatus');
+    const searchForm = document.getElementById('searchForm');
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        selfieDropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            selfieDropzone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        selfieDropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            selfieDropzone.classList.remove('dragover');
+        }, false);
+    });
+
+    selfieDropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        document.getElementById('selfieInput').files = files;
+        updateSelfieStatus(files);
+    });
+
+    function updateSelfieStatus(files) {
+        if (files.length > 0) {
+            const file = files[0];
+            document.getElementById('uploadPrompt').style.display = 'none';
+            document.getElementById('previewContainer').style.display = 'flex';
+            document.getElementById('selfieStatus').innerText = file.name;
+            document.getElementById('selfiePreview').src = URL.createObjectURL(file);
+        }
+    }
+
+    searchForm.addEventListener('submit', () => {
+        showLoading('Searching with FAISS AI engine...');
+    });
+</script>
+{% endblock %}

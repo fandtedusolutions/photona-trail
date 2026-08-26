@@ -1,0 +1,198 @@
+{% extends 'gallery/base.html' %}
+
+{% block title %}Create Account - Photona{% endblock %}
+
+{% block content %}
+<style>
+    .auth-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 80vh;
+        padding: 2rem 0;
+    }
+    
+    .auth-card {
+        display: flex;
+        width: 100%;
+        max-width: 1050px;
+        background: #ffffff;
+        border-radius: 28px;
+        box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.1);
+        overflow: hidden;
+        border: 1px solid #cbd5e1;
+    }
+    
+    .auth-visual {
+        flex: 1.1;
+        background: url('https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop') center/cover;
+        position: relative;
+        display: none;
+    }
+    
+    @media (min-width: 768px) {
+        .auth-visual {
+            display: block;
+        }
+    }
+    
+    .auth-visual-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(79, 70, 229, 0.88) 50%, rgba(147, 51, 234, 0.9) 100%);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 4rem;
+        color: white;
+    }
+    
+    .auth-form-wrapper {
+        flex: 1.3;
+        padding: 3.5rem 3rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .auth-form-input {
+        width: 100%;
+        padding: 0.85rem 1.25rem;
+        border-radius: var(--radius-md);
+        border: 1.5px solid #cbd5e1;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 0.95rem;
+        font-weight: 500;
+        transition: var(--transition);
+        margin-bottom: 1.25rem;
+    }
+    
+    .auth-form-input:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 4px rgba(79,70,229,0.15);
+    }
+    
+    .auth-label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #334155;
+        margin-bottom: 0.45rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .form-row-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+</style>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <!-- Left Side Visual -->
+        <div class="auth-visual">
+            <div class="auth-visual-overlay">
+                <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 50px; padding: 6px 16px; width: fit-content; margin-bottom: 1.5rem;">
+                    <span style="font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; color: #ffffff; text-transform: uppercase;">✦ STUDIO WORKSPACE</span>
+                </div>
+                <h2 style="font-size: 2.65rem; font-weight: 900; line-height: 1.15; margin-bottom: 1.25rem; letter-spacing: -0.03em; color: #ffffff;">
+                    Join Photona Studio.<br>
+                    <span style="background: linear-gradient(135deg, #a5b4fc 0%, #c084fc 50%, #f472b6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 10px 30px rgba(192, 132, 252, 0.3);">Smart AI Workflows.</span>
+                </h2>
+                <p style="font-size: 1.05rem; color: rgba(255, 255, 255, 0.9); line-height: 1.6; font-weight: 400; margin-bottom: 2rem;">
+                    Provision your studio workspace, invite camera operators and organizers, and launch AI face recognition.
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.9rem; color: rgba(255, 255, 255, 0.95); font-weight: 500;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">✓</div>
+                        Automated AI Face Tagging
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">✓</div>
+                        Custom Branded Event Galleries
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">✓</div>
+                        Instant QR & Selfie Search Access
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Side Form -->
+        <div class="auth-form-wrapper">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div style="display: inline-flex; width: 48px; height: 48px; border-radius: 14px; background: rgba(79, 70, 229, 0.1); align-items: center; justify-content: center; margin-bottom: 0.85rem; color: #4f46e5;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+                </div>
+                <h2 style="font-size: 1.75rem; font-weight: 850; color: #0f172a; letter-spacing: -0.03em;">Create Account</h2>
+                <p style="color: #64748b; font-size: 0.9rem; font-weight: 500;">Select your role and get started in seconds.</p>
+            </div>
+
+            {% if error %}
+                <div style="background: rgba(225, 29, 72, 0.08); border-left: 4px solid #e11d48; padding: 0.85rem 1.25rem; border-radius: var(--radius-sm); color: #e11d48; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'gallery:user_register' %}">
+                {% csrf_token %}
+                <div class="form-row-grid">
+                    <div>
+                        <label class="auth-label">Username</label>
+                        <input type="text" name="username" required placeholder="Choose a username" class="auth-form-input">
+                    </div>
+                    <div>
+                        <label class="auth-label">Email Address</label>
+                        <input type="email" name="email" required placeholder="your@email.com" class="auth-form-input">
+                    </div>
+                </div>
+
+                <div class="form-row-grid">
+                    <div>
+                        <label class="auth-label">Password</label>
+                        <input type="password" name="password" required placeholder="Create password" class="auth-form-input">
+                    </div>
+                    <div>
+                        <label class="auth-label">Confirm Password</label>
+                        <input type="password" name="password_confirm" required placeholder="Confirm password" class="auth-form-input">
+                    </div>
+                </div>
+
+                <div class="form-row-grid">
+                    <div>
+                        <label class="auth-label">Account Role</label>
+                        <select name="role" required class="auth-form-input">
+                            {% for value, name in roles %}
+                                <option value="{{ value }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="auth-label">Subscription Plan</label>
+                        <select name="plan_id" class="auth-form-input">
+                            {% for plan in plans %}
+                                <option value="{{ plan.id }}">{{ plan.name }} ({{ plan.storage_limit_mb }} MB)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%; padding: 0.9rem; font-size: 1rem; font-weight: 750; border-radius: var(--radius-md); margin-top: 0.5rem;">Create Account & Sign In</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.75rem; font-size: 0.9rem; color: #64748b; font-weight: 500;">
+                Already have an account? <a href="{% url 'gallery:user_login' %}" style="color: #4f46e5; font-weight: 750; text-decoration: none;">Sign In</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
