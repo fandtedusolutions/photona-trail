@@ -1043,9 +1043,10 @@
                     data.new_photos.forEach(photo => {
                         if (!knownPhotoIds.has(photo.id) && !document.getElementById(`image-card-${photo.id}`)) {
                             knownPhotoIds.add(photo.id);
-                            const dotIdx = photo.filename.lastIndexOf('.');
-                            const nameOnly = dotIdx !== -1 ? photo.filename.substring(0, dotIdx) : photo.filename;
-                            const ext = dotIdx !== -1 ? photo.filename.substring(dotIdx) : '';
+                            const fname = photo.filename || photo.url.split('/').pop() || 'photo.jpg';
+                            const dotIdx = fname.lastIndexOf('.');
+                            const nameOnly = dotIdx !== -1 ? fname.substring(0, dotIdx) : fname;
+                            const ext = dotIdx !== -1 ? fname.substring(dotIdx) : '';
                             const downloadName = `${nameOnly}_{{ event.slug }}${ext}`;
                             const photoCard = makePhotoCard(photo, downloadName);
                             if (gallery) {

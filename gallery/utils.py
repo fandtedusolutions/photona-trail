@@ -293,8 +293,10 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                                             'percent': min(99, pct),
                                             'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
                                             'new_photo': {
-                                                'url': gallery_image.file.url,
-                                                'id': gallery_image.id
+                                                'id': gallery_image.id,
+                                                'url': gallery_image.thumbnail.url if gallery_image.thumbnail else gallery_image.file.url,
+                                                'filename': gallery_image.filename,
+                                                'total_faces': gallery_image.total_faces
                                             }
                                         })
                 except Exception as ze:
@@ -327,8 +329,10 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                             'percent': min(99, pct),
                             'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
                             'new_photo': {
-                                'url': gallery_image.file.url,
-                                'id': gallery_image.id
+                                'id': gallery_image.id,
+                                'url': gallery_image.thumbnail.url if gallery_image.thumbnail else gallery_image.file.url,
+                                'filename': gallery_image.filename,
+                                'total_faces': gallery_image.total_faces
                             }
                         })
 
