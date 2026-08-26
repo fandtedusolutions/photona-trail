@@ -610,7 +610,7 @@ def bulk_delete_images(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 
-IMPORT_JOBS = {}
+from .job_tracker import get_job, update_job
 
 @login_required
 @require_POST
@@ -636,19 +636,18 @@ def gdrive_import(request):
         target_event_id = event.id
         target_event_name = event.name
         job_id = f"import_{event.id}"
-        
-        IMPORT_JOBS[job_id] = {
+        update_job(job_id, {
             'active': True,
             'current': 0,
             'total': 0,
             'percent': 0,
             'message': 'Connecting to Google Drive...',
             'new_photos': []
-        }
+        })
         
         def run_import():
             try:
-                indexed, faces = download_and_index_gdrive_link(url, event_id=target_event_id, job_id=job_id, jobs_dict=IMPORT_JOBS)
+                indexed, faces = download_and_index_gdrive_link(url, event_id=target_event_id, job_id=job_id)
                 print(f"[SUCCESS] Google Drive import finished for '{target_event_name}': {indexed} images, {faces} faces indexed.")
                 
                 # Run AI clustering on the newly imported faces
@@ -657,16 +656,18 @@ def gdrive_import(request):
                 if re_fetched_event:
                     run_clustering_on_upload(re_fetched_event)
                     
-                if job_id in IMPORT_JOBS:
-                    IMPORT_JOBS[job_id]['active'] = False
-                    IMPORT_JOBS[job_id]['percent'] = 100
-                    IMPORT_JOBS[job_id]['message'] = 'Import finished!'
+                update_job(job_id, {
+                    'active': False,
+                    'percent': 100,
+                    'message': 'Import finished!'
+                })
                     
             except Exception as ex:
                 print(f"[DEBUG] Background GDrive import thread error: {ex}")
-                if job_id in IMPORT_JOBS:
-                    IMPORT_JOBS[job_id]['active'] = False
-                    IMPORT_JOBS[job_id]['message'] = f"Import error: {ex}"
+                update_job(job_id, {
+                    'active': False,
+                    'message': f"Import error: {ex}"
+                })
                 
         thread = threading.Thread(target=run_import)
         thread.daemon = True
@@ -686,7 +687,9 @@ def gdrive_import(request):
 def gdrive_import_status(request, slug):
     event = get_object_or_404(Event, slug=slug)
     job_id = f"import_{event.id}"
-    job_data = IMPORT_JOBS.get(job_id, {'active': False, 'current': 0, 'total': 0, 'percent': 0, 'message': '', 'new_photos': []})
+    job_data = get_job(job_id)
+    if not job_data:
+        job_data = {'active': False, 'current': 0, 'total': 0, 'percent': 0, 'message': '', 'new_photos': []}
     return JsonResponse(job_data)
 
 @login_required
@@ -703,10 +706,13 @@ def cancel_gdrive_import(request):
         return JsonResponse({'success': False, 'message': 'Event ID or slug required.'})
         
     job_id = f"import_{event_id}"
-    if job_id in IMPORT_JOBS:
-        IMPORT_JOBS[job_id]['cancelled'] = True
-        IMPORT_JOBS[job_id]['active'] = False
-        IMPORT_JOBS[job_id]['message'] = "Import cancelled by user."
+    job_data = get_job(job_id)
+    if job_data:
+        update_job(job_id, {
+            'cancelled': True,
+            'active': False,
+            'message': 'Import cancelled by user.'
+        })
         return JsonResponse({'success': True, 'message': 'Import cancelled.'})
     return JsonResponse({'success': False, 'message': 'No active import found.'})
 
@@ -720,7 +726,7 @@ def active_imports_api(request):
     active_job = None
     for ev in user_events:
         job_id = f"import_{ev.id}"
-        job = IMPORT_JOBS.get(job_id)
+        job = get_job(job_id)
         if job and job.get('active'):
             active_job = {
                 'event_id': ev.id,

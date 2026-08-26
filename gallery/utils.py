@@ -197,6 +197,7 @@ def download_gdrive_file_by_id(file_id, output_path):
     return False
 
 def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=None):
+    from .job_tracker import get_job, update_job
     event = None
     if event_id:
         event = Event.objects.filter(id=event_id).first()
@@ -235,13 +236,15 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
             raise ValueError("No public files found in the Google Drive link.")
 
         total_files = len(file_ids)
-        if jobs_dict is not None and job_id in jobs_dict:
-            jobs_dict[job_id]['total'] = total_files
-            jobs_dict[job_id]['message'] = f"Found {total_files} files. Downloading & indexing..."
+        if job_id:
+            update_job(job_id, {
+                'total': total_files,
+                'message': f"Found {total_files} files. Downloading & indexing..."
+            })
 
         for fid in file_ids:
             # Check if job was cancelled by user
-            if job_id and jobs_dict and jobs_dict.get(job_id, {}).get('cancelled'):
+            if job_id and get_job(job_id).get('cancelled'):
                 print(f"[GDrive] Import job {job_id} was cancelled by user. Stopping download loop.")
                 break
 
@@ -283,16 +286,16 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                                     total_faces += num_faces
                                     total_indexed += 1
 
-                                    if jobs_dict is not None and job_id in jobs_dict:
+                                    if job_id:
                                         pct = int((total_indexed / total_files) * 100)
-                                        jobs_dict[job_id]['current'] = total_indexed
-                                        jobs_dict[job_id]['percent'] = min(99, pct)
-                                        jobs_dict[job_id]['message'] = f"Imported {total_indexed} of {total_files} photos ({pct}%)"
-                                        jobs_dict[job_id]['new_photos'].append({
-                                            'id': gallery_image.id,
-                                            'url': gallery_image.thumbnail.url if gallery_image.thumbnail else gallery_image.file.url,
-                                            'filename': gallery_image.filename,
-                                            'total_faces': gallery_image.total_faces
+                                        update_job(job_id, {
+                                            'current': total_indexed,
+                                            'percent': min(99, pct),
+                                            'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
+                                            'new_photo': {
+                                                'url': gallery_image.file.url,
+                                                'id': gallery_image.id
+                                            }
                                         })
                 except Exception as ze:
                     print(f"[DEBUG] Error extracting inner ZIP {fid}: {ze}")
@@ -317,28 +320,28 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                     total_faces += num_faces
                     total_indexed += 1
 
-                    if jobs_dict is not None and job_id in jobs_dict:
+                    if job_id:
                         pct = int((total_indexed / total_files) * 100)
-                        jobs_dict[job_id]['current'] = total_indexed
-                        jobs_dict[job_id]['percent'] = min(99, pct)
-                        jobs_dict[job_id]['message'] = f"Imported {total_indexed} of {total_files} photos ({pct}%)"
-                        jobs_dict[job_id]['new_photos'].append({
-                            'id': gallery_image.id,
-                            'url': gallery_image.thumbnail.url if gallery_image.thumbnail else gallery_image.file.url,
-                            'filename': gallery_image.filename,
-                            'event_name': event.name if event else "Event",
-                            'organiser_name': event.owner.username.title() if (event and event.owner) else "Studio",
-                            'total_faces': gallery_image.total_faces
+                        update_job(job_id, {
+                            'current': total_indexed,
+                            'percent': min(99, pct),
+                            'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
+                            'new_photo': {
+                                'url': gallery_image.file.url,
+                                'id': gallery_image.id
+                            }
                         })
 
     except Exception as e:
         print(f"[DEBUG] Google Drive import error: {e}")
         raise e
     finally:
-        if job_id and jobs_dict and job_id in jobs_dict:
-            jobs_dict[job_id]['active'] = False
-            jobs_dict[job_id]['percent'] = 100
-            jobs_dict[job_id]['message'] = "Import finished!"
+        if job_id:
+            update_job(job_id, {
+                'active': False,
+                'percent': 100,
+                'message': "Import finished!"
+            })
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)
             
