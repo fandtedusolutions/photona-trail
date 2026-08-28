@@ -125,11 +125,17 @@ def dashboard(request):
     total_images = GalleryImage.objects.filter(event__owner=request.user).count()
     total_faces = FaceEmbedding.objects.filter(image__event__owner=request.user).count()
     events = Event.objects.filter(owner=request.user).order_by('-created_at')
+    total_events = events.count()
+    
+    # Get recent events (up to 3) for the dashboard carousel
+    recent_events = events[:3]
     
     return render(request, 'gallery/dashboard.html', {
         'total_images': total_images,
         'total_faces': total_faces,
         'events': events,
+        'recent_events': recent_events,
+        'total_events': total_events,
         'profile': profile,
     })
 

@@ -1,160 +1,937 @@
 {% extends 'gallery/base.html' %}
 {% load static %}
 
-{% block title %}Events Dashboard - Photona Studio{% endblock %}
+{% block title %}Dashboard - Photona Studio{% endblock %}
 
 {% block content %}
-<!-- Welcome Header Banner -->
-<div class="glass-panel" style="padding: 2.25rem 2.75rem; border-radius: 24px; margin-bottom: 3rem; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.88);">
-    <div style="position: absolute; top: -60px; right: -60px; width: 260px; height: 260px; background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
-    <div style="position: relative; z-index: 2;">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
-            <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #4f46e5; background: rgba(79, 70, 229, 0.1); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(79, 70, 229, 0.25);">Workspace Console</span>
-            <span style="color: #94a3b8; font-size: 0.8rem;">•</span>
-            <span style="font-size: 0.82rem; color: #64748b; font-weight: 600;">{{ profile.subscription_plan.name|default:"Standard Plan" }}</span>
-        </div>
-        <h1 style="font-size: 2.35rem; font-weight: 850; letter-spacing: -0.04em; margin-bottom: 0.4rem; color: #0f172a;">
-            Welcome back, <span class="text-gradient">{{ request.user.username|title }}</span> 👋
-        </h1>
-        <p style="color: #64748b; font-size: 0.95rem; max-width: 600px; line-height: 1.5; font-weight: 500;">Here is an overview of your events, AI face indexing engine status, and storage usage.</p>
-    </div>
-    <div style="position: relative; z-index: 2; display: flex; align-items: center; gap: 12px;">
-        <div style="background: rgba(5, 150, 105, 0.08); padding: 0.75rem 1.35rem; border-radius: 16px; border: 1px solid rgba(5, 150, 105, 0.2); backdrop-filter: blur(16px); display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow-sm);">
-            <span style="display: flex; height: 10px; width: 10px; border-radius: 50%; background-color: #059669; box-shadow: 0 0 10px #059669; animation: pulse 2s infinite;"></span>
-            <span style="font-size: 0.88rem; font-weight: 700; color: #059669;">AI Engine Online</span>
-        </div>
-    </div>
-</div>
+<style>
+    /* ── Override base.html elements for sidebar dashboard layout ── */
+    header.glass-panel { display: none !important; }
+    .bg-mesh-container { display: none !important; }
+    #globalImportBanner { display: none !important; }
+    .app-container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+    body { background: #f1f5f9 !important; }
+    main { width: 100% !important; }
 
-<!-- Stat Cards Bento Grid -->
-<div class="stats-grid" style="margin-bottom: 3.5rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem;">
-    <!-- Storage Card -->
-    <div class="glass-panel glass-panel-interactive" style="padding: 2rem 2.25rem; border-radius: 24px; position: relative; overflow: hidden;">
-        <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
-            <div>
-                <h3 style="font-size: 0.78rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em;">Storage Usage</h3>
-                <div style="font-size: 0.82rem; color: #4f46e5; font-weight: 700; margin-top: 2px;">{{ profile.subscription_plan.name|default:"Free Tier" }}</div>
-            </div>
-            <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5; width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; border: 1px solid rgba(79, 70, 229, 0.2);">💾</div>
-        </div>
-        <div class="value" style="font-size: 2.75rem; font-weight: 900; color: #0f172a; margin-bottom: 0.3rem; letter-spacing: -0.04em;">
-            {{ profile.used_storage_mb|floatformat:1 }} <span style="font-size: 1rem; font-weight: 600; color: #64748b;">MB</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.82rem; color: #64748b; margin-bottom: 0.75rem; font-weight: 600;">
-            <span>Quota Limit</span>
-            <span style="font-weight: 800; color: #0f172a;">{{ profile.subscription_plan.storage_limit_mb|default:"0" }} MB</span>
-        </div>
-        {% if profile.subscription_plan %}
-        <div class="progress-bar" style="height: 8px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
-            <div class="progress-fill" style="width: {{ profile.storage_percentage }}%;"></div>
-        </div>
-        {% endif %}
-    </div>
+    /* ── Dashboard Layout ── */
+    .dash-layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+        background: #f1f5f9;
+    }
 
-    <!-- Images Card -->
-    <div class="glass-panel glass-panel-interactive" style="padding: 2rem 2.25rem; border-radius: 24px; position: relative; overflow: hidden;">
-        <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(5, 150, 105, 0.15) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
-            <div>
-                <h3 style="font-size: 0.78rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em;">Total Photos</h3>
-                <div style="font-size: 0.82rem; color: #059669; font-weight: 700; margin-top: 2px;">Gallery Index</div>
-            </div>
-            <div class="stat-icon" style="background: rgba(5, 150, 105, 0.1); color: #059669; width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; border: 1px solid rgba(5, 150, 105, 0.2);">🖼️</div>
-        </div>
-        <div class="value" style="font-size: 2.75rem; font-weight: 900; color: #0f172a; margin-bottom: 0.3rem; letter-spacing: -0.04em;">{{ total_images }}</div>
-        <span style="font-size: 0.84rem; color: #64748b; font-weight: 500;">High-resolution images stored</span>
-    </div>
+    /* ── Sidebar ── */
+    .dash-sidebar {
+        background: #ffffff;
+        border-right: 1px solid #e2e8f0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        z-index: 50;
+    }
 
-    <!-- Faces Card -->
-    <div class="glass-panel glass-panel-interactive" style="padding: 2rem 2.25rem; border-radius: 24px; position: relative; overflow: hidden;">
-        <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(217, 119, 6, 0.15) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
-            <div>
-                <h3 style="font-size: 0.78rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em;">Detected Faces</h3>
-                <div style="font-size: 0.82rem; color: #d97706; font-weight: 700; margin-top: 2px;">FAISS Embedding Index</div>
-            </div>
-            <div class="stat-icon" style="background: rgba(217, 119, 6, 0.1); color: #d97706; width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; border: 1px solid rgba(217, 119, 6, 0.2);">👥</div>
-        </div>
-        <div class="value" style="font-size: 2.75rem; font-weight: 900; color: #0f172a; margin-bottom: 0.3rem; letter-spacing: -0.04em;">{{ total_faces }}</div>
-        <span style="font-size: 0.84rem; color: #64748b; font-weight: 500;">Unique face vectors indexed</span>
-    </div>
-</div>
+    .dash-sidebar-logo {
+        padding: 1.5rem 1.75rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        border-bottom: 1px solid #f1f5f9;
+    }
 
-<!-- Events Section Header -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-    <div>
-        <h2 class="section-title" style="margin-bottom: 0.2rem; font-size: 1.6rem; color: #0f172a;">Event Collections</h2>
-        <p style="color: #64748b; font-size: 0.88rem; font-weight: 500;">Create, share, and organize photo albums with AI indexing</p>
-    </div>
-    <button class="btn" onclick="openModal('eventModal')" style="padding: 0.75rem 1.5rem; font-weight: 700;">
-        <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-        New Event
-    </button>
-</div>
+    .dash-sidebar-logo .logo-text {
+        font-size: 1.45rem;
+        font-weight: 850;
+        letter-spacing: -0.04em;
+        background: linear-gradient(135deg, #6366f1, #ec4899);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
 
-<!-- Events Grid -->
-<div class="gallery-grid" id="eventsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.75rem;">
-    {% for ev in events %}
-        <div class="glass-panel glass-panel-interactive" style="border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #e2e8f0; background: #ffffff; box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05); transition: var(--transition);">
-            {% with first_img=ev.images.first %}
-                {% if first_img %}
-                    <div onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="height: 160px; position: relative; overflow: hidden; background: #0f172a; cursor: pointer;">
-                        <img src="{% if first_img.thumbnail %}{{ first_img.thumbnail.url }}{% else %}{{ first_img.file.url }}{% endif %}" alt="{{ ev.name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;" class="card-cover-img">
-                        <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(15, 23, 42, 0.6) 0%, transparent 60%);"></div>
-                        <span style="position: absolute; top: 12px; right: 12px; font-size: 0.76rem; font-weight: 800; color: #ffffff; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.2);">🖼️ {{ ev.images.count }} photos</span>
-                    </div>
-                {% else %}
-                    <div onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="height: 130px; position: relative; overflow: hidden; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%); padding: 1.25rem; display: flex; align-items: flex-end; cursor: pointer;">
-                        <div style="position: absolute; top: -30px; right: -30px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%); border-radius: 50%;"></div>
-                        <span style="position: absolute; top: 12px; right: 12px; font-size: 0.76rem; font-weight: 800; color: #ffffff; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(12px); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.3);">📷 0 photos</span>
-                        <div style="width: 44px; height: 44px; border-radius: 14px; background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; color: #4f46e5; box-shadow: 0 6px 16px rgba(0,0,0,0.15);">📂</div>
-                    </div>
-                {% endif %}
-            {% endwith %}
+    .dash-nav {
+        padding: 1.25rem 0.85rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
 
-            <!-- Card Body Content -->
-            <div onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="padding: 1.5rem; flex: 1; cursor: pointer;">
-                <div style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 850; color: #0f172a; margin-bottom: 0.4rem; letter-spacing: -0.02em;">
-                    {{ ev.name|title }}
+    .dash-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0.7rem 1rem;
+        border-radius: 12px;
+        text-decoration: none;
+        color: #475569;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .dash-nav-item:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .dash-nav-item.active {
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(124, 58, 237, 0.08));
+        color: #4f46e5;
+        font-weight: 750;
+        border: 1px solid rgba(79, 70, 229, 0.15);
+    }
+
+    .dash-nav-icon {
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05rem;
+    }
+
+    .dash-nav-section-label {
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #94a3b8;
+        padding: 1rem 1rem 0.5rem;
+    }
+
+    .dash-sidebar-footer {
+        padding: 1rem 1.25rem;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    /* ── Main Content ── */
+    .dash-main {
+        padding: 2rem 2.5rem;
+        overflow-y: auto;
+    }
+
+    .dash-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.75rem;
+    }
+
+    .dash-header h1 {
+        font-size: 1.65rem;
+        font-weight: 850;
+        color: #0f172a;
+        letter-spacing: -0.03em;
+    }
+
+    /* ── Announcement Banner ── */
+    .dash-banner {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+        border-radius: 20px;
+        padding: 2rem 2.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .dash-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.3), transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .dash-banner-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #059669;
+        color: #ffffff;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 4px 12px;
+        border-radius: 20px;
+        margin-bottom: 0.75rem;
+    }
+
+    .dash-banner h2 {
+        color: #ffffff;
+        font-size: 1.3rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.4rem;
+    }
+
+    .dash-banner p {
+        color: #94a3b8;
+        font-size: 0.88rem;
+        line-height: 1.5;
+        margin-bottom: 1rem;
+    }
+
+    .dash-banner-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #059669;
+        color: #ffffff;
+        padding: 0.6rem 1.25rem;
+        border-radius: 10px;
+        font-size: 0.82rem;
+        font-weight: 750;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .dash-banner-btn:hover {
+        background: #047857;
+        transform: translateY(-1px);
+    }
+
+    .dash-banner-feature {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 1.1rem 1.5rem;
+        min-width: 260px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .dash-banner-feature h4 {
+        color: #ffffff;
+        font-size: 0.92rem;
+        font-weight: 750;
+        margin-bottom: 0.25rem;
+    }
+
+    .dash-banner-feature p {
+        color: #94a3b8;
+        font-size: 0.78rem;
+        margin: 0;
+    }
+
+    /* ── Recent Events Section ── */
+    .dash-recent-section {
+        margin-bottom: 2rem;
+    }
+
+    .dash-section-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 1.15rem;
+        letter-spacing: -0.01em;
+    }
+
+    .dash-recent-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 240px;
+        gap: 1.25rem;
+    }
+
+    .dash-event-card {
+        background: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        transition: all 0.25s ease;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .dash-event-card:hover {
+        box-shadow: 0 8px 25px -5px rgba(15, 23, 42, 0.1);
+        border-color: #cbd5e1;
+        transform: translateY(-2px);
+    }
+
+    .dash-event-cover {
+        height: 140px;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .dash-event-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .dash-event-body {
+        padding: 1rem 1.15rem;
+    }
+
+    .dash-event-body h4 {
+        font-size: 0.92rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 0.2rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .dash-event-body span {
+        font-size: 0.78rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .dash-events-count-widget {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 0.75rem;
+    }
+
+    .dash-events-count-label {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .dash-events-count-num {
+        font-size: 2.75rem;
+        font-weight: 900;
+        color: #0f172a;
+        letter-spacing: -0.04em;
+        line-height: 1;
+    }
+
+    .dash-events-count-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        padding: 0.55rem 1rem;
+        border-radius: 10px;
+        font-size: 0.82rem;
+        font-weight: 750;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: none;
+        font-family: inherit;
+    }
+
+    .dash-events-count-btn.primary {
+        background: #059669;
+        color: #ffffff;
+    }
+
+    .dash-events-count-btn.primary:hover {
+        background: #047857;
+    }
+
+    .dash-events-count-btn.secondary {
+        background: #1e293b;
+        color: #ffffff;
+    }
+
+    .dash-events-count-btn.secondary:hover {
+        background: #0f172a;
+    }
+
+    /* ── Studio Insights ── */
+    .dash-insights-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .dash-insight-card {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 1.35rem 1.5rem;
+    }
+
+    .dash-insight-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.6rem;
+    }
+
+    .dash-insight-label {
+        font-size: 0.85rem;
+        color: #475569;
+        font-weight: 600;
+    }
+
+    .dash-insight-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+    }
+
+    .dash-insight-value {
+        font-size: 1.65rem;
+        font-weight: 900;
+        color: #0f172a;
+        letter-spacing: -0.03em;
+        margin-bottom: 0.1rem;
+    }
+
+    .dash-insight-value span {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #94a3b8;
+    }
+
+    .dash-insight-sub {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        font-weight: 500;
+        margin-top: 0.2rem;
+    }
+
+    .dash-insight-bar {
+        width: 100%;
+        height: 5px;
+        background: #e2e8f0;
+        border-radius: 9999px;
+        margin-top: 0.75rem;
+        overflow: hidden;
+    }
+
+    .dash-insight-bar-fill {
+        height: 100%;
+        border-radius: 9999px;
+        transition: width 0.5s ease;
+    }
+
+    /* ── Stat Cards Grid ── */
+    .dash-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .dash-stat-card {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 1.5rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .dash-stat-card:hover {
+        box-shadow: 0 4px 15px -3px rgba(15, 23, 42, 0.08);
+    }
+
+    .dash-stat-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .dash-stat-num {
+        font-size: 2rem;
+        font-weight: 900;
+        color: #0f172a;
+        letter-spacing: -0.04em;
+        line-height: 1;
+    }
+
+    .dash-stat-label {
+        font-size: 0.78rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    /* ── All Events Section ── */
+    .dash-all-events-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .dash-events-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .dash-event-full-card {
+        background: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        transition: all 0.25s ease;
+    }
+
+    .dash-event-full-card:hover {
+        box-shadow: 0 8px 25px -5px rgba(15, 23, 42, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .dash-event-full-cover {
+        height: 150px;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .dash-event-full-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+    }
+
+    .dash-event-full-card:hover .dash-event-full-cover img {
+        transform: scale(1.05);
+    }
+
+    .dash-event-full-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #ffffff;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(8px);
+        padding: 4px 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .dash-event-full-body {
+        padding: 1.15rem 1.25rem;
+    }
+
+    .dash-event-full-body h4 {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 0.3rem;
+        letter-spacing: -0.01em;
+    }
+
+    .dash-event-full-body p {
+        font-size: 0.82rem;
+        color: #64748b;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 0.6rem;
+    }
+
+    .dash-event-full-meta {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    .dash-event-full-footer {
+        padding: 0.75rem 1.25rem;
+        background: #f8fafc;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .dash-event-full-footer a {
+        font-size: 0.82rem;
+        font-weight: 750;
+        color: #4f46e5;
+        text-decoration: none;
+    }
+
+    .dash-event-full-footer a:hover {
+        color: #7c3aed;
+    }
+
+    .event-card-actions {
+        display: flex;
+        gap: 6px;
+    }
+
+    .action-edit, .action-delete {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        text-decoration: none;
+        font-family: inherit;
+    }
+
+    .action-edit {
+        background: rgba(79, 70, 229, 0.08);
+        color: #4f46e5;
+        border: 1px solid rgba(79, 70, 229, 0.2);
+    }
+
+    .action-edit:hover {
+        background: rgba(79, 70, 229, 0.15);
+    }
+
+    .action-delete {
+        background: rgba(225, 29, 72, 0.08);
+        color: #e11d48;
+        border: 1px solid rgba(225, 29, 72, 0.2);
+    }
+
+    .action-delete:hover {
+        background: rgba(225, 29, 72, 0.15);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+        .dash-recent-row {
+            grid-template-columns: 1fr 1fr;
+        }
+        .dash-stat-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dash-layout {
+            grid-template-columns: 1fr;
+        }
+        .dash-sidebar {
+            display: none;
+        }
+        .dash-main {
+            padding: 1.25rem;
+        }
+        .dash-recent-row {
+            grid-template-columns: 1fr;
+        }
+        .dash-insights-row {
+            grid-template-columns: 1fr;
+        }
+        .dash-stat-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        .dash-banner {
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .dash-banner-feature {
+            min-width: unset;
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="dash-layout">
+    <!-- ════════════════════ LEFT SIDEBAR ════════════════════ -->
+    <aside class="dash-sidebar">
+        <!-- Logo -->
+        <a href="{% url 'gallery:dashboard' %}" class="dash-sidebar-logo">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 8px rgba(99, 102, 241, 0.35));">
+                <rect x="2" y="2" width="20" height="20" rx="8" fill="url(#dashGrad)"/>
+                <circle cx="12" cy="12" r="4.5" fill="white" opacity="0.95"/>
+                <circle cx="17.5" cy="6.5" r="1.5" fill="white" opacity="0.8"/>
+                <defs>
+                    <linearGradient id="dashGrad" x1="2" y1="2" x2="22" y2="22">
+                        <stop stop-color="#6366f1"/>
+                        <stop offset="1" stop-color="#ec4899"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            <span class="logo-text">Photona</span>
+        </a>
+
+        <!-- Navigation -->
+        <nav class="dash-nav">
+            <a href="{% url 'gallery:dashboard' %}" class="dash-nav-item active">
+                <span class="dash-nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="{% url 'gallery:dashboard' %}#events-section" class="dash-nav-item" onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'}); return false;">
+                <span class="dash-nav-icon">📅</span>
+                Events
+            </a>
+            <a href="{% url 'gallery:search' %}" class="dash-nav-item">
+                <span class="dash-nav-icon">🔍</span>
+                AI Search
+            </a>
+
+            <div class="dash-nav-section-label">Quick Actions</div>
+
+            <a href="javascript:void(0)" class="dash-nav-item" onclick="openModal('eventModal')">
+                <span class="dash-nav-icon">➕</span>
+                Create Event
+            </a>
+        </nav>
+
+        <!-- Sidebar Footer / Profile -->
+        <div class="dash-sidebar-footer">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 850; box-shadow: 0 3px 10px rgba(79, 70, 229, 0.3);">
+                    {{ request.user.username|make_list|first|upper }}
                 </div>
-                <p style="color: #64748b; font-size: 0.88rem; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 500; margin-bottom: 0.85rem;">
-                    {{ ev.description|default:"No description provided for this collection." }}
-                </p>
-                <div style="font-size: 0.78rem; color: #94a3b8; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                    <span>📅</span> {{ ev.created_at|date:"M d, Y" }}
+                <div style="overflow: hidden;">
+                    <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ request.user.username|title }}</div>
+                    <div style="font-size: 0.7rem; color: #4f46e5; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">{{ profile.subscription_plan.name|default:"Free Plan" }}</div>
                 </div>
             </div>
-            
-            <!-- Card Footer Bar -->
-            <div style="padding: 0.9rem 1.5rem; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
-                <a href="{% url 'gallery:event_detail' ev.slug %}" style="font-size: 0.84rem; font-weight: 800; color: #4f46e5; text-decoration: none; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.color='#7c3aed';" onmouseout="this.style.color='#4f46e5';">
-                    View Album →
+            <a href="{% url 'gallery:user_logout' %}" style="display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 0.55rem; border-radius: 10px; background: rgba(225, 29, 72, 0.06); color: #e11d48; border: 1px solid rgba(225, 29, 72, 0.2); font-size: 0.82rem; font-weight: 700; text-decoration: none; transition: all 0.2s ease;" onmouseover="this.style.background='#e11d48'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(225, 29, 72, 0.06)'; this.style.color='#e11d48';">
+                Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- ════════════════════ MAIN CONTENT ════════════════════ -->
+    <div class="dash-main">
+        <!-- Header -->
+        <div class="dash-header">
+            <h1>Dashboard</h1>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="background: rgba(5, 150, 105, 0.08); padding: 0.5rem 1rem; border-radius: 12px; border: 1px solid rgba(5, 150, 105, 0.2); display: flex; align-items: center; gap: 8px;">
+                    <span style="display: flex; height: 8px; width: 8px; border-radius: 50%; background-color: #059669; box-shadow: 0 0 8px #059669; animation: pulse 2s infinite;"></span>
+                    <span style="font-size: 0.82rem; font-weight: 700; color: #059669;">AI Engine Online</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Announcement Banner ── -->
+        <div class="dash-banner">
+            <div style="position: relative; z-index: 2;">
+                <div class="dash-banner-badge">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #ffffff;"></span>
+                    What's New
+                </div>
+                <h2>AI-Powered Face Search & Smart Photo Delivery</h2>
+                <p>Upload photos, let our AI detect faces, and share events instantly. Guests find their photos with a selfie search!</p>
+                <a href="{% url 'gallery:search' %}" class="dash-banner-btn">
+                    Try AI Search
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </a>
-                <div class="event-card-actions" style="display: flex; gap: 8px;">
-                    <a href="javascript:void(0)" class="action-edit" onclick="editEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}', '{{ ev.description|escapejs }}')">✎ Edit</a>
-                    <button class="action-delete" onclick="confirmDeleteEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}')">✕ Delete</button>
+            </div>
+            <div class="dash-banner-feature">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(5, 150, 105, 0.2); display: flex; align-items: center; justify-content: center;">
+                        <span style="font-size: 1.1rem;">🔗</span>
+                    </div>
+                    <h4>Client Access Links</h4>
+                </div>
+                <p>Share event links with clients. No login needed for guests to search their photos.</p>
+            </div>
+        </div>
+
+        <!-- ── Recent Events Section ── -->
+        <div class="dash-recent-section">
+            <h3 class="dash-section-title">Recent Events</h3>
+            <div class="dash-recent-row">
+                {% for ev in recent_events %}
+                <a href="{% url 'gallery:event_detail' ev.slug %}" class="dash-event-card">
+                    <div class="dash-event-cover">
+                        {% with first_img=ev.images.first %}
+                            {% if first_img %}
+                                <img src="{% if first_img.thumbnail %}{{ first_img.thumbnail.url }}{% else %}{{ first_img.file.url }}{% endif %}" alt="{{ ev.name }}">
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    <div class="dash-event-body">
+                        <h4>{{ ev.name|title }}</h4>
+                        <span>{{ ev.description|default:"Photography Event"|truncatewords:6 }}</span>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="dash-event-card" style="display: flex; align-items: center; justify-content: center; min-height: 200px; grid-column: 1 / -1; cursor: default;">
+                    <div style="text-align: center; padding: 2rem;">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📅</div>
+                        <div style="font-size: 0.92rem; font-weight: 700; color: #0f172a; margin-bottom: 0.3rem;">No events yet</div>
+                        <div style="font-size: 0.82rem; color: #64748b;">Create your first event to get started</div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Events Count Widget -->
+                <div class="dash-events-count-widget">
+                    <span class="dash-events-count-label">Events Count</span>
+                    <span class="dash-events-count-num">{{ total_events }}</span>
+                    <button onclick="openModal('eventModal')" class="dash-events-count-btn primary">
+                        Create Event
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                    </button>
+                    <a href="#events-section" class="dash-events-count-btn secondary" onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'}); return false;">
+                        Go to Events →
+                    </a>
                 </div>
             </div>
         </div>
-    {% empty %}
-        <div class="glass-panel" style="grid-column: 1 / -1; padding: 4.5rem 2rem; text-align: center; border-radius: 24px;">
-            <div style="font-size: 3.8rem; margin-bottom: 1.25rem;">📅</div>
-            <h3 style="font-size: 1.55rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem;">No events created yet</h3>
-            <p style="color: #64748b; max-width: 440px; margin: 0 auto 1.75rem auto; line-height: 1.6; font-size: 0.92rem; font-weight: 500;">Create your first photo event collection to start uploading and running AI-powered face detection.</p>
-            <button class="btn" onclick="openModal('eventModal')" style="padding: 0.8rem 2rem; font-weight: 700;">
-                Create First Event →
-            </button>
+
+        <!-- ── Studio Insights ── -->
+        <div class="dash-insights-row">
+            <!-- Storage Usage Card -->
+            <div class="dash-insight-card">
+                <div class="dash-insight-header">
+                    <span class="dash-insight-label">Storage Used</span>
+                    <div class="dash-insight-icon" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5;">💾</div>
+                </div>
+                <div class="dash-insight-value">
+                    {{ profile.used_storage_mb|floatformat:0 }} <span>/ {{ profile.subscription_plan.storage_limit_mb|default:"0" }} MB</span>
+                </div>
+                <div class="dash-insight-sub">Storage Uploaded / Allowed</div>
+                {% if profile.subscription_plan %}
+                <div class="dash-insight-bar">
+                    <div class="dash-insight-bar-fill" style="width: {{ profile.storage_percentage }}%; background: linear-gradient(90deg, #4f46e5, #7c3aed);"></div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Photos Indexed Card -->
+            <div class="dash-insight-card">
+                <div class="dash-insight-header">
+                    <span class="dash-insight-label">Photos Indexed</span>
+                    <div class="dash-insight-icon" style="background: rgba(5, 150, 105, 0.1); color: #059669;">✓</div>
+                </div>
+                <div class="dash-insight-value">
+                    {{ total_images }} <span>photos</span>
+                </div>
+                <div class="dash-insight-sub">Total Photos Uploaded & AI-Indexed</div>
+                <div class="dash-insight-bar">
+                    <div class="dash-insight-bar-fill" style="width: {% if total_images > 0 %}100{% else %}0{% endif %}%; background: linear-gradient(90deg, #059669, #10b981);"></div>
+                </div>
+            </div>
         </div>
-    {% endfor %}
+
+        <!-- ── Stat Cards ── -->
+        <div class="dash-stat-grid">
+            <div class="dash-stat-card">
+                <div class="dash-stat-icon" style="background: rgba(79, 70, 229, 0.08);">👤</div>
+                <div class="dash-stat-num">1</div>
+                <div class="dash-stat-label">Studio Users</div>
+            </div>
+            <div class="dash-stat-card">
+                <div class="dash-stat-icon" style="background: rgba(5, 150, 105, 0.08);">📅</div>
+                <div class="dash-stat-num">{{ total_events }}</div>
+                <div class="dash-stat-label">Total Events</div>
+            </div>
+            <div class="dash-stat-card">
+                <div class="dash-stat-icon" style="background: rgba(217, 119, 6, 0.08);">🖼️</div>
+                <div class="dash-stat-num">{{ total_images }}</div>
+                <div class="dash-stat-label">Total Photos</div>
+            </div>
+            <div class="dash-stat-card">
+                <div class="dash-stat-icon" style="background: rgba(236, 72, 153, 0.08);">👥</div>
+                <div class="dash-stat-num">{{ total_faces }}</div>
+                <div class="dash-stat-label">Faces Detected</div>
+            </div>
+        </div>
+
+        <!-- ── All Events Section ── -->
+        <div id="events-section">
+            <div class="dash-all-events-header">
+                <h3 class="dash-section-title" style="margin-bottom: 0;">All Events</h3>
+                <button class="dash-events-count-btn primary" onclick="openModal('eventModal')" style="width: auto; padding: 0.55rem 1.25rem;">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                    New Event
+                </button>
+            </div>
+
+            <div class="dash-events-grid" id="eventsGrid">
+                {% for ev in events %}
+                <div class="dash-event-full-card">
+                    {% with first_img=ev.images.first %}
+                        {% if first_img %}
+                        <div class="dash-event-full-cover" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'">
+                            <img src="{% if first_img.thumbnail %}{{ first_img.thumbnail.url }}{% else %}{{ first_img.file.url }}{% endif %}" alt="{{ ev.name }}">
+                            <span class="dash-event-full-badge">🖼️ {{ ev.images.count }} photos</span>
+                        </div>
+                        {% else %}
+                        <div class="dash-event-full-cover" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="display: flex; align-items: flex-end; padding: 1rem;">
+                            <span class="dash-event-full-badge">📷 0 photos</span>
+                        </div>
+                        {% endif %}
+                    {% endwith %}
+
+                    <div class="dash-event-full-body" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="cursor: pointer;">
+                        <h4>{{ ev.name|title }}</h4>
+                        <p>{{ ev.description|default:"No description provided for this collection." }}</p>
+                        <span class="dash-event-full-meta">📅 {{ ev.created_at|date:"M d, Y" }}</span>
+                    </div>
+
+                    <div class="dash-event-full-footer">
+                        <a href="{% url 'gallery:event_detail' ev.slug %}">View Album →</a>
+                        <div class="event-card-actions">
+                            <a href="javascript:void(0)" class="action-edit" onclick="editEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}', '{{ ev.description|escapejs }}')">✎ Edit</a>
+                            <button class="action-delete" onclick="confirmDeleteEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}')">✕ Delete</button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="dash-event-full-card" style="grid-column: 1 / -1; padding: 4rem 2rem; text-align: center;">
+                    <div style="font-size: 3.5rem; margin-bottom: 1rem;">📅</div>
+                    <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem;">No events created yet</h3>
+                    <p style="color: #64748b; max-width: 400px; margin: 0 auto 1.5rem; font-size: 0.88rem; line-height: 1.6;">Create your first photo event to start uploading and running AI face detection.</p>
+                    <button class="dash-events-count-btn primary" onclick="openModal('eventModal')" style="width: auto; padding: 0.65rem 1.5rem; margin: 0 auto;">
+                        Create First Event →
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Create Event Modal -->
+<!-- ══════════ Create Event Modal ══════════ -->
 <div id="eventModal" class="modal-overlay">
-    <div class="card glass-panel" style="width: 100%; max-width: 500px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
+    <div class="card" style="width: 100%; max-width: 500px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
             <h3 style="font-size: 1.35rem; font-weight: 850; letter-spacing: -0.02em; color: #0f172a;">Create New Event</h3>
-            <button onclick="closeModal('eventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: var(--transition);" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
+            <button onclick="closeModal('eventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s ease;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
         </div>
         <form method="post" action="{% url 'gallery:create_event' %}">
             {% csrf_token %}
@@ -171,12 +948,12 @@
     </div>
 </div>
 
-<!-- Edit Event Modal -->
+<!-- ══════════ Edit Event Modal ══════════ -->
 <div id="editEventModal" class="modal-overlay">
-    <div class="card glass-panel" style="width: 100%; max-width: 500px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
+    <div class="card" style="width: 100%; max-width: 500px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
             <h3 style="font-size: 1.35rem; font-weight: 850; letter-spacing: -0.02em; color: #0f172a;">Edit Event Details</h3>
-            <button onclick="closeModal('editEventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: var(--transition);" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
+            <button onclick="closeModal('editEventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s ease;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
         </div>
         <form id="editEventForm" method="post">
             {% csrf_token %}
