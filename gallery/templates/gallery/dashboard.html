@@ -704,23 +704,92 @@
         <!-- Navigation -->
         <nav class="dash-nav">
             <a href="{% url 'gallery:dashboard' %}" class="dash-nav-item active">
-                <span class="dash-nav-icon">📊</span>
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="10.5" y="1" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="1" y="10.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="10.5" y="10.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+                </span>
                 Dashboard
             </a>
-            <a href="{% url 'gallery:dashboard' %}#events-section" class="dash-nav-item" onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'}); return false;">
-                <span class="dash-nav-icon">📅</span>
+            <a href="javascript:void(0)" class="dash-nav-item" onclick="openModal('eventModal')">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 5.5v7M5.5 9h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                Create Event
+            </a>
+            <a href="#events-section" class="dash-nav-item" onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'}); return false;">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 7h14M6 1v4M12 1v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
                 Events
             </a>
             <a href="{% url 'gallery:search' %}" class="dash-nav-item">
-                <span class="dash-nav-icon">🔍</span>
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.8"/><path d="M11.5 11.5L16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
                 AI Search
             </a>
+            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Downloads page coming soon!', 'info')">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v10M5 9l4 4 4-4M3 14h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                Downloads
+            </a>
 
-            <div class="dash-nav-section-label">Quick Actions</div>
+            <div class="dash-nav-section-label">AI Tools</div>
 
-            <a href="javascript:void(0)" class="dash-nav-item" onclick="openModal('eventModal')">
-                <span class="dash-nav-icon">➕</span>
-                Create Event
+            <a href="{% url 'gallery:group_by_face' %}" class="dash-nav-item">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="6" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                Face Grouping
+            </a>
+            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Photo Enhancement coming soon!', 'info')">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1l2.2 4.5 5 .7-3.6 3.5.9 5L9 12.5 4.5 14.7l.9-5L1.8 6.2l5-.7L9 1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                </span>
+                Photo Enhancement
+                <span style="margin-left: auto; font-size: 0.6rem; font-weight: 800; color: #4f46e5; background: rgba(79, 70, 229, 0.1); padding: 2px 7px; border-radius: 6px;">SOON</span>
+            </a>
+            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Eye Correction AI coming soon!', 'info')">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M1 9s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.6"/></svg>
+                </span>
+                Eye Correction
+                <span style="margin-left: auto; font-size: 0.6rem; font-weight: 800; color: #4f46e5; background: rgba(79, 70, 229, 0.1); padding: 2px 7px; border-radius: 6px;">SOON</span>
+            </a>
+            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Smart Filters coming soon!', 'info')">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 3h14M4 7h10M6 11h6M8 15h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                Smart Filters
+                <span style="margin-left: auto; font-size: 0.6rem; font-weight: 800; color: #4f46e5; background: rgba(79, 70, 229, 0.1); padding: 2px 7px; border-radius: 6px;">SOON</span>
+            </a>
+
+            <div class="dash-nav-section-label">Account</div>
+
+            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('WhatsApp sharing coming soon!', 'info')">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M15.5 2.5A8.5 8.5 0 003.2 14l-1.7 3.5 3.6-1A8.5 8.5 0 0015.5 2.5z" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 7.5c.3-.6.7-1 1.2-1s.8.5 1 .8l.2.4c.1.3 0 .6-.2.8l-.5.5s.5 1 1.2 1.7c.7.7 1.7 1.2 1.7 1.2l.5-.5c.2-.2.5-.3.8-.2l.4.2c.3.2.8.5.8 1s-.4.9-1 1.2c-.8.3-1.8.1-2.8-.5A10.5 10.5 0 016.5 7.5z" stroke="currentColor" stroke-width="1.2"/></svg>
+                </span>
+                WhatsApp
+                <span style="margin-left: auto; font-size: 0.6rem; font-weight: 800; color: #059669; background: rgba(5, 150, 105, 0.1); padding: 2px 7px; border-radius: 6px;">NEW</span>
+            </a>
+            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Email sharing coming soon!', 'info')">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 6l7 4.5L16 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                Email
+            </a>
+            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Billing & Plans coming soon!', 'info')">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 8h14" stroke="currentColor" stroke-width="1.8"/></svg>
+                </span>
+                Billing
+            </a>
+            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Settings page coming soon!', 'info')">
+                <span class="dash-nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.4 3.4l1.4 1.4M13.2 13.2l1.4 1.4M3.4 14.6l1.4-1.4M13.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                </span>
+                Settings
             </a>
         </nav>
 
