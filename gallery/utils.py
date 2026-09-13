@@ -163,36 +163,47 @@ def extract_gdrive_id(url):
     return match.group(1) if match else None
 
 def download_gdrive_file_by_id(file_id, output_path):
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    })
-    
-    urls_to_try = [
-        f"https://drive.usercontent.google.com/download?id={file_id}&export=download",
-        f"https://drive.google.com/uc?export=download&id={file_id}"
-    ]
-    
-    for dl_url in urls_to_try:
-        try:
-            response = session.get(dl_url, stream=True, timeout=30)
-            token = None
-            for key, value in response.cookies.items():
-                if key.startswith('download_warning'):
-                    token = value
-                    break
-                    
-            if token:
-                response = session.get(f"{dl_url}&confirm={token}", stream=True, timeout=30)
+    try:
+        import gdown
+        output = gdown.download(id=file_id, output=output_path, quiet=True)
+        
+        if output and os.path.exists(output_path) and os.path.getsize(output_path) > 100:
+            return True
+        else:
+            print(f"[DEBUG] gdown returned {output} for {file_id}. Attempting requests fallback...")
+    except Exception as ex:
+        print(f"[DEBUG] Failed downloading file {file_id} via gdown: {ex}. Attempting requests fallback...")
+
+    # Fallback: Pure requests approach with confirmation token handling
+    try:
+        import requests
+        URL = "https://docs.google.com/uc?export=download"
+        session = requests.Session()
+        response = session.get(URL, params={'id': file_id}, stream=True, timeout=30)
+
+        token = None
+        for key, value in session.cookies.items():
+            if key.startswith('download_warning'):
+                token = value
+                break
                 
-            if response.status_code == 200 and len(response.content) > 100:
-                with open(output_path, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=65536):
-                        if chunk:
-                            f.write(chunk)
+        if token:
+            response = session.get(URL, params={'id': file_id, 'confirm': token}, stream=True, timeout=30)
+
+        content_type = response.headers.get('Content-Type', '')
+        if response.status_code == 200 and 'text/html' not in content_type:
+            with open(output_path, "wb") as f:
+                for chunk in response.iter_content(32768):
+                    if chunk:
+                        f.write(chunk)
+            
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 100:
+                print(f"[DEBUG] Successfully downloaded {file_id} via requests fallback.")
                 return True
-        except Exception as ex:
-            print(f"[DEBUG] Failed downloading file {file_id} via {dl_url}: {ex}")
+        else:
+            print(f"[DEBUG] requests fallback failed: status {response.status_code}, content_type {content_type}")
+    except Exception as e:
+        print(f"[DEBUG] requests fallback also failed for {file_id}: {e}")
             
     return False
 
@@ -217,15 +228,31 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
             if not folder_id:
                 raise ValueError("Could not extract Google Drive folder ID from URL.")
                 
-            session = requests.Session()
-            session.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            })
             folder_page_url = f"https://drive.google.com/drive/folders/{folder_id}?usp=sharing"
-            resp = session.get(folder_page_url, timeout=20)
+            print(f"[GDrive] Parsing folder {folder_id}...")
             
-            extracted = set(re.findall(r'\"(1[a-zA-Z0-9-_]{32})\"', resp.text))
-            file_ids = [fid for fid in extracted if fid != folder_id]
+            try:
+                import gdown
+                # Use id=folder_id instead of URL to avoid scraping blocks
+                gdown_files = gdown.download_folder(id=folder_id, skip_download=True, quiet=True, use_cookies=False)
+                if gdown_files:
+                    file_ids = [f.id for f in gdown_files if hasattr(f, 'id')]
+                else:
+                    file_ids = []
+            except Exception as e:
+                print(f"[GDrive] gdown folder parse failed: {e}")
+                file_ids = []
+                
+            if not file_ids:
+                print("[GDrive] Fallback to regex extraction...")
+                session = requests.Session()
+                session.headers.update({
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                })
+                resp = session.get(folder_page_url, timeout=20)
+                extracted = set(re.findall(r'\"([a-zA-Z0-9-_]{25,35})\"', resp.text))
+                file_ids = [fid for fid in extracted if fid != folder_id]
+                
             print(f"[GDrive] Discovered {len(file_ids)} public files in folder {folder_id}")
         else:
             file_id = extract_gdrive_id(url)
@@ -274,7 +301,8 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                                         profile = event.owner.profile
                                         f_size_mb = os.path.getsize(full_img_path) / (1024 * 1024)
                                         if profile.subscription_plan and (profile.used_storage_mb + f_size_mb) > profile.subscription_plan.storage_limit_mb:
-                                            continue
+                                            raise Exception("Storage limit exceeded. Upgrade your plan to import more photos.")
+
                                         profile.used_storage_mb += f_size_mb
                                         profile.save()
 
@@ -294,7 +322,7 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                                             'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
                                             'new_photo': {
                                                 'id': gallery_image.id,
-                                                'url': gallery_image.thumbnail.url if gallery_image.thumbnail else gallery_image.file.url,
+                                                'url': f"/secure-media/{gallery_image.get_secure_thumbnail_token()}/",
                                                 'filename': gallery_image.filename,
                                                 'total_faces': gallery_image.total_faces
                                             }
@@ -310,7 +338,8 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                         profile = event.owner.profile
                         file_size_mb = os.path.getsize(tmp_file_path) / (1024 * 1024)
                         if profile.subscription_plan and (profile.used_storage_mb + file_size_mb) > profile.subscription_plan.storage_limit_mb:
-                            continue
+                            raise Exception("Storage limit exceeded. Upgrade your plan to import more photos.")
+
                         profile.used_storage_mb += file_size_mb
                         profile.save()
 
@@ -330,7 +359,7 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                             'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
                             'new_photo': {
                                 'id': gallery_image.id,
-                                'url': gallery_image.thumbnail.url if gallery_image.thumbnail else gallery_image.file.url,
+                                'url': f"/secure-media/{gallery_image.get_secure_thumbnail_token()}/",
                                 'filename': gallery_image.filename,
                                 'total_faces': gallery_image.total_faces
                             }

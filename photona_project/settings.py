@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'photona_project.middleware.TrialEnforcementMiddleware',
 ]
 
 ROOT_URLCONF = 'photona_project.urls'
@@ -132,9 +133,11 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # ---------------------------------------------------------
-# AWS S3 Configuration (Activates if AWS_ACCESS_KEY_ID is set)
+# AWS S3 Configuration
 # ---------------------------------------------------------
-if os.environ.get('AWS_ACCESS_KEY_ID'):
+USE_S3 = os.environ.get('USE_S3', 'False') == 'True'
+
+if USE_S3 and os.environ.get('AWS_ACCESS_KEY_ID'):
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')

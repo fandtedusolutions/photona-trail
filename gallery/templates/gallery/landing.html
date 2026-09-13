@@ -5,354 +5,597 @@
 
 {% block content %}
 <style>
-    /* Hero Section with Blobs */
+    /* ── Premium Hero Section ── */
     .hero-container {
         position: relative;
         text-align: center;
-        padding: 8rem 1rem 6rem;
-        max-width: 1100px;
+        padding: 10rem 1.5rem 8rem;
+        max-width: 1200px;
         margin: 0 auto;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    @media (max-width: 768px) {
+        .hero-container { padding: 6rem 1rem 4rem; }
     }
 
-    .blob {
+    /* Animated Premium Orbs */
+    .premium-orb {
         position: absolute;
         border-radius: 50%;
-        filter: blur(80px);
-        opacity: 0.5;
+        filter: blur(100px);
         z-index: -1;
-        animation: float 10s infinite ease-in-out alternate;
+        animation: orb-drift 15s ease-in-out infinite alternate;
+        opacity: 0.6;
     }
+    .premium-orb-1 { top: -15%; left: 10%; width: 500px; height: 500px; background: linear-gradient(135deg, rgba(79, 70, 229, 0.4), rgba(124, 58, 237, 0.4)); }
+    .premium-orb-2 { bottom: -10%; right: 10%; width: 600px; height: 600px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.3), rgba(244, 63, 94, 0.3)); animation-delay: -7s; }
+    .premium-orb-3 { top: 40%; left: 50%; transform: translateX(-50%); width: 800px; height: 300px; background: radial-gradient(ellipse, rgba(56, 189, 248, 0.15) 0%, transparent 70%); animation: pulse 8s ease-in-out infinite alternate; }
 
-    .blob-1 {
-        top: -10%; left: -10%; width: 400px; height: 400px;
-        background: rgba(99, 102, 241, 0.4);
-    }
-    
-    .blob-2 {
-        bottom: -20%; right: -5%; width: 500px; height: 500px;
-        background: rgba(236, 72, 153, 0.3);
-        animation-delay: -5s;
-    }
-
-    @keyframes float {
+    @keyframes orb-drift {
         0% { transform: translate(0, 0) scale(1); }
-        100% { transform: translate(30px, 50px) scale(1.1); }
+        50% { transform: translate(40px, -30px) scale(1.1); }
+        100% { transform: translate(-30px, 40px) scale(0.95); }
+    }
+    @keyframes pulse {
+        0% { opacity: 0.4; transform: translateX(-50%) scale(1); }
+        100% { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
+    }
+
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        padding: 8px 20px;
+        border-radius: 9999px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--accent-indigo);
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-sm);
+        animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 
     .hero-title {
-        font-size: 4.5rem;
+        font-size: clamp(3.5rem, 8vw, 5.5rem);
         font-weight: 900;
-        line-height: 1.1;
-        letter-spacing: -0.05em;
-        margin-bottom: 1.5rem;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+        margin-bottom: 1.75rem;
+        color: var(--text-primary);
+        animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+    }
+    
+    .hero-title .text-gradient {
+        background: linear-gradient(135deg, #4f46e5, #ec4899, #f59e0b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        background-size: 200% 200%;
+        animation: gradient-shift 5s ease infinite;
+    }
+
+    @keyframes gradient-shift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
     }
 
     .hero-subtitle {
-        font-size: 1.25rem;
+        font-size: clamp(1.1rem, 3vw, 1.35rem);
         color: var(--text-secondary);
         line-height: 1.6;
         margin-bottom: 3.5rem;
-        max-width: 700px;
-        margin-left: auto;
-        margin-right: auto;
+        max-width: 750px;
+        font-weight: 400;
+        animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
     }
 
-    /* Bento Grid */
+    .hero-cta {
+        display: flex;
+        gap: 1.25rem;
+        animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+    }
+
+    .btn-premium {
+        background: linear-gradient(135deg, #0f172a, #334155);
+        color: white;
+        padding: 1.1rem 2.5rem;
+        font-size: 1.05rem;
+        font-weight: 700;
+        border-radius: 9999px;
+        border: none;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+    }
+    .btn-premium:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 15px 35px rgba(15, 23, 42, 0.35);
+        background: linear-gradient(135deg, #000000, #1e293b);
+    }
+    .btn-premium-outline {
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(15, 23, 42, 0.15);
+        color: #0f172a;
+        padding: 1.1rem 2.5rem;
+        font-size: 1.05rem;
+        font-weight: 700;
+        border-radius: 9999px;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        text-decoration: none;
+    }
+    .btn-premium-outline:hover {
+        background: #ffffff;
+        border-color: rgba(15, 23, 42, 0.3);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+    }
+
+    @keyframes fadeUp {
+        0% { opacity: 0; transform: translateY(30px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Premium Bento Features ── */
+    .bento-section {
+        padding: 4rem 1.5rem 8rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    @media (max-width: 768px) {
+        .bento-section { padding: 2rem 1rem 4rem; }
+    }
+    .section-tag {
+        font-size: 0.85rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--accent-indigo);
+        background: rgba(99, 102, 241, 0.1);
+        padding: 6px 16px;
+        border-radius: 20px;
+        margin-bottom: 1.5rem;
+        display: inline-block;
+    }
+    .section-header {
+        font-size: clamp(2.5rem, 5vw, 3.5rem);
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        margin-bottom: 4rem;
+        line-height: 1.1;
+        max-width: 700px;
+    }
     .bento-grid {
         display: grid;
         grid-template-columns: repeat(12, 1fr);
         gap: 1.5rem;
-        margin-bottom: 6rem;
     }
-
     .bento-card {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-light);
-        border-radius: var(--radius-2xl);
-        padding: 2.5rem;
-        transition: var(--transition-bounce);
-        position: relative;
-        overflow: hidden;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-radius: 32px;
+        padding: 3rem;
+        transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         flex-direction: column;
+        box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.05);
+        position: relative;
+        overflow: hidden;
     }
-    
+    .bento-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+        border-radius: inherit;
+        pointer-events: none;
+    }
     .bento-card:hover {
-        transform: translateY(-5px) scale(1.01);
-        box-shadow: var(--shadow-2xl);
-        border-color: var(--border-glow);
+        transform: translateY(-8px);
+        box-shadow: 0 30px 60px -15px rgba(15, 23, 42, 0.1);
+        background: rgba(255, 255, 255, 0.95);
+        border-color: rgba(99, 102, 241, 0.3);
     }
-
     .bento-large { grid-column: span 8; }
-    .bento-medium { grid-column: span 4; }
-    .bento-wide { grid-column: span 12; display: flex; flex-direction: row; align-items: center; gap: 4rem; }
-
-    .bento-icon-wrap {
-        width: 56px;
-        height: 56px;
-        border-radius: 16px;
+    .bento-small { grid-column: span 4; }
+    .bento-wide { grid-column: span 12; display: flex; flex-direction: row; align-items: center; gap: 3rem; padding: 4rem; }
+    @media (max-width: 900px) {
+        .bento-large, .bento-small, .bento-wide { grid-column: span 12; }
+        .bento-wide { flex-direction: column; align-items: flex-start; padding: 3rem; }
+    }
+    .bento-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
-        margin-bottom: 1.5rem;
+        font-size: 1.75rem;
+        margin-bottom: 2rem;
+        background: var(--bg-primary);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(226, 232, 240, 0.8);
     }
-
     .bento-title {
         font-size: 1.75rem;
         font-weight: 850;
-        letter-spacing: -0.04em;
-        margin-bottom: 1rem;
         color: var(--text-primary);
+        margin-bottom: 1rem;
+        letter-spacing: -0.02em;
     }
-
     .bento-desc {
-        font-size: 1.05rem;
-        color: var(--text-muted);
+        font-size: 1.1rem;
+        color: var(--text-secondary);
         line-height: 1.6;
     }
-
-    /* Pricing Section */
-    .pricing-section {
-        text-align: center;
-        padding: 6rem 0;
+    
+    /* ── Stats Section ── */
+    .stats-section {
+        background: #1e293b;
+        color: white;
+        padding: 5rem 3rem;
+        border-radius: 40px;
+        margin: 0 auto 6rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4rem;
+        align-items: center;
+        max-width: 1200px;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.3);
         position: relative;
+        overflow: hidden;
     }
+    .stats-bg-glow {
+        position: absolute;
+        top: -20%; left: -10%;
+        width: 500px; height: 500px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    @media (max-width: 900px) {
+        .stats-section { grid-template-columns: 1fr; gap: 3rem; padding: 4rem 2rem; margin-bottom: 4rem; }
+    }
+    @media (max-width: 600px) {
+        .stats-section { padding: 3rem 1.5rem; }
+        .stats-grid-inner { grid-template-columns: 1fr; }
+    }
+    .stats-left h2 { font-size: clamp(2.2rem, 4vw, 3.2rem); font-weight: 900; margin-bottom: 1.5rem; color: #ffffff; letter-spacing: -0.02em; line-height: 1.1; }
+    .stats-left p { color: #94a3b8; font-size: 1.15rem; line-height: 1.7; margin-bottom: 2.5rem; }
+    .stats-grid-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; z-index: 2; position: relative; }
+    .stat-box { background: white; border-radius: 24px; padding: 2rem 1.5rem; color: #0f172a; box-shadow: var(--shadow-xl); transition: transform 0.4s ease; text-align: left; }
+    .stat-box:hover { transform: translateY(-8px); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+    .stat-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 1.5rem; background: var(--bg-primary); color: var(--accent-indigo); }
+    .stat-number { font-size: 2.5rem; font-weight: 900; letter-spacing: -0.05em; margin-bottom: 0.5rem; color: var(--text-primary); }
+    .stat-label { font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; }
 
+    /* ── FAQ Section ── */
+    .faq-section {
+        max-width: 1000px; margin: 0 auto 8rem; padding: 0 1.5rem;
+    }
+    .faq-header { text-align: center; font-size: clamp(2.2rem, 4vw, 3rem); font-weight: 900; margin-bottom: 4rem; letter-spacing: -0.03em; color: var(--text-primary); }
+    .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 768px) { .faq-grid { grid-template-columns: 1fr; } }
+    .faq-item {
+        background: white; border-radius: 16px; padding: 1.75rem; border: 1px solid var(--border-light);
+        cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: var(--shadow-sm);
+    }
+    .faq-item:hover { border-color: var(--accent-indigo); box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .faq-question { font-size: 1.1rem; font-weight: 750; color: var(--text-primary); display: flex; justify-content: space-between; align-items: center; }
+    .faq-question svg { transition: transform 0.3s; color: var(--text-muted); }
+    .faq-item.active .faq-question svg { transform: rotate(180deg); color: var(--accent-indigo); }
+    .faq-answer { display: none; font-size: 1rem; color: var(--text-secondary); margin-top: 1.25rem; line-height: 1.6; }
+    .faq-item.active .faq-answer { display: block; animation: fadeUp 0.3s ease; }
+
+    /* ── Bottom CTA ── */
+    .bottom-cta {
+        background: var(--bg-secondary); border: 1px solid var(--border-light);
+        border-radius: 40px; padding: 6rem 3rem; margin: 0 auto 6rem; max-width: 1000px;
+        text-align: center; box-shadow: var(--shadow-xl); position: relative; overflow: hidden;
+    }
+    @media (max-width: 768px) {
+        .bottom-cta { padding: 4rem 1.5rem; border-radius: 24px; }
+    }
+    .bottom-cta::before {
+        content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(79, 70, 229, 0.05), transparent); pointer-events: none;
+    }
+    .bottom-cta h2 { font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 900; margin-bottom: 1.5rem; letter-spacing: -0.04em; color: var(--text-primary); }
+    .bottom-cta p { font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+    .cta-features { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: 3rem; }
+    .cta-feature { background: var(--bg-tertiary); padding: 10px 20px; border-radius: 9999px; font-size: 0.9rem; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-light); }
+    .cta-feature svg { color: var(--accent-emerald); }
+
+    /* ── Premium Pricing ── */
+    .pricing-section {
+        padding: 8rem 1.5rem;
+        background: #f8fafc;
+        color: #0f172a;
+        border: 1px solid #e2e8f0;
+        border-radius: 40px;
+        margin: 0 1.5rem 6rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+    }
+    @media (max-width: 768px) {
+        .pricing-section { padding: 4rem 1rem; margin: 0 1rem 3rem; border-radius: 24px; }
+    }
+    .pricing-bg-glow {
+        position: absolute;
+        top: 0; left: 50%; transform: translateX(-50%);
+        width: 800px; height: 600px;
+        background: radial-gradient(ellipse, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .pricing-header {
+        font-size: clamp(2.5rem, 5vw, 3.5rem);
+        font-weight: 900;
+        margin-bottom: 4rem;
+        color: #0f172a;
+    }
     .pricing-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
         gap: 2rem;
-        max-width: 1000px;
-        margin: 4rem auto 0;
-    }
-
-    .pricing-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        border: 1px solid var(--border-light);
-        border-radius: var(--radius-2xl);
-        padding: 3rem 2rem;
-        transition: var(--transition-bounce);
+        max-width: 1050px;
+        margin: 0 auto;
         position: relative;
+        z-index: 2;
     }
-
+    .pricing-card {
+        background: #ffffff;
+        backdrop-filter: blur(12px);
+        border: 1px solid #e2e8f0;
+        border-radius: 32px;
+        padding: 3rem 2rem;
+        transition: all 0.4s ease;
+        text-align: left;
+        position: relative;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.03);
+    }
     .pricing-card:hover {
-        transform: translateY(-8px);
-        box-shadow: var(--shadow-2xl);
-        border-color: var(--border-glow);
+        background: #ffffff;
+        border-color: rgba(99, 102, 241, 0.3);
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
     }
-
     .pricing-card.popular {
-        background: var(--bg-secondary);
-        border: 2px solid var(--accent-indigo);
-        box-shadow: var(--shadow-glow);
+        background: #ffffff;
+        border: 2px solid #4f46e5;
+        box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15);
     }
-
     .pricing-badge {
         position: absolute;
-        top: -12px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--gradient-primary);
-        color: white;
-        padding: 4px 16px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        top: -15px; left: 50%; transform: translateX(-50%);
+        background: linear-gradient(135deg, #4f46e5, #ec4899);
+        color: white; padding: 6px 18px; border-radius: 20px;
+        font-size: 0.8rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
     }
-
-    .pricing-plan-name {
-        font-size: 1.25rem;
-        font-weight: 800;
-        color: var(--text-muted);
-        margin-bottom: 1rem;
+    .pricing-price {
+        font-size: 3.5rem; font-weight: 900; margin-bottom: 0.5rem; color: #0f172a;
     }
-
-    .pricing-storage {
-        font-size: 3.5rem;
-        font-weight: 900;
-        color: var(--text-primary);
-        letter-spacing: -0.05em;
-        line-height: 1;
-        margin-bottom: 2rem;
+    .pricing-price span { font-size: 1.25rem; font-weight: 500; color: #64748b; }
+    .pricing-list { list-style: none; margin: 2.5rem 0; padding: 0; }
+    .pricing-list li {
+        margin-bottom: 1.2rem; display: flex; align-items: center; gap: 12px;
+        font-size: 1.05rem; color: #475569;
     }
-
-    .pricing-storage span {
-        font-size: 1.25rem;
-        color: var(--text-muted);
-        font-weight: 600;
-    }
-
-    .pricing-features {
-        list-style: none;
-        text-align: left;
-        margin-bottom: 3rem;
-    }
-
-    .pricing-feature-item {
-        margin-bottom: 1rem;
-        font-size: 0.95rem;
-        color: var(--text-secondary);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .pricing-feature-bullet {
-        color: var(--accent-emerald);
-        font-weight: 800;
-    }
-
-    /* Brands */
-    .brand-section {
-        padding: 4rem 0;
-        text-align: center;
-        border-top: 1px solid var(--border-light);
-    }
-    
-    .brand-grid {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 3rem;
-        opacity: 0.6;
-        margin-top: 3rem;
-    }
-    
-    .brand-logo {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: var(--text-secondary);
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        font-family: 'Outfit', sans-serif;
-    }
+    .pricing-list li svg { color: #10b981; }
 </style>
 
-<!-- Hero Section -->
+<!-- Premium Hero -->
 <div class="hero-container">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-    <h1 class="hero-title">Instant Photo Delivery<br><span class="text-gradient">Powered by AI</span></h1>
-    <p class="hero-subtitle">Deliver high-res media to event attendees in seconds. Sync from camera to cloud, auto-cluster faces, and share beautiful galleries effortlessly.</p>
+    <div class="premium-orb premium-orb-1"></div>
+    <div class="premium-orb premium-orb-2"></div>
+    <div class="premium-orb premium-orb-3"></div>
     
-    <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem;">
-        <a href="{% url 'gallery:user_login' %}" class="btn" style="padding: 1rem 2.5rem; font-size: 1.1rem; border-radius: 30px; box-shadow: var(--shadow-glow);">Start Free Trial</a>
-        <a href="#features" class="btn btn-secondary" style="padding: 1rem 2.5rem; font-size: 1.1rem; border-radius: 30px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);">Explore Features</a>
+    <div class="hero-badge">
+        <span style="font-size: 1.2rem;">✨</span> Introducing Photona AI 2.0
+    </div>
+    <h1 class="hero-title">
+        The Ultimate<br>Event Photo <span class="text-gradient">Experience</span>
+    </h1>
+    <p class="hero-subtitle">
+        Upload thousands of event photos in seconds. Our state-of-the-art AI instantly groups faces, builds beautiful personal galleries, and lets your guests find their selfies flawlessly.
+    </p>
+    <div class="hero-cta">
+        <a href="{% url 'gallery:user_login' %}" class="btn-premium">
+            Get Started Free
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#features" class="btn-premium-outline">See How It Works</a>
     </div>
 </div>
 
-<!-- Bento Grid Features -->
-<section id="features" style="position: relative; z-index: 10;">
+<!-- Stats Section -->
+<section class="stats-section">
+    <div class="stats-bg-glow"></div>
+    <div class="stats-left">
+        <span class="section-tag" style="background: rgba(255,255,255,0.1); color: #fff; margin-bottom: 1rem;">AI-Powered Photo Sharing</span>
+        <h2>Trusted by Professional Photography Teams</h2>
+        <p>Used by photographers and event organizers globally to manage large volumes of photos with absolute confidence. Streamline your workflow with our advanced AI tools.</p>
+        <a href="{% url 'gallery:user_login' %}" class="btn-premium-outline" style="background: white; color: #0f172a; border-color: white;">Try Photona Free</a>
+    </div>
+    <div class="stats-grid-inner">
+        <div class="stat-box">
+            <div class="stat-icon" style="color: #4f46e5; background: rgba(79, 70, 229, 0.1);">👥</div>
+            <div class="stat-number">100K+</div>
+            <div class="stat-label">Worldwide Customers</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-icon" style="color: #ec4899; background: rgba(236, 72, 153, 0.1);">📅</div>
+            <div class="stat-number">360K+</div>
+            <div class="stat-label">Events Created</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-icon" style="color: #10b981; background: rgba(16, 185, 129, 0.1);">🖼️</div>
+            <div class="stat-number">900M+</div>
+            <div class="stat-label">Photos Processed</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-icon" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);">👤</div>
+            <div class="stat-number">13M+</div>
+            <div class="stat-label">Guests Served</div>
+        </div>
+    </div>
+</section>
+
+<!-- Premium Features Bento -->
+<section id="features" class="bento-section">
+    <span class="section-tag">Next-Gen Capabilities</span>
+    <h2 class="section-header">Everything you need to deliver photos, brilliantly.</h2>
+    
     <div class="bento-grid">
-        
         <!-- Large Card -->
         <div class="bento-card bento-large">
-            <div class="bento-icon-wrap" style="background: rgba(99, 102, 241, 0.1); color: var(--accent-indigo);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <div class="bento-icon" style="color: #4f46e5;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12 2.1 2.1"/></svg>
             </div>
-            <h3 class="bento-title">FAISS AI Selfie Search</h3>
-            <p class="bento-desc" style="max-width: 400px;">Guests simply upload a selfie, and our AI instantly scans thousands of event photos to deliver their personal gallery. Powered by state-of-the-art embedding models.</p>
-            <div style="position: absolute; right: -50px; bottom: -50px; width: 400px; height: 300px; background: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop') center/cover; border-radius: 20px; box-shadow: var(--shadow-2xl); transform: rotate(-5deg);"></div>
+            <h3 class="bento-title">Ultra-Fast AI Face Recognition</h3>
+            <p class="bento-desc" style="max-width: 450px;">Guests upload one selfie, and our proprietary FAISS vector search instantly scans the entire event to deliver a custom private gallery of just their photos. Zero waiting.</p>
+            <div style="position: absolute; right: -40px; bottom: -40px; width: 45%; height: 75%; background: url('https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=800&auto=format&fit=crop') center/cover; border-radius: 24px; box-shadow: var(--shadow-2xl); border: 4px solid white;"></div>
         </div>
 
-        <!-- Medium Card 1 -->
-        <div class="bento-card bento-medium">
-            <div class="bento-icon-wrap" style="background: rgba(236, 72, 153, 0.1); color: var(--accent-rose);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <!-- Small Card 1 -->
+        <div class="bento-card bento-small">
+            <div class="bento-icon" style="color: #ec4899;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </div>
-            <h3 class="bento-title">Smart Grouping</h3>
-            <p class="bento-desc">Photos are automatically clustered into folders for every unique face detected.</p>
+            <h3 class="bento-title">Seamless Live Uploads</h3>
+            <p class="bento-desc">Drag & drop raw batches, ZIP files, or link a live Google Drive folder. We process everything in the background while you work.</p>
         </div>
 
-        <!-- Medium Card 2 -->
-        <div class="bento-card bento-medium">
-            <div class="bento-icon-wrap" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <!-- Small Card 2 -->
+        <div class="bento-card bento-small">
+            <div class="bento-icon" style="color: #10b981;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </div>
-            <h3 class="bento-title">Real-time Delivery</h3>
-            <p class="bento-desc">From camera capture to attendee smartphone in less than 10 seconds.</p>
+            <h3 class="bento-title">Smart Auto-Albums</h3>
+            <p class="bento-desc">Every unique face at your event is automatically clustered into "Sorted People", ready to be named or shared with a click.</p>
         </div>
 
         <!-- Wide Card -->
         <div class="bento-card bento-wide">
             <div style="flex: 1;">
-                <div class="bento-icon-wrap" style="background: rgba(245, 158, 11, 0.1); color: var(--accent-amber);">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                <div class="bento-icon" style="color: #f59e0b;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 </div>
-                <h3 class="bento-title">Seamless Cloud Integration</h3>
-                <p class="bento-desc">Bulk import via Google Drive or direct zip uploads. The system handles extraction and background processing without freezing your browser.</p>
+                <h3 class="bento-title">Bank-Grade Privacy</h3>
+                <p class="bento-desc">Full control over who sees what. Set event-level passwords or restrict access so users only ever see photos they appear in. Perfect for weddings, corporate galas, and VIP events.</p>
             </div>
-            <div style="flex: 1; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-xl); aspect-ratio: 16/9;">
-                <img src="https://images.unsplash.com/photo-1493612276216-ee3925520721?q=80&w=1000&auto=format&fit=crop" style="width: 100%; height: 100%; object-fit: cover;">
+            <div style="flex: 1.2; position: relative; height: 100%; min-height: 300px; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+                <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=1200&auto=format&fit=crop" style="position: absolute; width: 100%; height: 100%; object-fit: cover;">
             </div>
         </div>
-
     </div>
 </section>
 
-<!-- Pricing Section -->
+<!-- Premium Pricing -->
 <section id="pricing" class="pricing-section">
-    <div style="text-align: center; margin-bottom: 2rem;">
-        <span style="font-size: 0.85rem; font-weight: 700; color: var(--accent-indigo); text-transform: uppercase; letter-spacing: 0.1em; background: rgba(99,102,241,0.1); padding: 6px 16px; border-radius: 20px;">Pricing</span>
-        <h2 class="hero-title" style="font-size: 3rem; margin-top: 1rem;">Simple, Transparent Plans</h2>
-    </div>
+    <div class="pricing-bg-glow"></div>
+    <span class="section-tag">Simple Pricing</span>
+    <h2 class="pricing-header">Plans tailored to your scale.</h2>
     
     <div class="pricing-grid">
         {% for plan in plans %}
-            <div class="pricing-card {% if forloop.first %}popular{% endif %}">
-                {% if forloop.first %}
-                    <span class="pricing-badge">Most Popular</span>
+            <div class="pricing-card {% if forloop.counter == 2 %}popular{% endif %}">
+                {% if forloop.counter == 2 %}
+                    <div class="pricing-badge">Most Popular</div>
                 {% endif %}
-                <h3 class="pricing-plan-name">{{ plan.name }}</h3>
-                <div class="pricing-storage">
-                    {{ plan.storage_limit_mb }}<span> MB</span>
-                </div>
+                <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 800;">{{ plan.name }}</h3>
+                <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 2rem;">Perfect for event professionals.</p>
                 
-                <ul class="pricing-features">
-                    <li class="pricing-feature-item">
-                        <span class="pricing-feature-bullet">✓</span> Real-Time AI Search Integration
-                    </li>
-                    <li class="pricing-feature-item">
-                        <span class="pricing-feature-bullet">✓</span> High-Fidelity Image Uploads
-                    </li>
-                    <li class="pricing-feature-item">
-                        <span class="pricing-feature-bullet">✓</span> Automated Face Groupings
-                    </li>
-                    <li class="pricing-feature-item">
-                        <span class="pricing-feature-bullet">✓</span> Password-protected Share Links
-                    </li>
+                <div class="pricing-price">{{ plan.storage_limit_mb }}<span> MB</span></div>
+                
+                <ul class="pricing-list">
+                    <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Unlimited Event Galleries</li>
+                    <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Ultra-Fast FAISS AI Search</li>
+                    <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Automated Face Clustering</li>
+                    <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Live Drive Import</li>
                 </ul>
                 
-                <a href="{% url 'gallery:user_login' %}" class="btn" style="width: 100%; padding: 1rem; border-radius: 12px; {% if not forloop.first %}background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-medium);{% endif %}">
-                    Get Started Now
+                <a href="{% url 'gallery:user_login' %}" style="display: block; text-align: center; text-decoration: none; padding: 1.1rem; border-radius: 16px; font-weight: 700; transition: all 0.3s; {% if forloop.counter == 2 %}background: linear-gradient(135deg, #4f46e5, #ec4899); color: white; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);{% else %}background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;{% endif %}">
+                    Start Free Trial
                 </a>
             </div>
         {% empty %}
-            <div class="pricing-card">
+            <div class="pricing-card" style="text-align: center; grid-column: 1 / -1; background: transparent; border: none; box-shadow: none;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
-                <h3 class="bento-title">No plans configured</h3>
-                <p class="bento-desc">Plans created by the super administrator will appear here.</p>
+                <h3 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">No plans configured yet</h3>
+                <p style="color: #64748b;">Plans created by the administrator will appear here.</p>
             </div>
         {% endfor %}
     </div>
 </section>
 
-<!-- Brands Section -->
-<section class="brand-section">
-    <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text-secondary);">Trusted by Top Event Creators</h2>
-    <div class="brand-grid">
-        <div class="brand-logo">Porsche</div>
-        <div class="brand-logo">Chanel</div>
-        <div class="brand-logo">Dior</div>
-        <div class="brand-logo">Apple</div>
-        <div class="brand-logo">Sony</div>
-        <div class="brand-logo">Vogue</div>
+<!-- FAQ Section -->
+<section class="faq-section">
+    <h2 class="faq-header">Frequently Asked Questions</h2>
+    <div class="faq-grid">
+        <div class="faq-item" onclick="this.classList.toggle('active')">
+            <div class="faq-question">What makes Photona's AI different? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">Unlike basic tagging systems, Photona uses an advanced FAISS vector engine that matches faces instantly across tens of thousands of photos in milliseconds with near-perfect accuracy.</div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('active')">
+            <div class="faq-question">Can I bulk import photos via Google Drive? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">Yes! Simply paste a public Google Drive folder link, and Photona will securely download, extract, and index all your event media entirely in the background.</div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('active')">
+            <div class="faq-question">How does attendee privacy work? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">You have full control. You can lock entire events behind a PIN, or enforce a strict privacy mode where guests only receive photos their face was positively identified in.</div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('active')">
+            <div class="faq-question">Do I need to pay to test it out? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">Not at all. You can start completely free to explore the platform, upload photos, and see the AI in action before deciding to upgrade your storage plan.</div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('active')">
+            <div class="faq-question">Can I download the processed photos? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">Absolutely. Both you and your guests (if permitted) can download individual photos or download their entire personalized gallery as a ZIP file.</div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('active')">
+            <div class="faq-question">Is it optimized for mobile users? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">Yes! The guest experience is designed entirely mobile-first, allowing them to snap a quick selfie on their phone and instantly view their matched photos without downloading any app.</div>
+        </div>
+    </div>
+</section>
+
+<!-- Bottom CTA -->
+<section class="bottom-cta">
+    <h2>Join Photona</h2>
+    <p>Turn every event into a smooth, stress-free experience. Elevate your photography workflow with AI.</p>
+    <a href="{% url 'gallery:user_login' %}" class="btn-premium" style="display: inline-block;">Start Free Trial &rarr;</a>
+    <div class="cta-features">
+        <span class="cta-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> AI Face Recognition</span>
+        <span class="cta-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> QR Code Sharing</span>
+        <span class="cta-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> 99.9% Accuracy</span>
+    </div>
+</section>
+
+<!-- Premium Footer / Trust Section -->
+<section style="padding: 2rem 1.5rem 6rem; text-align: center; max-width: 1000px; margin: 0 auto;">
+    <h2 style="font-size: 1.1rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3rem;">Trusted by visionary photographers at</h2>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 4rem; opacity: 0.5; filter: grayscale(100%);">
+        <h3 style="font-family: 'Outfit'; font-size: 1.8rem; font-weight: 900; letter-spacing: -0.05em;">VOGUE</h3>
+        <h3 style="font-family: 'Outfit'; font-size: 1.8rem; font-weight: 900; letter-spacing: -0.05em;">SONY</h3>
+        <h3 style="font-family: 'Outfit'; font-size: 1.8rem; font-weight: 900; letter-spacing: -0.05em;">PORSCHE</h3>
+        <h3 style="font-family: 'Outfit'; font-size: 1.8rem; font-weight: 900; letter-spacing: -0.05em;">CHANEL</h3>
+        <h3 style="font-family: 'Outfit'; font-size: 1.8rem; font-weight: 900; letter-spacing: -0.05em;">DIOR</h3>
     </div>
 </section>
 

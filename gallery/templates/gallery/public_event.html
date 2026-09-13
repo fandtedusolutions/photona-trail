@@ -430,7 +430,7 @@
                         </div>
                         <div class="pub-person-thumbs">
                             {% for img in cluster.images|slice:":5" %}
-                            <img class="pub-thumb" src="{{ img.file.url }}" alt="{{ cluster.name }}">
+                            <img class="pub-thumb" src="{% url 'gallery:secure_image' img.get_secure_file_token %}" alt="{{ cluster.name }}">
                             {% endfor %}
                             {% if cluster.image_count > 5 %}
                             <div class="pub-thumb-more">+{{ cluster.image_count|add:"-5" }}</div>

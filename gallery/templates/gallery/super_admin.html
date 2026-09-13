@@ -387,6 +387,7 @@
                                 <th>Role</th>
                                 <th>Plan</th>
                                 <th>Storage Usage</th>
+                                <th>Trial Status</th>
                                 <th style="text-align: right;">Actions</th>
                             </tr>
                         </thead>
@@ -414,16 +415,35 @@
                                         <span style="font-size: 0.8rem; color: #334155; white-space: nowrap; font-weight: 600;">{{ admin.profile.used_storage_mb|floatformat:1 }} / {{ admin.profile.subscription_plan.storage_limit_mb|default:"0" }} MB</span>
                                     </div>
                                 </td>
+                                <td>
+                                    {% if admin.profile.is_paid %}
+                                        <span class="badge badge-emerald" style="padding: 6px 14px; font-size: 0.78rem;">Paid</span>
+                                    {% elif admin.profile.is_active_trial %}
+                                        <span class="badge badge-purple" style="padding: 6px 14px; font-size: 0.78rem;">Trial Active</span>
+                                    {% else %}
+                                        <span class="badge badge-rose" style="padding: 6px 14px; font-size: 0.78rem;">Expired</span>
+                                    {% endif %}
+                                </td>
                                 <td style="text-align: right;">
-                                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}')" class="action-edit">✎ Edit</button>
-                                        <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete">✕ Remove</button>
+                                    <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+                                        <form method="POST" action="{% url 'gallery:extend_trial' admin.id %}" style="margin:0;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm" style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; border: 1px solid #c7d2fe;">+7 Days</button>
+                                        </form>
+                                        <form method="POST" action="{% url 'gallery:toggle_paid_status' admin.id %}" style="margin:0;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm" style="background: {% if admin.profile.is_paid %}#fef2f2; color: #991b1b; border: 1px solid #fecaca;{% else %}#ecfdf5; color: #065f46; border: 1px solid #a7f3d0;{% endif %} padding: 4px 10px; font-size: 0.7rem; border-radius: 6px;">
+                                                {% if admin.profile.is_paid %}Mark Unpaid{% else %}Mark Paid{% endif %}
+                                            </button>
+                                        </form>
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
+                                        <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
                                     </div>
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 4rem 0;">
+                                <td colspan="6" style="text-align: center; padding: 4rem 0;">
                                     <div class="empty-state">
                                         <div class="empty-state-icon">👥</div>
                                         <h3 class="empty-state-title">No tenant administrators</h3>
@@ -472,6 +492,7 @@
                                 <th>Role</th>
                                 <th>Plan Assigned</th>
                                 <th>Storage Usage</th>
+                                <th>Trial Status</th>
                                 <th style="text-align: right;">Actions</th>
                             </tr>
                         </thead>
@@ -499,16 +520,35 @@
                                         <span style="font-size: 0.8rem; color: #334155; white-space: nowrap; font-weight: 600;">{{ admin.profile.used_storage_mb|floatformat:1 }} / {{ admin.profile.subscription_plan.storage_limit_mb|default:"0" }} MB</span>
                                     </div>
                                 </td>
+                                <td>
+                                    {% if admin.profile.is_paid %}
+                                        <span class="badge badge-emerald" style="padding: 6px 14px; font-size: 0.78rem;">Paid</span>
+                                    {% elif admin.profile.is_active_trial %}
+                                        <span class="badge badge-purple" style="padding: 6px 14px; font-size: 0.78rem;">Trial Active</span>
+                                    {% else %}
+                                        <span class="badge badge-rose" style="padding: 6px 14px; font-size: 0.78rem;">Expired</span>
+                                    {% endif %}
+                                </td>
                                 <td style="text-align: right;">
-                                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}')" class="action-edit">✎ Edit</button>
-                                        <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete">✕ Remove</button>
+                                    <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+                                        <form method="POST" action="{% url 'gallery:extend_trial' admin.id %}" style="margin:0;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm" style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; border: 1px solid #c7d2fe;">+7 Days</button>
+                                        </form>
+                                        <form method="POST" action="{% url 'gallery:toggle_paid_status' admin.id %}" style="margin:0;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm" style="background: {% if admin.profile.is_paid %}#fef2f2; color: #991b1b; border: 1px solid #fecaca;{% else %}#ecfdf5; color: #065f46; border: 1px solid #a7f3d0;{% endif %} padding: 4px 10px; font-size: 0.7rem; border-radius: 6px;">
+                                                {% if admin.profile.is_paid %}Mark Unpaid{% else %}Mark Paid{% endif %}
+                                            </button>
+                                        </form>
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
+                                        <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
                                     </div>
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 4rem 0;">
+                                <td colspan="6" style="text-align: center; padding: 4rem 0;">
                                     <div class="empty-state">
                                         <div class="empty-state-icon">👥</div>
                                         <h3 class="empty-state-title">No studio administrators</h3>

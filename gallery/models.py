@@ -23,11 +23,24 @@ class UserProfile(models.Model):
     subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True, blank=True)
     used_storage_mb = models.FloatField(default=0.0)
 
+    # Trial & Payment Fields
+    trial_start_date = models.DateTimeField(auto_now_add=True)
+    trial_duration_days = models.IntegerField(default=7, help_text="Number of days the trial is valid")
+    is_paid = models.BooleanField(default=False, help_text="Set to True if the user has paid, bypassing trial limits")
+
     @property
     def storage_percentage(self):
         if not self.subscription_plan or self.subscription_plan.storage_limit_mb == 0:
             return 0
         return min(100, int((self.used_storage_mb / self.subscription_plan.storage_limit_mb) * 100))
+
+    @property
+    def is_active_trial(self):
+        from django.utils import timezone
+        import datetime
+        if self.is_paid:
+            return True
+        return timezone.now() < (self.trial_start_date + datetime.timedelta(days=self.trial_duration_days))
 
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()})"
@@ -61,6 +74,16 @@ class GalleryImage(models.Model):
 
     def __str__(self):
         return self.filename
+
+    def get_secure_file_token(self):
+        from django.core.signing import Signer
+        return Signer().sign(f"{self.id}:file")
+
+    def get_secure_thumbnail_token(self):
+        from django.core.signing import Signer
+        if not self.thumbnail:
+            return self.get_secure_file_token()
+        return Signer().sign(f"{self.id}:thumbnail")
 
 class FaceEmbedding(models.Model):
     image = models.ForeignKey(GalleryImage, on_delete=models.CASCADE, related_name='embeddings')

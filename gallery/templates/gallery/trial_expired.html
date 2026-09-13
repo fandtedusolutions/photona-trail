@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Trial Expired - Photona</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Outfit', sans-serif; background-color: #f8fafc; color: #334155; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; }
+        .container { background: #ffffff; padding: 3rem 4rem; border-radius: 24px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05); text-align: center; max-width: 500px; width: 100%; border: 1px solid #e2e8f0; }
+        .icon { font-size: 4rem; margin-bottom: 1.5rem; background: rgba(225, 29, 72, 0.1); width: 100px; height: 100px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #e11d48; }
+        h1 { font-size: 2rem; color: #0f172a; font-weight: 850; margin-bottom: 1rem; }
+        p { font-size: 1.05rem; color: #64748b; line-height: 1.6; margin-bottom: 2rem; }
+        .btn { display: inline-block; background: linear-gradient(135deg, #4f46e5, #4338ca); color: #ffffff; text-decoration: none; padding: 0.8rem 2rem; border-radius: 12px; font-weight: 700; font-size: 1rem; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4); }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5); }
+        .logout-link { display: block; margin-top: 1.5rem; font-size: 0.9rem; color: #64748b; text-decoration: none; font-weight: 600; }
+        .logout-link:hover { color: #0f172a; text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">⏳</div>
+        <h1>Trial Expired</h1>
+        <p>Your 7-day free trial has unfortunately ended. To continue using Photona and regain full access to your studio dashboard, please contact your administrator to upgrade your plan or extend your trial.</p>
+        <a href="mailto:admin@example.com" class="btn">Contact Administrator</a>
+        <a href="{% url 'gallery:user_logout' %}" class="logout-link">Log out of this account</a>
+    </div>
+</body>
+</html>

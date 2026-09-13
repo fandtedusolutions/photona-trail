@@ -300,6 +300,7 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
+        object-position: center 15%;
     }
 
     .dash-event-body {
@@ -548,6 +549,7 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
+        object-position: center 15%;
         transition: transform 0.4s ease;
     }
 
@@ -958,7 +960,7 @@
                     <div class="dash-event-cover" style="position: relative;">
                         {% with first_img=ev.images.first %}
                             {% if first_img %}
-                                <img src="{% if first_img.thumbnail %}{{ first_img.thumbnail.url }}{% else %}{{ first_img.file.url }}{% endif %}" alt="{{ ev.name }}">
+                                <img src="{% url 'gallery:secure_image' first_img.get_secure_thumbnail_token %}" alt="{{ ev.name }}">
                             {% endif %}
                         {% endwith %}
                         <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 60px; background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);"></div>
@@ -1018,7 +1020,7 @@
                     {% with first_img=ev.images.first %}
                         {% if first_img %}
                         <div class="dash-event-full-cover" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'">
-                            <img src="{% if first_img.thumbnail %}{{ first_img.thumbnail.url }}{% else %}{{ first_img.file.url }}{% endif %}" alt="{{ ev.name }}">
+                            <img src="{% url 'gallery:secure_image' first_img.get_secure_thumbnail_token %}" alt="{{ ev.name }}">
                             <span class="dash-event-full-badge">🖼️ {{ ev.images.count }} photos</span>
                         </div>
                         {% else %}

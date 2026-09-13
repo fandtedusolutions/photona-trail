@@ -30,22 +30,37 @@
             <input type="hidden" name="event_slug" value="{{ selected_event.slug }}">
         </div>
 
-        <div class="dropzone" id="selfieDropzone" onclick="document.getElementById('selfieInput').click()" style="position: relative; overflow: hidden;">
-            <div id="previewContainer" style="display: none; position: absolute; inset: 0; background: var(--bg-secondary); z-index: 10; flex-direction: column; align-items: center; justify-content: center; padding: 1rem;">
-                <img id="selfiePreview" src="" style="max-height: 120px; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); margin-bottom: 0.5rem; object-fit: contain;">
-                <div id="selfieStatus" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-indigo);"></div>
-            </div>
-            
-            <div id="uploadPrompt" style="display: flex; flex-direction: column; align-items: center;">
-                <div class="dropzone-icon">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                    </svg>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; background: var(--bg-secondary); padding: 0.35rem; border-radius: var(--radius-md);">
+            <button type="button" id="tabUpload" class="btn" style="flex: 1; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);" onclick="switchTab('upload')">📂 Upload Photo</button>
+            <button type="button" id="tabCamera" class="btn" style="flex: 1; background: transparent; color: var(--text-secondary); border: 1px solid transparent; box-shadow: none;" onclick="switchTab('camera')">📷 Take Selfie</button>
+        </div>
+
+        <div id="uploadSection">
+            <div class="dropzone" id="selfieDropzone" onclick="document.getElementById('selfieInput').click()" style="position: relative; overflow: hidden;">
+                <div id="previewContainer" style="display: none; position: absolute; inset: 0; background: var(--bg-secondary); z-index: 10; flex-direction: column; align-items: center; justify-content: center; padding: 1rem;">
+                    <img id="selfiePreview" src="" style="max-height: 120px; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); margin-bottom: 0.5rem; object-fit: contain;">
+                    <div id="selfieStatus" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-indigo);"></div>
                 </div>
-                <p style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);">Drop your selfie here or click to select</p>
+                
+                <div id="uploadPrompt" style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="dropzone-icon">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    <p style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);">Drop your selfie here or click to select</p>
+                </div>
+                <input type="file" id="selfieInput" name="selfie" accept="image/*" style="display: none;" onchange="updateSelfieStatus(this.files)">
             </div>
-            <input type="file" id="selfieInput" name="selfie" accept="image/*" style="display: none;" onchange="updateSelfieStatus(this.files)">
+        </div>
+
+        <div id="cameraSection" style="display: none; border-radius: var(--radius-md); overflow: hidden; border: 2px dashed var(--border-light); position: relative; background: #000; aspect-ratio: 4/3; flex-direction: column; align-items: center; justify-content: center;">
+            <video id="cameraStream" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+            <button type="button" id="captureBtn" title="Take Photo" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10; border-radius: 50%; width: 64px; height: 64px; padding: 0; background: white; border: 4px solid rgba(255,255,255,0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.1s;" onmousedown="this.style.transform='translateX(-50%) scale(0.95)'" onmouseup="this.style.transform='translateX(-50%) scale(1)'" onclick="captureSelfie()">
+                <div style="width: 100%; height: 100%; border-radius: 50%; border: 2px solid #333;"></div>
+            </button>
+            <canvas id="cameraCanvas" style="display: none;"></canvas>
         </div>
 
         <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Search Matches</button>
@@ -76,8 +91,8 @@
             {% for res in results %}
                 <div class="rich-gallery-item" style="border-radius: 18px; overflow: hidden; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06); transition: transform 0.25s ease, box-shadow 0.25s ease;">
                     <div class="rich-thumb-wrap" style="position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: #0f172a;">
-                        <a href="{{ res.image.file.url }}" target="_blank">
-                            <img class="rich-thumb" src="{% if res.image.thumbnail %}{{ res.image.thumbnail.url }}{% else %}{{ res.image.file.url }}{% endif %}" alt="{{ res.image.filename }}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+                        <a href="{% url 'gallery:secure_image' res.image.get_secure_file_token %}" target="_blank">
+                            <img class="rich-thumb" src="{% url 'gallery:secure_image' res.image.get_secure_thumbnail_token %}" alt="{{ res.image.filename }}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
                         </a>
                         <div style="position: absolute; top: 10px; right: 10px; background: rgba(5, 150, 105, 0.9); color: white; font-size: 0.72rem; font-weight: 850; padding: 4px 10px; border-radius: 12px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2);">
                             🎯 Match: {{ res.score|floatformat:2 }}
@@ -110,6 +125,89 @@
     const selfieDropzone = document.getElementById('selfieDropzone');
     const selfieStatus = document.getElementById('selfieStatus');
     const searchForm = document.getElementById('searchForm');
+    
+    // Camera Elements
+    const tabUpload = document.getElementById('tabUpload');
+    const tabCamera = document.getElementById('tabCamera');
+    const uploadSection = document.getElementById('uploadSection');
+    const cameraSection = document.getElementById('cameraSection');
+    const cameraStream = document.getElementById('cameraStream');
+    const cameraCanvas = document.getElementById('cameraCanvas');
+    let mediaStream = null;
+
+    function switchTab(tab) {
+        if (tab === 'upload') {
+            tabUpload.style.background = 'var(--bg-tertiary)';
+            tabUpload.style.border = '1px solid var(--border-light)';
+            tabUpload.style.color = 'var(--text-primary)';
+            tabUpload.style.boxShadow = 'var(--shadow-sm)';
+            
+            tabCamera.style.background = 'transparent';
+            tabCamera.style.border = '1px solid transparent';
+            tabCamera.style.color = 'var(--text-secondary)';
+            tabCamera.style.boxShadow = 'none';
+            
+            uploadSection.style.display = 'block';
+            cameraSection.style.display = 'none';
+            stopCamera();
+        } else {
+            tabCamera.style.background = 'var(--bg-tertiary)';
+            tabCamera.style.border = '1px solid var(--border-light)';
+            tabCamera.style.color = 'var(--text-primary)';
+            tabCamera.style.boxShadow = 'var(--shadow-sm)';
+            
+            tabUpload.style.background = 'transparent';
+            tabUpload.style.border = '1px solid transparent';
+            tabUpload.style.color = 'var(--text-secondary)';
+            tabUpload.style.boxShadow = 'none';
+            
+            uploadSection.style.display = 'none';
+            cameraSection.style.display = 'flex';
+            startCamera();
+        }
+    }
+
+    async function startCamera() {
+        try {
+            mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            cameraStream.srcObject = mediaStream;
+        } catch (err) {
+            alert("Unable to access camera: " + err.message);
+            switchTab('upload');
+        }
+    }
+
+    function stopCamera() {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            mediaStream = null;
+        }
+    }
+
+    function captureSelfie() {
+        if (!mediaStream) return;
+        cameraCanvas.width = cameraStream.videoWidth;
+        cameraCanvas.height = cameraStream.videoHeight;
+        const ctx = cameraCanvas.getContext('2d');
+        
+        // Handle horizontal flip for front-facing camera display matching
+        ctx.translate(cameraCanvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(cameraStream, 0, 0);
+        
+        cameraCanvas.toBlob((blob) => {
+            const file = new File([blob], "camera-selfie.jpg", { type: "image/jpeg" });
+            
+            // Create a new FileList-like object (DataTransfer)
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            document.getElementById('selfieInput').files = dataTransfer.files;
+            
+            // Show preview and switch tab
+            updateSelfieStatus(dataTransfer.files);
+            switchTab('upload');
+        }, 'image/jpeg', 0.9);
+    }
 
     ['dragenter', 'dragover'].forEach(eventName => {
         selfieDropzone.addEventListener(eventName, (e) => {

@@ -336,14 +336,16 @@ def photos_api(request):
     paginator = Paginator(images, 12)
     page = paginator.get_page(page_num)
     
+    from django.urls import reverse
     data = []
     for img in page:
+        token = img.get_secure_thumbnail_token() if img.thumbnail else img.get_secure_file_token()
         data.append({
             'id': img.id,
             'filename': img.filename,
             'event_name': img.event.name if img.event else "Event",
             'organiser_name': img.event.owner.username.title() if (img.event and img.event.owner) else "Studio",
-            'url': img.thumbnail.url if img.thumbnail else img.file.url,
+            'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[token])),
             'total_faces': img.total_faces,
             'uploaded_at': img.uploaded_at.strftime("%b %d, %H:%M")
         })
@@ -460,6 +462,8 @@ def upload_single_photo(request):
         
         num_faces = process_gallery_image(gallery_image)
         
+        from django.urls import reverse
+        token = gallery_image.get_secure_thumbnail_token() if gallery_image.thumbnail else gallery_image.get_secure_file_token()
         return JsonResponse({
             'success': True,
             'image': {
@@ -467,7 +471,7 @@ def upload_single_photo(request):
                 'filename': gallery_image.filename,
                 'event_name': event.name if event else "Event",
                 'organiser_name': event.owner.username.title() if (event and event.owner) else "Studio",
-                'url': gallery_image.thumbnail.url if gallery_image.thumbnail else gallery_image.file.url,
+                'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[token])),
                 'total_faces': gallery_image.total_faces,
                 'uploaded_at': gallery_image.uploaded_at.strftime("%b %d, %H:%M")
             }
@@ -634,6 +638,12 @@ def gdrive_import(request):
         event = Event.objects.filter(owner=request.user).first()
         if not event:
             event = Event.objects.create(name="Drive Imports", description="Imported from Google Drive", owner=request.user)
+            
+    # Storage Limit Check
+    profile = request.user.profile
+    limit_mb = profile.subscription_plan.storage_limit_mb if profile.subscription_plan else 0
+    if profile.used_storage_mb >= limit_mb:
+        return JsonResponse({'success': False, 'message': 'Storage limit exceeded. Please upgrade your plan.'})
         
     try:
         import threading
@@ -722,6 +732,67 @@ def cancel_gdrive_import(request):
         })
         return JsonResponse({'success': True, 'message': 'Import cancelled.'})
     return JsonResponse({'success': False, 'message': 'No active import found.'})
+
+# ------------------------------------------------------------------
+# Secure Image Streaming
+# ------------------------------------------------------------------
+from django.core.signing import Signer, BadSignature
+from django.http import FileResponse
+
+def secure_image_serve(request, token):
+    try:
+        data = Signer().unsign(token)
+        image_id_str, img_type = data.split(':', 1)
+        image_id = int(image_id_str)
+    except (BadSignature, ValueError):
+        return HttpResponse('Invalid token', status=403)
+        
+    img = get_object_or_404(GalleryImage, id=image_id)
+    
+    target_field = img.thumbnail if img_type == 'thumbnail' and img.thumbnail else img.file
+    
+    if not target_field or not target_field.name:
+        return HttpResponse('Image not found', status=404)
+        
+    try:
+        f = target_field.open('rb')
+        response = FileResponse(f, content_type='image/jpeg')
+        if request.GET.get('download'):
+            response['Content-Disposition'] = f'attachment; filename="{img.filename}"'
+        return response
+    except Exception as e:
+        print(f"Error serving secure image: {e}")
+        return HttpResponse('Error reading image', status=500)
+
+# -------------------------------------------------------------
+# Trial Management Views
+# -------------------------------------------------------------
+@login_required
+def trial_expired(request):
+    if request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.is_active_trial):
+        return redirect('gallery:dashboard')
+    return render(request, 'gallery/trial_expired.html')
+
+@user_passes_test(lambda u: u.is_superuser)
+def extend_trial(request, user_id):
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id)
+        if hasattr(user, 'profile'):
+            user.profile.trial_duration_days += 7
+            user.profile.save()
+            messages.success(request, f"Extended trial by 7 days for {user.username}.")
+    return redirect('gallery:super_admin_dashboard')
+
+@user_passes_test(lambda u: u.is_superuser)
+def toggle_paid_status(request, user_id):
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id)
+        if hasattr(user, 'profile'):
+            user.profile.is_paid = not user.profile.is_paid
+            user.profile.save()
+            status = "Paid" if user.profile.is_paid else "Unpaid (Trial limit applies)"
+            messages.success(request, f"Updated {user.username} payment status to: {status}.")
+    return redirect('gallery:super_admin_dashboard')
 
 @login_required
 def active_imports_api(request):
@@ -864,10 +935,10 @@ def download_event_zip(request, slug):
                         content = f.read()
                 else:
                     try:
-                        req = urllib.request.urlopen(img.file.url)
-                        content = req.read()
+                        with img.file.open('rb') as f:
+                            content = f.read()
                     except Exception as e:
-                        print(f"Error zipping image from URL: {e}")
+                        print(f"Error reading image from storage: {e}")
                         
                 if content:
                     zip_file.writestr(zip_filename, content)
@@ -905,10 +976,9 @@ def download_single_image(request, image_id):
         with open(img.file.path, 'rb') as f:
             content = f.read()
     else:
-        import urllib.request
         try:
-            req = urllib.request.urlopen(img.file.url)
-            content = req.read()
+            with img.file.open('rb') as f:
+                content = f.read()
         except Exception as e:
             print(f"Error fetching single image file: {e}")
             
@@ -974,10 +1044,9 @@ def download_images_zip(request):
                         with open(img.file.path, 'rb') as f:
                             content = f.read()
                     else:
-                        import urllib.request
                         try:
-                            req = urllib.request.urlopen(img.file.url)
-                            content = req.read()
+                            with img.file.open('rb') as f:
+                                content = f.read()
                         except Exception as e:
                             print(f"Error fetching zip image file: {e}")
 
@@ -1289,7 +1358,7 @@ def public_photos_api(request):
     for img in page_obj.object_list:
         data.append({
             'id': img.id,
-            'url': request.build_absolute_uri(img.thumbnail.url if img.thumbnail else img.file.url),
+            'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[img.get_secure_thumbnail_token()])),
             'filename': img.filename,
             'uploaded_at': img.uploaded_at.strftime('%b %d, %H:%M'),
         })
