@@ -163,18 +163,7 @@ def extract_gdrive_id(url):
     return match.group(1) if match else None
 
 def download_gdrive_file_by_id(file_id, output_path):
-    try:
-        import gdown
-        output = gdown.download(id=file_id, output=output_path, quiet=True)
-        
-        if output and os.path.exists(output_path) and os.path.getsize(output_path) > 100:
-            return True
-        else:
-            print(f"[DEBUG] gdown returned {output} for {file_id}. Attempting requests fallback...")
-    except Exception as ex:
-        print(f"[DEBUG] Failed downloading file {file_id} via gdown: {ex}. Attempting requests fallback...")
-
-    # Fallback: Pure requests approach with confirmation token handling
+    # Pure requests approach with confirmation token handling (avoids gdown infinite loops on AWS EC2)
     try:
         import requests
         URL = "https://docs.google.com/uc?export=download"
@@ -231,27 +220,14 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
             folder_page_url = f"https://drive.google.com/drive/folders/{folder_id}?usp=sharing"
             print(f"[GDrive] Parsing folder {folder_id}...")
             
-            try:
-                import gdown
-                # Use id=folder_id instead of URL to avoid scraping blocks
-                gdown_files = gdown.download_folder(id=folder_id, skip_download=True, quiet=True, use_cookies=False)
-                if gdown_files:
-                    file_ids = [f.id for f in gdown_files if hasattr(f, 'id')]
-                else:
-                    file_ids = []
-            except Exception as e:
-                print(f"[GDrive] gdown folder parse failed: {e}")
-                file_ids = []
-                
-            if not file_ids:
-                print("[GDrive] Fallback to regex extraction...")
-                session = requests.Session()
-                session.headers.update({
-                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                })
-                resp = session.get(folder_page_url, timeout=20)
-                extracted = set(re.findall(r'\"([a-zA-Z0-9-_]{25,35})\"', resp.text))
-                file_ids = [fid for fid in extracted if fid != folder_id]
+            print("[GDrive] Using regex extraction for folder contents...")
+            session = requests.Session()
+            session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            })
+            resp = session.get(folder_page_url, timeout=20)
+            extracted = set(re.findall(r'\"([a-zA-Z0-9-_]{25,35})\"', resp.text))
+            file_ids = [fid for fid in extracted if fid != folder_id]
                 
             print(f"[GDrive] Discovered {len(file_ids)} public files in folder {folder_id}")
         else:
