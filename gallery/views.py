@@ -17,7 +17,7 @@ from django.contrib.auth.models import User
 
 from django.utils.text import slugify
 from config import VALID_IMAGE_EXTENSIONS
-from .models import GalleryImage, FaceEmbedding, Event, UserProfile, SubscriptionPlan, EventShareLink
+from .models import GalleryImage, FaceEmbedding, Event, UserProfile, SubscriptionPlan, EventShareLink, GuestLead
 from .utils import process_gallery_image, search_person_by_selfie
 from .tasks import process_image_upload_task, process_zip_upload_task, process_gdrive_import_task
 # -------------------------------------------------------------
