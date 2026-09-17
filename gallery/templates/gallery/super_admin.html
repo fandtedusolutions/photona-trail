@@ -580,39 +580,58 @@
 
             <div class="admin-table-wrap">
                 <div class="admin-table-head">
-                    <div style="flex:1;">Guest Name</div>
-                    <div style="flex:1;">Contact</div>
-                    <div style="flex:1;">Event & Organizer</div>
-                    <div style="width: 80px; text-align: right;">Selfie</div>
+                    <div>
+                        <div style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 850; color: #0f172a;">Captured Leads</div>
+                        <div style="font-size: 0.84rem; color: #64748b;">Guest info from selfie searches</div>
+                    </div>
+                    <span class="badge badge-purple" style="padding: 6px 16px; font-size: 0.8rem;">{{ leads|length }} Total</span>
                 </div>
-                {% for lead in leads %}
-                <div class="admin-table-row">
-                    <div style="flex:1;">
-                        <span style="font-weight:700; color:#0f172a; font-size: 0.95rem;">{{ lead.name }}</span>
-                        <div style="font-size:0.75rem; color:#64748b;">Age: {{ lead.age }}</div>
-                        <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">{{ lead.created_at|date:"M d, Y - H:i" }}</div>
-                    </div>
-                    <div style="flex:1;">
-                        <span style="font-weight: 600; color: var(--accent-indigo); font-size: 0.9rem;">{{ lead.phone }}</span>
-                        {% if lead.email %}<div style="font-size:0.75rem; color:#64748b;">{{ lead.email }}</div>{% endif %}
-                    </div>
-                    <div style="flex:1;">
-                        <span style="font-weight:600; color:#334155;">{{ lead.event.name }}</span>
-                        <div style="font-size:0.75rem; color:#64748b;">Org: {{ lead.event.owner.username }}</div>
-                    </div>
-                    <div style="width: 80px; text-align: right;">
-                        <a href="{{ lead.selfie.url }}" target="_blank">
-                            <img src="{{ lead.selfie.url }}" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" alt="Lead Selfie">
-                        </a>
-                    </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Guest Details</th>
+                                <th>Contact Info</th>
+                                <th>Event & Organizer</th>
+                                <th style="text-align: right;">Selfie</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lead in leads %}
+                            <tr>
+                                <td>
+                                    <span style="font-weight:700; color:#0f172a; font-size: 0.95rem;">{{ lead.name }}</span>
+                                    <div style="font-size:0.75rem; color:#64748b;">Age: {{ lead.age }}</div>
+                                    <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">{{ lead.created_at|date:"M d, Y - H:i" }}</div>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 600; color: var(--accent-indigo); font-size: 0.9rem;">{{ lead.phone }}</span>
+                                    {% if lead.email %}<div style="font-size:0.75rem; color:#64748b;">{{ lead.email }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    <span style="font-weight:600; color:#334155;">{{ lead.event.name }}</span>
+                                    <div style="font-size:0.75rem; color:#64748b;">Org: {{ lead.event.owner.username }}</div>
+                                </td>
+                                <td style="text-align: right;">
+                                    <a href="{{ lead.selfie.url }}" target="_blank">
+                                        <img src="{{ lead.selfie.url }}" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" alt="Lead Selfie">
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4">
+                                    <div style="padding: 4rem 2rem; text-align: center; color: #64748b;">
+                                        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📸</div>
+                                        <h3 style="font-size: 1.1rem; color: #334155; font-weight: 700;">No leads captured yet</h3>
+                                        <p style="font-size: 0.9rem; margin-top: 0.5rem;">When guests use the selfie search, their details will appear here.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                {% empty %}
-                <div style="padding: 4rem 2rem; text-align: center; color: #64748b;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📸</div>
-                    <h3 style="font-size: 1.1rem; color: #334155; font-weight: 700;">No leads captured yet</h3>
-                    <p style="font-size: 0.9rem; margin-top: 0.5rem;">When guests use the selfie search, their details will appear here.</p>
-                </div>
-                {% endfor %}
             </div>
         </div>
 
