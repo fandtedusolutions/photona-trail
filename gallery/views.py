@@ -331,7 +331,7 @@ def photos_api(request):
     else:
         images = GalleryImage.objects.filter(event=event).order_by('-uploaded_at')
         
-    paginator = Paginator(images, 12)
+    paginator = Paginator(images, 60)
     page = paginator.get_page(page_num)
     
     from django.urls import reverse
