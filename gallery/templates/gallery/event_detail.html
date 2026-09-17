@@ -641,7 +641,7 @@
                     <div class="person-thumbs" style="display: block;">
                         {% with first_img=cluster.images|first %}
                             {% if first_img %}
-                                <img src="{% url 'gallery:secure_image' first_img.get_secure_file_token %}" alt="{{ cluster.name }}" style="width: 100%; height: 160px; object-fit: cover; object-position: center 15%; border-radius: 12px; border: 1px solid var(--border-medium); transition: transform 0.3s ease; display: block;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                <img src="{% url 'gallery:secure_image' first_img.get_secure_thumbnail_token %}" alt="{{ cluster.name }}" loading="lazy" style="width: 100%; height: 160px; object-fit: cover; object-position: center 15%; border-radius: 12px; border: 1px solid var(--border-medium); transition: transform 0.3s ease; display: block;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                             {% endif %}
                         {% endwith %}
                     </div>
