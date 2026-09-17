@@ -51,7 +51,32 @@
         align-items: start;
     }
 
-    /* ── Left: Sorted People Panel ── */
+    /* ── Tabs ── */
+    .admin-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-medium);
+        padding-bottom: 0px;
+    }
+    .admin-tab {
+        padding: 0.75rem 1rem;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        transition: color 0.2s, border-color 0.2s;
+        margin-bottom: -1px;
+    }
+    .admin-tab.active {
+        color: var(--accent-indigo);
+        border-bottom: 3px solid var(--accent-indigo);
+    }
+    .admin-tab-content { display: none; }
+    .admin-tab-content.active { display: block; }
+
     .people-panel {
         background: var(--bg-secondary);
         border: 1px solid var(--border-light);
@@ -584,11 +609,17 @@
     </div>
 </div>
 
-<!-- ── Main Split Layout ── -->
-<div class="split-layout" style="margin-bottom: 3rem;">
+<!-- ── Tabs ── -->
+<div class="admin-tabs">
+    <div class="admin-tab active" onclick="switchAdminTab('photos')">🖼️ All Photos</div>
+    <div class="admin-tab" onclick="switchAdminTab('people')">👥 Sorted People</div>
+</div>
 
-    <!-- ═══ LEFT: Sorted People ═══ -->
-    <aside class="people-panel">
+<!-- ── Main Layout ── -->
+<div class="split-layout" style="margin-bottom: 3rem; display: block;">
+
+    <!-- ═══ LEFT: Sorted People (Tab) ═══ -->
+    <aside id="tab-people" class="admin-tab-content people-panel">
         <div class="people-panel-header">
             <div class="people-panel-title">
                 <span style="width: 26px; height: 26px; background: rgba(79,70,229,0.08); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">👥</span>
@@ -639,8 +670,8 @@
         </div>
     </aside>
 
-    <!-- ═══ RIGHT: Event Photos ═══ -->
-    <section class="photos-panel">
+    <!-- ═══ RIGHT: Event Photos (Tab) ═══ -->
+    <section id="tab-photos" class="admin-tab-content active photos-panel">
         <div class="photos-panel-header">
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <div class="photos-panel-title">
@@ -1279,6 +1310,15 @@
 
     // Check status on initial page load
     checkImportStatus();
+
+    // ── Tab Switching Logic ──
+    function switchAdminTab(tabName) {
+        document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+        
+        event.currentTarget.classList.add('active');
+        document.getElementById('tab-' + tabName).classList.add('active');
+    }
 
     // ── Lazy load photos
     let page = 1, hasNext = true, loading = false;
