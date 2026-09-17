@@ -702,12 +702,13 @@ def gdrive_import(request):
 
 @login_required
 def gdrive_import_status(request, slug):
-    event = get_object_or_404(Event, slug=slug)
-    job_id = f"import_{event.id}"
-    job_data = get_job(job_id)
-    if not job_data:
-        job_data = {'active': False, 'current': 0, 'total': 0, 'percent': 0, 'message': '', 'new_photos': []}
-    return JsonResponse(job_data)
+    job_id = f"import_{Event.objects.get(slug=slug).id}"
+    from gallery.job_tracker import get_job
+    job = get_job(job_id)
+    print(f"[DEBUG] Poll {job_id} -> {job}")
+    if not job:
+        return JsonResponse({'active': False})
+    return JsonResponse(job)
 
 @login_required
 @require_POST
