@@ -3,6 +3,7 @@ import zipfile
 import shutil
 import threading
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.http import JsonResponse, HttpResponseForbidden
 from django.conf import settings
 from django.core.files import File
@@ -1330,38 +1331,42 @@ def public_search_person(request, token):
 
 def public_photos_api(request):
     """Paginated photos for public view — gated by share token."""
-    token = request.GET.get('token')
-    page_num = request.GET.get('page', 1)
+    try:
+        token = request.GET.get('token')
+        page_num = request.GET.get('page', 1)
 
-    link = get_object_or_404(EventShareLink, token=token)
+        link = get_object_or_404(EventShareLink, token=token)
 
-    if not link.is_accessible:
-        return JsonResponse({'images': [], 'has_next': False})
+        if not link.is_accessible:
+            return JsonResponse({'images': [], 'has_next': False})
 
-    if link.password:
-        session_key = f'share_auth_{link.token}'
-        if not request.session.get(session_key):
-            return JsonResponse({'error': 'auth_required'}, status=403)
+        if link.password:
+            session_key = f'share_auth_{link.token}'
+            if not request.session.get(session_key):
+                return JsonResponse({'error': 'auth_required'}, status=403)
 
-    if link.person_label:
-        # Filter images to only those containing the shared person's embeddings
-        images = GalleryImage.objects.filter(
-            event=link.event,
-            embeddings__person_label=link.person_label
-        ).distinct().order_by('-uploaded_at')
-    else:
-        images = GalleryImage.objects.filter(event=link.event).order_by('-uploaded_at')
+        if link.person_label:
+            # Filter images to only those containing the shared person's embeddings
+            images = GalleryImage.objects.filter(
+                event=link.event,
+                embeddings__person_label=link.person_label
+            ).distinct().order_by('-uploaded_at')
+        else:
+            images = GalleryImage.objects.filter(event=link.event).order_by('-uploaded_at')
 
-    paginator = Paginator(images, 20)
-    page_obj = paginator.get_page(page_num)
+        paginator = Paginator(images, 20)
+        page_obj = paginator.get_page(page_num)
 
-    data = []
-    for img in page_obj.object_list:
-        data.append({
-            'id': img.id,
-            'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[img.get_secure_thumbnail_token()])),
-            'filename': img.filename,
-            'uploaded_at': img.uploaded_at.strftime('%b %d, %H:%M'),
-        })
-    return JsonResponse({'images': data, 'has_next': page_obj.has_next()})
+        data = []
+        for img in page_obj.object_list:
+            data.append({
+                'id': img.id,
+                'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[img.get_secure_thumbnail_token()])),
+                'filename': img.filename,
+                'uploaded_at': img.uploaded_at.strftime('%b %d, %H:%M') if img.uploaded_at else '',
+            })
+        return JsonResponse({'images': data, 'has_next': page_obj.has_next()})
+    except Exception as e:
+        import traceback
+        return JsonResponse({'error': str(e), 'traceback': traceback.format_exc()}, status=500)
 
