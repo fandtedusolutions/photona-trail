@@ -118,7 +118,26 @@
     </div>
     
     {% if results %}
-        <div class="rich-gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem;">
+        <style>
+            .rich-gallery-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 1.25rem;
+            }
+            @media (max-width: 640px) {
+                .rich-gallery-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 0.75rem;
+                }
+                .rich-gallery-info {
+                    padding: 0.5rem 0.6rem !important;
+                }
+                .rich-gallery-name {
+                    font-size: 0.75rem !important;
+                }
+            }
+        </style>
+        <div class="rich-gallery-grid">
             {% for res in results %}
                 <div class="rich-gallery-item" style="border-radius: 18px; overflow: hidden; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06); transition: transform 0.25s ease, box-shadow 0.25s ease;">
                     <div class="rich-thumb-wrap" style="position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: #0f172a;">
