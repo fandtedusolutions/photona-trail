@@ -1133,12 +1133,15 @@ def create_share(request, slug):
         except Exception:
             return JsonResponse({'success': False, 'message': 'Invalid expiry date format.'})
 
+    search_only = request.POST.get('search_only') == 'true'
+
     link = EventShareLink.objects.create(
         event=event,
         label=label,
         person_label=person_label,
         password=hashed,
         expires_at=expires_dt,
+        search_only=search_only,
     )
     return JsonResponse({
         'success': True,
@@ -1148,6 +1151,7 @@ def create_share(request, slug):
         'label': link.label,
         'person_label': link.person_label or '',
         'is_active': link.is_active,
+        'search_only': link.search_only,
         'has_password': bool(link.password),
         'created_at': link.created_at.strftime('%b %d, %Y'),
         'expires_at': link.expires_at.strftime('%Y-%m-%dT%H:%M') if link.expires_at else '',
@@ -1176,6 +1180,10 @@ def update_share(request, slug, share_id):
     is_active = request.POST.get('is_active', None)
     if is_active is not None:
         link.is_active = (is_active == 'true')
+
+    search_only = request.POST.get('search_only', None)
+    if search_only is not None:
+        link.search_only = (search_only == 'true')
 
     raw_password = request.POST.get('password', None)
     if raw_password is not None:
@@ -1228,6 +1236,9 @@ def public_event(request, token):
                 'link': link,
                 'pw_error': request.GET.get('pw_error', ''),
             })
+
+    if link.search_only:
+        return redirect('gallery:public_search', token=link.token)
 
     event = link.event
     from .clustering import get_cached_clusters_for_event

@@ -115,6 +115,7 @@ class EventShareLink(models.Model):
     person_label = models.CharField(max_length=100, blank=True, null=True, help_text='If set, limits access to this face group label only')
     password    = models.CharField(max_length=255, blank=True, null=True, help_text='Hashed password (blank = no protection)')
     is_active   = models.BooleanField(default=True)
+    search_only = models.BooleanField(default=False, help_text='If true, guests can only upload a selfie to find their photos, and cannot browse the full gallery.')
     created_at  = models.DateTimeField(auto_now_add=True)
     expires_at  = models.DateTimeField(null=True, blank=True, help_text='Optional expiry. Leave blank for no expiry.')
 

@@ -1507,6 +1507,10 @@
                         <input type="password" id="newSharePassword" class="form-input" placeholder="Leave blank for open access">
                     </div>
                 </div>
+                <div style="margin-bottom:1rem; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="newShareSearchOnly" style="width: 16px; height: 16px; accent-color: var(--accent-indigo);">
+                    <label for="newShareSearchOnly" class="form-label" style="margin-bottom: 0; cursor: pointer;">Search Only (Hide full gallery)</label>
+                </div>
                 <div style="margin-bottom:1rem;">
                     <label class="form-label">Expiry Date & Time <span style="color:var(--text-muted); font-weight:400;">(optional)</span></label>
                     <input type="datetime-local" id="newShareExpiry" class="form-input">
@@ -1542,6 +1546,10 @@
         <div style="margin-bottom:0.85rem;">
             <label class="form-label">New Password <span style="color:var(--text-muted); font-weight:400;">(blank = remove password)</span></label>
             <input type="password" id="editSharePassword" class="form-input" placeholder="Enter new password or leave blank">
+        </div>
+        <div style="margin-bottom:1rem; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="editShareSearchOnly" style="width: 16px; height: 16px; accent-color: var(--accent-indigo);">
+            <label for="editShareSearchOnly" class="form-label" style="margin-bottom: 0; cursor: pointer;">Search Only (Hide full gallery)</label>
         </div>
         <div style="margin-bottom:1.25rem;">
             <label class="form-label">Expiry Date & Time</label>
@@ -1631,13 +1639,14 @@ function buildLinkRow(lnk) {
                 <span style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">${lnk.label}</span>
                 ${personBadge}
                 ${statusBadge}
+                ${lnk.search_only ? '<span style="font-size:0.65rem; background:rgba(236, 72, 153, 0.1); color:var(--accent-rose); padding:2px 8px; border-radius:10px; font-weight:700;">🔍 Search Only</span>' : ''}
                 ${lnk.has_password ? '<span style="font-size:0.65rem; color:var(--text-muted);">🔒 Password</span>' : '<span style="font-size:0.65rem; color:var(--text-muted);">🌐 Open</span>'}
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
                 <label style="display:flex; align-items:center; gap:4px; font-size:0.72rem; color:var(--text-muted); cursor:pointer;">
                     <input type="checkbox" class="share-toggle" ${lnk.is_active ? 'checked' : ''} onchange="toggleShareActive(${lnk.id}, this.checked)">
                 </label>
-                <button onclick="openEditShare(${lnk.id}, '${lnk.label}', '${lnk.expires_at}')" class="action-edit" style="font-size:0.72rem;">✎ Edit</button>
+                <button onclick="openEditShare(${lnk.id}, '${lnk.label}', '${lnk.expires_at}', ${lnk.search_only})" class="action-edit" style="font-size:0.72rem;">✎ Edit</button>
                 <button onclick="deleteShareLink(${lnk.id}, '${lnk.label}')" class="action-delete" style="font-size:0.72rem;">✕</button>
             </div>
         </div>
@@ -1689,6 +1698,7 @@ function createShareLink() {
     formData.append('label', label);
     formData.append('password', password);
     formData.append('expires_at', expires_at);
+    formData.append('search_only', document.getElementById('newShareSearchOnly').checked ? 'true' : 'false');
     if (person_label) {
         formData.append('person_label', person_label);
     }
@@ -1709,11 +1719,12 @@ function createShareLink() {
     });
 }
 
-function openEditShare(id, label, expiresAt) {
+function openEditShare(id, label, expiresAt, searchOnly = false) {
     document.getElementById('editShareId').value = id;
     document.getElementById('editShareLabel').value = label;
     document.getElementById('editSharePassword').value = '';
     document.getElementById('editShareExpiry').value = expiresAt || '';
+    document.getElementById('editShareSearchOnly').checked = searchOnly;
     document.getElementById('editShareOverlay').style.display = 'flex';
 }
 
@@ -1738,6 +1749,7 @@ function saveEditShare() {
     formData.append('label', label);
     formData.append('password', password);
     formData.append('expires_at', expires_at);
+    formData.append('search_only', document.getElementById('editShareSearchOnly').checked ? 'true' : 'false');
 
     fetch(`/event/${SLUG}/shares/${id}/update/`, { method: 'POST', body: formData })
     .then(res => res.json())
