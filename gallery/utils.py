@@ -301,7 +301,15 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
 
                                     with open(full_img_path, 'rb') as img_f:
                                         gallery_image = GalleryImage(filename=file_name, event=event)
-                                        gallery_image.file.save(file_name, File(img_f), save=True)
+                                        gallery_image.file.save(file_name, File(img_f), save=False)
+                                        
+                                        from .tasks import create_thumbnail
+                                        thumb_io, ext = create_thumbnail(full_img_path)
+                                        if thumb_io:
+                                            thumb_name = os.path.splitext(file_name)[0] + "_thumb" + ext
+                                            gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                                            
+                                        gallery_image.save()
                                         
                                     num_faces = process_gallery_image(gallery_image, local_path=full_img_path)
                                     total_faces += num_faces
@@ -338,8 +346,15 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
 
                     with open(tmp_file_path, 'rb') as img_f:
                         gallery_image = GalleryImage(filename=file_name, event=event)
-                        gallery_image.file.save(file_name, File(img_f), save=True)
+                        gallery_image.file.save(file_name, File(img_f), save=False)
                         
+                        from .tasks import create_thumbnail
+                        thumb_io, ext = create_thumbnail(tmp_file_path)
+                        if thumb_io:
+                            thumb_name = os.path.splitext(file_name)[0] + "_thumb" + ext
+                            gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                            
+                        gallery_image.save()
                     num_faces = process_gallery_image(gallery_image, local_path=tmp_file_path)
                     total_faces += num_faces
                     total_indexed += 1
