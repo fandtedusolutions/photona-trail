@@ -118,10 +118,7 @@ def dashboard(request):
         
     # Get or create profile for tenant
     profile, _ = UserProfile.objects.get_or_create(user=request.user, defaults={'role': 'event_organizer'})
-    
-    # Recalculate actual storage used from disk files
-    recalculate_user_storage(request.user)
-    profile.refresh_from_db()
+
     
     total_images = GalleryImage.objects.filter(event__owner=request.user).count()
     total_faces = FaceEmbedding.objects.filter(image__event__owner=request.user).count()
