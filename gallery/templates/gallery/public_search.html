@@ -37,25 +37,36 @@
             <input type="hidden" name="event_slug" value="{{ selected_event.slug }}">
         </div>
 
-        <div class="dropzone" id="selfieDropzone" onclick="document.getElementById('selfieInput').click()" style="position: relative; overflow: hidden;">
-            <div id="previewContainer" style="display: none; position: absolute; inset: 0; background: var(--bg-secondary); z-index: 10; flex-direction: column; align-items: center; justify-content: center; padding: 1rem;">
-                <img id="selfiePreview" src="" style="max-height: 120px; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); margin-bottom: 0.5rem; object-fit: contain;">
-                <div id="selfieStatus" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-indigo);"></div>
+        <!-- The main hidden input that gets submitted -->
+        <input type="file" id="mainSelfieInput" name="selfie" style="display:none;" accept="image/*">
+
+        <!-- Selection Options -->
+        <div id="selectionOptions" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <!-- Upload from Device -->
+            <div style="flex: 1; border: 2px dashed var(--border-medium); border-radius: var(--radius-lg); text-align: center; padding: 2rem 1rem; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('selfieUpload').click()" onmouseover="this.style.borderColor='var(--accent-indigo)'; this.style.background='var(--bg-secondary)';" onmouseout="this.style.borderColor='var(--border-medium)'; this.style.background='transparent';">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
+                <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Upload Photo</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Choose from your device</div>
+                <input type="file" id="selfieUpload" accept="image/*" style="display:none;" onchange="updateSelfieStatus(this)">
             </div>
             
-            <div id="uploadPrompt" style="display: flex; flex-direction: column; align-items: center;">
-                <div class="dropzone-icon">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                </div>
-                <p style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);">Drop your selfie here or click to select</p>
+            <!-- Take a Selfie -->
+            <div style="flex: 1; border: 2px dashed var(--border-medium); border-radius: var(--radius-lg); text-align: center; padding: 2rem 1rem; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('selfieCamera').click()" onmouseover="this.style.borderColor='var(--accent-indigo)'; this.style.background='var(--bg-secondary)';" onmouseout="this.style.borderColor='var(--border-medium)'; this.style.background='transparent';">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📷</div>
+                <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Take Selfie</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Use your camera directly</div>
+                <input type="file" id="selfieCamera" accept="image/*" capture="user" style="display:none;" onchange="updateSelfieStatus(this)">
             </div>
-            <input type="file" id="selfieInput" name="selfie" accept="image/*" style="width: 0.1px; height: 0.1px; opacity: 0; overflow: hidden; position: absolute; z-index: -1;" onchange="updateSelfieStatus(this.files)">
         </div>
 
-        <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Search Matches</button>
+        <!-- Preview State (Hidden by default) -->
+        <div id="previewContainer" style="display: none; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.5rem; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+            <button type="button" onclick="resetSelection()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.8); border: 1px solid var(--border-light); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; box-shadow: var(--shadow-sm); z-index: 10;">✕</button>
+            <img id="selfiePreview" src="" style="max-height: 160px; max-width: 100%; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); margin-bottom: 0.75rem; object-fit: contain;">
+            <div id="selfieStatus" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-indigo); word-break: break-all; text-align: center;"></div>
+        </div>
+
+        <button type="submit" class="btn" style="width: 100%; margin-top: 1rem; padding: 1rem; font-size: 1rem; border-radius: var(--radius-md);">🔍 Search Matches</button>
     </form>
 </div>
 
@@ -114,46 +125,45 @@
 {% endif %}
 
 <script>
-    const selfieDropzone = document.getElementById('selfieDropzone');
-    const selfieStatus = document.getElementById('selfieStatus');
     const searchForm = document.getElementById('searchForm');
+    const mainInput = document.getElementById('mainSelfieInput');
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        selfieDropzone.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            selfieDropzone.classList.add('dragover');
-        }, false);
-    });
+    function updateSelfieStatus(inputElement) {
+        if (inputElement.files && inputElement.files.length > 0) {
+            const file = inputElement.files[0];
+            
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file. Videos and other formats are not allowed.');
+                inputElement.value = '';
+                return;
+            }
 
-    ['dragleave', 'drop'].forEach(eventName => {
-        selfieDropzone.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            selfieDropzone.classList.remove('dragover');
-        }, false);
-    });
-
-    selfieDropzone.addEventListener('drop', (e) => {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        document.getElementById('selfieInput').files = files;
-        updateSelfieStatus(files);
-    });
-
-    function updateSelfieStatus(files) {
-        if (files.length > 0) {
-            const file = files[0];
-            document.getElementById('uploadPrompt').style.display = 'none';
+            document.getElementById('selectionOptions').style.display = 'none';
             document.getElementById('previewContainer').style.display = 'flex';
-            document.getElementById('selfieStatus').innerText = file.name;
+            document.getElementById('selfieStatus').innerText = file.name || "Selfie Captured";
             document.getElementById('selfiePreview').src = URL.createObjectURL(file);
+
+            // Transfer the file to the main hidden input
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            mainInput.files = dt.files;
+            
+            // Clear the original input so it can trigger 'change' again if needed
+            inputElement.value = ''; 
         }
     }
 
+    function resetSelection() {
+        document.getElementById('selectionOptions').style.display = 'flex';
+        document.getElementById('previewContainer').style.display = 'none';
+        document.getElementById('selfiePreview').src = '';
+        mainInput.value = '';
+    }
+
     searchForm.addEventListener('submit', (e) => {
-        const fileInput = document.getElementById('selfieInput');
-        if (!fileInput.files || fileInput.files.length === 0) {
+        if (!mainInput.files || mainInput.files.length === 0) {
             e.preventDefault();
-            alert('Please select or capture a selfie photo first!');
+            alert('Please select a photo or take a selfie first!');
             return;
         }
         showLoading('Scanning event photos...');
