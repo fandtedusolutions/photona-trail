@@ -112,9 +112,6 @@
     }
 
     .people-scroll {
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        flex: 1;
         padding: 1.5rem;
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -1311,7 +1308,11 @@
         document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
         
-        event.currentTarget.classList.add('active');
+        // Find the tab button that corresponds to this tabName
+        const tabBtns = document.querySelectorAll('.admin-tab');
+        if (tabName === 'photos' && tabBtns.length > 0) tabBtns[0].classList.add('active');
+        else if (tabName === 'people' && tabBtns.length > 1) tabBtns[1].classList.add('active');
+        
         document.getElementById('tab-' + tabName).classList.add('active');
     }
 
@@ -1403,6 +1404,10 @@
         hasNext = true;
         gallery.innerHTML = '';
         noPhotosMessage.style.display = 'none';
+        
+        // Auto-switch to the photos tab to see the filtered results!
+        switchAdminTab('photos');
+        
         loadMorePhotos();
     }
 
