@@ -64,9 +64,19 @@ class Event(models.Model):
     def __str__(self):
         return self.name
 
+def event_image_upload_path(instance, filename):
+    organizer = instance.event.owner.username if instance.event and instance.event.owner else 'unassigned'
+    event_slug = instance.event.slug if instance.event else 'unassigned'
+    return f'events/{organizer}/{event_slug}/{filename}'
+
+def event_thumbnail_upload_path(instance, filename):
+    organizer = instance.event.owner.username if instance.event and instance.event.owner else 'unassigned'
+    event_slug = instance.event.slug if instance.event else 'unassigned'
+    return f'thumbnails/{organizer}/{event_slug}/{filename}'
+
 class GalleryImage(models.Model):
-    file = models.ImageField(upload_to='events/')
-    thumbnail = models.ImageField(upload_to='thumbnails/', null=True, blank=True)
+    file = models.ImageField(upload_to=event_image_upload_path)
+    thumbnail = models.ImageField(upload_to=event_thumbnail_upload_path, null=True, blank=True)
     filename = models.CharField(max_length=255)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='images', null=True, blank=True)
     total_faces = models.IntegerField(default=0)
