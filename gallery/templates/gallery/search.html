@@ -51,7 +51,7 @@
                     </div>
                     <p style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);">Drop your selfie here or click to select</p>
                 </div>
-                <input type="file" id="selfieInput" name="selfie" accept="image/*" style="display: none;" onchange="updateSelfieStatus(this.files)">
+                <input type="file" id="selfieInput" name="selfie" accept="image/*" style="width: 0.1px; height: 0.1px; opacity: 0; overflow: hidden; position: absolute; z-index: -1;" onchange="updateSelfieStatus(this.files)">
             </div>
         </div>
 
@@ -240,7 +240,13 @@
         }
     }
 
-    searchForm.addEventListener('submit', () => {
+    searchForm.addEventListener('submit', (e) => {
+        const fileInput = document.getElementById('selfieInput');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            e.preventDefault();
+            alert('Please select or capture a selfie photo first!');
+            return;
+        }
         showLoading('Searching with FAISS AI engine...');
     });
 </script>
