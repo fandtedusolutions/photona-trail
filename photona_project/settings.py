@@ -136,6 +136,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # AWS S3 Configuration
 # ---------------------------------------------------------
 USE_S3 = os.environ.get('USE_S3', 'False') == 'True'
+GDRIVE_API_KEY = os.environ.get('GDRIVE_API_KEY')
 
 if USE_S3 and os.environ.get('AWS_ACCESS_KEY_ID'):
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')

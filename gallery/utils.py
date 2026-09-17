@@ -217,17 +217,34 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
             if not folder_id:
                 raise ValueError("Could not extract Google Drive folder ID from URL.")
                 
-            folder_page_url = f"https://drive.google.com/drive/folders/{folder_id}?usp=sharing"
             print(f"[GDrive] Parsing folder {folder_id}...")
             
-            print("[GDrive] Using regex extraction for folder contents...")
-            session = requests.Session()
-            session.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            })
-            resp = session.get(folder_page_url, timeout=20)
-            extracted = set(re.findall(r'\"([a-zA-Z0-9-_]{25,35})\"', resp.text))
-            file_ids = [fid for fid in extracted if fid != folder_id]
+            if hasattr(settings, 'GDRIVE_API_KEY') and settings.GDRIVE_API_KEY:
+                print("[GDrive] Using official Google Drive API for pagination...")
+                api_key = settings.GDRIVE_API_KEY
+                page_token = ""
+                file_ids = []
+                while True:
+                    api_url = f"https://www.googleapis.com/drive/v3/files?q='{folder_id}'+in+parents+and+trashed=false&key={api_key}&pageToken={page_token}&pageSize=1000&fields=nextPageToken,files(id)"
+                    res = requests.get(api_url).json()
+                    if 'files' in res:
+                        file_ids.extend([item['id'] for item in res['files']])
+                    if 'error' in res:
+                        print(f"[GDrive] API Error: {res['error']}")
+                        break
+                    page_token = res.get('nextPageToken')
+                    if not page_token:
+                        break
+            else:
+                print("[GDrive] Using regex extraction for folder contents (limited to ~60 files)...")
+                folder_page_url = f"https://drive.google.com/drive/folders/{folder_id}?usp=sharing"
+                session = requests.Session()
+                session.headers.update({
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                })
+                resp = session.get(folder_page_url, timeout=20)
+                extracted = set(re.findall(r'\"([a-zA-Z0-9-_]{25,35})\"', resp.text))
+                file_ids = [fid for fid in extracted if fid != folder_id]
                 
             print(f"[GDrive] Discovered {len(file_ids)} public files in folder {folder_id}")
         else:
