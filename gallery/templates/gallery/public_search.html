@@ -66,7 +66,35 @@
             <div id="selfieStatus" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-indigo); word-break: break-all; text-align: center;"></div>
         </div>
 
-        <button type="submit" class="btn" style="width: 100%; margin-top: 1rem; padding: 1rem; font-size: 1rem; border-radius: var(--radius-md);">🔍 Search Matches</button>
+        <!-- Lead Generation Form (Hidden initially) -->
+        <div id="leadFormContainer" style="display: none; margin-top: 1.5rem; text-align: left;">
+            <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-light);">
+                Your Details (Required to fetch matches)
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label" for="guest_name">Full Name <span style="color: var(--accent-rose);">*</span></label>
+                <input type="text" id="guest_name" name="guest_name" class="form-input" required placeholder="John Doe">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label class="form-label" for="guest_age">Age <span style="color: var(--accent-rose);">*</span></label>
+                    <input type="number" id="guest_age" name="guest_age" class="form-input" required placeholder="25" min="1" max="120">
+                </div>
+                <div>
+                    <label class="form-label" for="guest_phone">Phone Number <span style="color: var(--accent-rose);">*</span></label>
+                    <input type="tel" id="guest_phone" name="guest_phone" class="form-input" required placeholder="+1 234 567 8900">
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label class="form-label" for="guest_email">Email <span style="color: var(--text-muted); font-weight: normal;">(Optional)</span></label>
+                <input type="email" id="guest_email" name="guest_email" class="form-input" placeholder="john@example.com">
+            </div>
+            
+            <button type="submit" class="btn" style="width: 100%; padding: 1rem; font-size: 1rem; border-radius: var(--radius-md);">🔍 Search Matches</button>
+        </div>
     </form>
 </div>
 
@@ -140,6 +168,7 @@
 
             document.getElementById('selectionOptions').style.display = 'none';
             document.getElementById('previewContainer').style.display = 'flex';
+            document.getElementById('leadFormContainer').style.display = 'block';
             document.getElementById('selfieStatus').innerText = file.name || "Selfie Captured";
             document.getElementById('selfiePreview').src = URL.createObjectURL(file);
 
@@ -156,6 +185,7 @@
     function resetSelection() {
         document.getElementById('selectionOptions').style.display = 'flex';
         document.getElementById('previewContainer').style.display = 'none';
+        document.getElementById('leadFormContainer').style.display = 'none';
         document.getElementById('selfiePreview').src = '';
         mainInput.value = '';
     }

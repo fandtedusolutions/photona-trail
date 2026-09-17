@@ -150,6 +150,8 @@ def super_admin_dashboard(request):
     total_plans = plans.count()
     total_storage_used = sum(admin.profile.used_storage_mb for admin in admins if hasattr(admin, 'profile') and admin.profile)
     
+    leads = GuestLead.objects.all().select_related('event', 'event__owner').order_by('-created_at')
+    
     return render(request, 'gallery/super_admin.html', {
         'admins': admins,
         'plans': plans,
@@ -157,6 +159,7 @@ def super_admin_dashboard(request):
         'total_tenants': total_tenants,
         'total_plans': total_plans,
         'total_storage_used': total_storage_used,
+        'leads': leads,
     })
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -1296,6 +1299,26 @@ def public_search_person(request, token):
 
     if request.method == 'POST' and request.FILES.get('selfie'):
         selfie = request.FILES['selfie']
+        
+        # 1. Save the Guest Lead
+        name = request.POST.get('guest_name')
+        age = request.POST.get('guest_age')
+        phone = request.POST.get('guest_phone')
+        email = request.POST.get('guest_email', '')
+        
+        if name and age and phone:
+            GuestLead.objects.create(
+                event=event,
+                name=name,
+                age=age,
+                phone=phone,
+                email=email,
+                selfie=selfie
+            )
+            # Reset file pointer after saving to DB so the chunk reading below works correctly
+            selfie.seek(0)
+
+        # 2. Process FAISS Search via temp file
         import time
         import base64
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')

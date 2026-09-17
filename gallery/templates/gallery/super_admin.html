@@ -310,6 +310,12 @@
             All Studio Admins
         </button>
 
+        <div class="sidebar-section-label">Lead Generation</div>
+        <button class="sidebar-nav-item" onclick="switchPanel('leads', this)">
+            <div class="sidebar-nav-icon">🎯</div>
+            Guest Leads
+        </button>
+
         <div class="sidebar-section-label">Subscriptions</div>
         <button class="sidebar-nav-item" onclick="switchPanel('plans', this)">
             <div class="sidebar-nav-icon">💳</div>
@@ -560,6 +566,53 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        <!-- ── GUEST LEADS PANEL ── -->
+        <div id="panel-leads" class="admin-content-panel">
+            <div class="admin-panel-header">
+                <div class="admin-header-title">
+                    <h2>🎯 Guest Leads</h2>
+                    <p>Leads captured from guests performing selfie searches.</p>
+                </div>
+            </div>
+
+            <div class="admin-table-wrap">
+                <div class="admin-table-head">
+                    <div style="flex:1;">Guest Name</div>
+                    <div style="flex:1;">Contact</div>
+                    <div style="flex:1;">Event & Organizer</div>
+                    <div style="width: 80px; text-align: right;">Selfie</div>
+                </div>
+                {% for lead in leads %}
+                <div class="admin-table-row">
+                    <div style="flex:1;">
+                        <span style="font-weight:700; color:#0f172a; font-size: 0.95rem;">{{ lead.name }}</span>
+                        <div style="font-size:0.75rem; color:#64748b;">Age: {{ lead.age }}</div>
+                        <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">{{ lead.created_at|date:"M d, Y - H:i" }}</div>
+                    </div>
+                    <div style="flex:1;">
+                        <span style="font-weight: 600; color: var(--accent-indigo); font-size: 0.9rem;">{{ lead.phone }}</span>
+                        {% if lead.email %}<div style="font-size:0.75rem; color:#64748b;">{{ lead.email }}</div>{% endif %}
+                    </div>
+                    <div style="flex:1;">
+                        <span style="font-weight:600; color:#334155;">{{ lead.event.name }}</span>
+                        <div style="font-size:0.75rem; color:#64748b;">Org: {{ lead.event.owner.username }}</div>
+                    </div>
+                    <div style="width: 80px; text-align: right;">
+                        <a href="{{ lead.selfie.url }}" target="_blank">
+                            <img src="{{ lead.selfie.url }}" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" alt="Lead Selfie">
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="padding: 4rem 2rem; text-align: center; color: #64748b;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📸</div>
+                    <h3 style="font-size: 1.1rem; color: #334155; font-weight: 700;">No leads captured yet</h3>
+                    <p style="font-size: 0.9rem; margin-top: 0.5rem;">When guests use the selfie search, their details will appear here.</p>
+                </div>
+                {% endfor %}
             </div>
         </div>
 

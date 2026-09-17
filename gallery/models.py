@@ -133,3 +133,16 @@ class EventShareLink(models.Model):
     def is_accessible(self):
         return self.is_active and not self.is_expired
 
+class GuestLead(models.Model):
+    """Lead generated from a guest performing a selfie search."""
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='leads')
+    name = models.CharField(max_length=255)
+    age = models.IntegerField()
+    phone = models.CharField(max_length=50)
+    email = models.EmailField(blank=True, null=True)
+    selfie = models.ImageField(upload_to='leads/selfies/')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.event.name}"
+
