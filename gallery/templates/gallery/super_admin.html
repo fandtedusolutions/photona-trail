@@ -579,11 +579,37 @@
             </div>
 
             <div class="admin-table-wrap">
-                <div class="admin-table-head">
+                <div class="admin-table-head" style="flex-wrap: wrap; gap: 1rem;">
                     <div>
                         <div style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 850; color: #0f172a;">Captured Leads</div>
                         <div style="font-size: 0.84rem; color: #64748b;">Guest info from selfie searches</div>
                     </div>
+                    
+                    <form id="leadFilterForm" method="GET" action="" style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-left: auto;">
+                        <input type="text" name="search_q" value="{{ request.GET.search_q }}" placeholder="Search name/phone..." class="form-input" style="padding: 0.4rem 0.75rem; min-width: 160px; font-size: 0.85rem;">
+                        
+                        <select name="organizer_id" class="form-input" style="padding: 0.4rem 0.75rem; font-size: 0.85rem;" onchange="this.form.submit()">
+                            <option value="">All Organizers</option>
+                            {% for admin in admins %}
+                            <option value="{{ admin.id }}" {% if request.GET.organizer_id == admin.id|stringformat:"s" %}selected{% endif %}>{{ admin.username }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <select name="event_id" class="form-input" style="padding: 0.4rem 0.75rem; font-size: 0.85rem;" onchange="this.form.submit()">
+                            <option value="">All Events</option>
+                            {% for evt in all_events %}
+                            <option value="{{ evt.id }}" {% if request.GET.event_id == evt.id|stringformat:"s" %}selected{% endif %}>{{ evt.name }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <input type="date" name="start_date" value="{{ request.GET.start_date }}" class="form-input" style="padding: 0.4rem 0.75rem; font-size: 0.85rem;" onchange="this.form.submit()">
+                        <span style="color: #64748b; font-size: 0.85rem;">to</span>
+                        <input type="date" name="end_date" value="{{ request.GET.end_date }}" class="form-input" style="padding: 0.4rem 0.75rem; font-size: 0.85rem;" onchange="this.form.submit()">
+                        
+                        <button type="submit" class="btn btn-sm" style="padding: 0.4rem 0.75rem;">Filter</button>
+                        <a href="?panel=leads" class="btn btn-sm" style="background: transparent; color: #64748b; border: 1px solid #cbd5e1; padding: 0.4rem 0.75rem;">Clear</a>
+                    </form>
+                    
                     <span class="badge badge-purple" style="padding: 6px 16px; font-size: 0.8rem;">{{ leads|length }} Total</span>
                 </div>
                 <div style="overflow-x: auto;">
@@ -594,6 +620,7 @@
                                 <th>Contact Info</th>
                                 <th>Event & Organizer</th>
                                 <th style="text-align: right;">Selfie</th>
+                                <th style="text-align: right; width: 80px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -617,14 +644,20 @@
                                         <img src="{{ lead.selfie.url }}" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" alt="Lead Selfie">
                                     </a>
                                 </td>
+                                <td style="text-align: right;">
+                                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                        <button class="btn btn-sm" style="background: transparent; color: #475569; padding: 4px;" onclick="openEditLeadModal({{ lead.id }}, '{{ lead.name|escapejs }}', {{ lead.age }}, '{{ lead.phone|escapejs }}', '{{ lead.email|escapejs }}')">✏️</button>
+                                        <button class="btn btn-sm" style="background: transparent; color: #ef4444; padding: 4px;" onclick="deleteLead({{ lead.id }})">🗑️</button>
+                                    </div>
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4">
+                                <td colspan="5">
                                     <div style="padding: 4rem 2rem; text-align: center; color: #64748b;">
                                         <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📸</div>
-                                        <h3 style="font-size: 1.1rem; color: #334155; font-weight: 700;">No leads captured yet</h3>
-                                        <p style="font-size: 0.9rem; margin-top: 0.5rem;">When guests use the selfie search, their details will appear here.</p>
+                                        <h3 style="font-size: 1.1rem; color: #334155; font-weight: 700;">No leads found</h3>
+                                        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Try adjusting your filters.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -828,9 +861,95 @@
         </form>
     </div>
 </div>
+</div>
+
+<!-- Edit Lead Modal -->
+<div id="editLeadModal" style="display:none; position:fixed; inset:0; background:rgba(15, 23, 42, 0.45); backdrop-filter:blur(16px); z-index:10000; align-items:center; justify-content:center; padding: 1.5rem;">
+    <div class="glass-panel" style="background: #ffffff; border-radius: 24px; padding: 2.5rem; width: 480px; max-width: 95vw; border: 1px solid #cbd5e1; box-shadow: var(--shadow-2xl); position: relative;">
+        <button onclick="closeEditLeadModal()" style="position: absolute; top: 1.5rem; right: 1.5rem; background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
+        <div style="font-family: 'Outfit', sans-serif; font-size: 1.45rem; font-weight: 850; color: #0f172a; margin-bottom: 0.3rem;">Edit Guest Lead</div>
+        <div style="font-size: 0.88rem; color: #64748b; margin-bottom: 2rem;">Update the guest's contact information.</div>
+        <form id="editLeadForm">
+            <input type="hidden" id="editLeadId">
+            <div class="form-field">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="editLeadName" class="form-input" required>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Age</label>
+                <input type="number" id="editLeadAge" class="form-input" required>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Phone Number</label>
+                <input type="text" id="editLeadPhone" class="form-input" required>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Email (Optional)</label>
+                <input type="email" id="editLeadEmail" class="form-input">
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button type="submit" class="btn" style="flex: 1; padding: 0.85rem;">Save Changes</button>
+                <button type="button" onclick="closeEditLeadModal()" class="btn btn-secondary" style="flex: 1; padding: 0.85rem;">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
 const CSRF = '{{ csrf_token }}';
+
+// Lead Management JS
+function openEditLeadModal(id, name, age, phone, email) {
+    document.getElementById('editLeadId').value = id;
+    document.getElementById('editLeadName').value = name;
+    document.getElementById('editLeadAge').value = age;
+    document.getElementById('editLeadPhone').value = phone;
+    document.getElementById('editLeadEmail').value = email || '';
+    document.getElementById('editLeadModal').style.display = 'flex';
+}
+
+function closeEditLeadModal() {
+    document.getElementById('editLeadModal').style.display = 'none';
+    document.getElementById('editLeadForm').reset();
+}
+
+document.getElementById('editLeadForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editLeadId').value;
+    const formData = new FormData();
+    formData.append('name', document.getElementById('editLeadName').value);
+    formData.append('age', document.getElementById('editLeadAge').value);
+    formData.append('phone', document.getElementById('editLeadPhone').value);
+    formData.append('email', document.getElementById('editLeadEmail').value);
+
+    try {
+        const res = await fetch(`/super-admin/lead/edit/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+            body: formData
+        });
+        const data = await res.json();
+        if(data.success) location.reload();
+        else alert(data.message);
+    } catch(err) {
+        alert("Error updating lead.");
+    }
+});
+
+async function deleteLead(id) {
+    if(!confirm("Are you sure you want to delete this lead? This action cannot be undone.")) return;
+    try {
+        const res = await fetch(`/super-admin/lead/delete/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF }
+        });
+        const data = await res.json();
+        if(data.success) location.reload();
+        else alert(data.message);
+    } catch(err) {
+        alert("Error deleting lead.");
+    }
+}
 
 function switchPanel(panelId, btn) {
     document.querySelectorAll('.admin-content-panel').forEach(p => p.classList.remove('visible'));

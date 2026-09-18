@@ -152,6 +152,32 @@ def super_admin_dashboard(request):
     
     leads = GuestLead.objects.all().select_related('event', 'event__owner').order_by('-created_at')
     
+    # Filtering
+    search_q = request.GET.get('search_q')
+    organizer_id = request.GET.get('organizer_id')
+    event_id = request.GET.get('event_id')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    if search_q:
+        from django.db.models import Q
+        leads = leads.filter(Q(name__icontains=search_q) | Q(phone__icontains=search_q) | Q(email__icontains=search_q))
+        
+    if organizer_id:
+        leads = leads.filter(event__owner_id=organizer_id)
+        
+    if event_id:
+        leads = leads.filter(event_id=event_id)
+        
+    if start_date:
+        leads = leads.filter(created_at__date__gte=start_date)
+        
+    if end_date:
+        leads = leads.filter(created_at__date__lte=end_date)
+        
+    # Get distinct organizers and events for the dropdowns
+    all_events = Event.objects.all().select_related('owner')
+    
     return render(request, 'gallery/super_admin.html', {
         'admins': admins,
         'plans': plans,
@@ -160,6 +186,7 @@ def super_admin_dashboard(request):
         'total_plans': total_plans,
         'total_storage_used': total_storage_used,
         'leads': leads,
+        'all_events': all_events,
     })
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -243,10 +270,38 @@ def update_plan(request, plan_id):
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
 def delete_plan(request, plan_id):
-    plan = get_object_or_404(SubscriptionPlan, id=plan_id)
-    plan_name = plan.name
-    plan.delete()
-    return JsonResponse({'success': True, 'message': f'Plan "{plan_name}" deleted successfully.'})
+    plan = SubscriptionPlan.objects.filter(id=plan_id).first()
+    if plan:
+        plan.delete()
+        return JsonResponse({'success': True, 'message': 'Plan deleted.'})
+    return JsonResponse({'success': False, 'message': 'Plan not found.'})
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def edit_lead(request, lead_id):
+    lead = GuestLead.objects.filter(id=lead_id).first()
+    if not lead:
+        return JsonResponse({'success': False, 'message': 'Lead not found.'})
+    
+    lead.name = request.POST.get('name', lead.name)
+    lead.phone = request.POST.get('phone', lead.phone)
+    lead.email = request.POST.get('email', lead.email)
+    
+    age = request.POST.get('age')
+    if age and age.isdigit():
+        lead.age = int(age)
+        
+    lead.save()
+    return JsonResponse({'success': True, 'message': 'Lead updated successfully.'})
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def delete_lead(request, lead_id):
+    lead = GuestLead.objects.filter(id=lead_id).first()
+    if not lead:
+        return JsonResponse({'success': False, 'message': 'Lead not found.'})
+    lead.delete()
+    return JsonResponse({'success': True, 'message': 'Lead deleted successfully.'})
 
 
 # -------------------------------------------------------------

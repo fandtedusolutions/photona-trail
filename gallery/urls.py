@@ -24,6 +24,10 @@ urlpatterns = [
     path('trial-expired/', views.trial_expired, name='trial_expired'),
     path('super-admin/extend-trial/<int:user_id>/', views.extend_trial, name='extend_trial'),
     path('super-admin/toggle-paid/<int:user_id>/', views.toggle_paid_status, name='toggle_paid_status'),
+    
+    # Guest Leads Management
+    path('super-admin/lead/edit/<int:lead_id>/', views.edit_lead, name='edit_lead'),
+    path('super-admin/lead/delete/<int:lead_id>/', views.delete_lead, name='delete_lead'),
 
     # Event CRUD (Tenant)
     path('event/create/', views.create_event, name='create_event'),
