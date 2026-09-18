@@ -369,30 +369,40 @@
     <!-- ══ LEFT SIDEBAR ══ -->
     <aside class="admin-sidebar">
         <div class="sidebar-brand">
-            <span class="sidebar-brand-text">VELZON</span>
+            <span class="sidebar-brand-text">PHOTONA</span>
         </div>
 
         <div class="sidebar-section-label">Menu</div>
         
-        <div style="padding-left: 1.5rem; margin-bottom: 0.5rem;">
-            <div style="font-size: 0.85rem; color: var(--vz-primary); font-weight: 500; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                <span class="sidebar-nav-icon">📊</span> Dashboards
+        <div style="padding: 0 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 0.85rem; color: var(--vz-text-muted); font-weight: 600; padding: 0.5rem 1rem; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                Dashboards
             </div>
-            <div style="padding-left: 1.75rem; display: flex; flex-direction: column; gap: 0.2rem;">
-                <button class="sidebar-nav-item active" style="padding: 0.35rem 0;" onclick="switchPanel('overview', this)">- Overview</button>
-                <button class="sidebar-nav-item" style="padding: 0.35rem 0;" onclick="switchPanel('tenants', this)">- Tenants</button>
-                <button class="sidebar-nav-item" style="padding: 0.35rem 0;" onclick="switchPanel('leads', this)">- Leads</button>
-                <button class="sidebar-nav-item" style="padding: 0.35rem 0;" onclick="switchPanel('plans', this)">- Plans</button>
+            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                <button class="sidebar-nav-item active" onclick="switchPanel('overview', this)">
+                    <span class="sidebar-nav-icon">📊</span> Overview
+                </button>
+                <button class="sidebar-nav-item" onclick="switchPanel('tenants', this)">
+                    <span class="sidebar-nav-icon">👥</span> Studio Admins
+                </button>
+                <button class="sidebar-nav-item" onclick="switchPanel('leads', this)">
+                    <span class="sidebar-nav-icon">🎯</span> Guest Leads
+                </button>
+                <button class="sidebar-nav-item" onclick="switchPanel('plans', this)">
+                    <span class="sidebar-nav-icon">💳</span> Manage Plans
+                </button>
             </div>
         </div>
 
         <div class="sidebar-section-label">Pages</div>
-        <button class="sidebar-nav-item">
-            <div class="sidebar-nav-icon">👤</div> Authentication
-        </button>
-        <button class="sidebar-nav-item">
-            <div class="sidebar-nav-icon">📄</div> Pages
-        </button>
+        <div style="padding: 0 1rem; display: flex; flex-direction: column; gap: 0.3rem;">
+            <button class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">👤</span> Authentication
+            </button>
+            <button class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">📄</span> Pages
+            </button>
+        </div>
     </aside>
 
     <!-- ══ RIGHT MAIN PANEL ══ -->
@@ -406,18 +416,19 @@
                 </div>
             </div>
             <div class="topbar-right">
-                <div style="font-size: 1rem; color: var(--vz-text-muted); cursor: pointer; padding: 0 0.5rem;">🇺🇸</div>
-                <div style="font-size: 1rem; color: var(--vz-text-muted); cursor: pointer; padding: 0 0.5rem;">❖</div>
-                <div style="font-size: 1rem; color: var(--vz-text-muted); cursor: pointer; padding: 0 0.5rem;">🛒</div>
-                <div style="font-size: 1rem; color: var(--vz-text-muted); cursor: pointer; padding: 0 0.5rem;">⛶</div>
-                <div style="font-size: 1rem; color: var(--vz-text-muted); cursor: pointer; padding: 0 0.5rem;">🌙</div>
-                <div style="font-size: 1rem; color: var(--vz-text-muted); cursor: pointer; padding: 0 0.5rem;">🔔</div>
-                <div class="topbar-profile">
-                    <img src="https://ui-avatars.com/api/?name=Super+Admin&background=random" style="width: 32px; height: 32px; border-radius: 50%;">
-                    <div style="display: flex; flex-direction: column;">
-                        <span class="topbar-profile-name">Anna Adame</span>
-                        <span class="topbar-profile-role">Founder</span>
+                <div class="topbar-profile" style="position: relative; display: flex; align-items: center; gap: 1rem; padding: 0.25rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; background: #f3f3f9; padding: 0.4rem 0.8rem; border-radius: 4px;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--vz-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
+                            {{ request.user.username|make_list|first|upper|default:"A" }}
+                        </div>
+                        <div style="display: flex; flex-direction: column;">
+                            <span class="topbar-profile-name">{{ request.user.username|default:"Admin" }}</span>
+                            <span class="topbar-profile-role">Super Admin</span>
+                        </div>
                     </div>
+                    <a href="{% url 'logout' %}" style="display: flex; align-items: center; gap: 0.4rem; color: var(--vz-danger); text-decoration: none; font-size: 0.85rem; font-weight: 500; padding: 0.4rem 0.8rem; border-radius: 4px; border: 1px solid var(--vz-danger-bg); transition: all 0.2s;" onmouseover="this.style.background='var(--vz-danger-bg)'" onmouseout="this.style.background='transparent'">
+                        <span>🚪</span> Logout
+                    </a>
                 </div>
             </div>
         </header>

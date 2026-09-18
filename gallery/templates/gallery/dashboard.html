@@ -134,7 +134,7 @@
 
     /* ── Main Content ── */
     .dash-main {
-        padding: 2rem 2.5rem;
+        padding: 1.5rem 1.5rem;
         overflow-y: auto;
     }
 
@@ -142,185 +142,110 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.75rem;
+        margin-bottom: 1.5rem;
     }
 
     .dash-header h1 {
-        font-size: 1.65rem;
-        font-weight: 850;
-        color: #0f172a;
-        letter-spacing: -0.03em;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #212529;
+        margin: 0;
+    }
+    
+    .dash-header-actions {
+        display: flex;
+        gap: 0.5rem;
     }
 
-    /* ── Announcement Banner ── */
-    .dash-banner {
-        background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
-        border-radius: 20px;
-        padding: 2rem 2.5rem;
-        margin-bottom: 2rem;
+    .dash-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .dash-card {
+        background: #ffffff;
+        border-radius: 4px;
+        box-shadow: 0 1px 2px rgba(56, 65, 74, 0.15);
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .dash-card-header {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 1rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        position: relative;
-        overflow: hidden;
     }
 
-    .dash-banner::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 300px;
-        height: 300px;
-        background: radial-gradient(circle, rgba(99, 102, 241, 0.3), transparent 70%);
-        border-radius: 50%;
-        pointer-events: none;
+    .dash-card-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .dash-card-subtitle {
+        font-size: 0.75rem;
+        color: #878a99;
+        margin-top: 0.25rem;
     }
 
-    .dash-banner-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: #059669;
-        color: #ffffff;
-        font-size: 0.7rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        padding: 4px 12px;
-        border-radius: 20px;
-        margin-bottom: 0.75rem;
-    }
-
-    .dash-banner h2 {
-        color: #ffffff;
-        font-size: 1.3rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        margin-bottom: 0.4rem;
-    }
-
-    .dash-banner p {
-        color: #94a3b8;
-        font-size: 0.88rem;
-        line-height: 1.5;
+    .dash-card-icon {
+        font-size: 1.5rem;
+        color: #878a99;
         margin-bottom: 1rem;
+        text-align: center;
     }
 
-    .dash-banner-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: #059669;
-        color: #ffffff;
-        padding: 0.6rem 1.25rem;
-        border-radius: 10px;
-        font-size: 0.82rem;
-        font-weight: 750;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        border: none;
-        cursor: pointer;
+    .dash-card-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #212529;
+        text-align: center;
     }
-
-    .dash-banner-btn:hover {
-        background: #047857;
-        transform: translateY(-1px);
+    
+    .dash-card-progress-wrap {
+        margin-top: 0.5rem;
     }
-
-    .dash-banner-feature {
-        background: rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 16px;
-        padding: 1.1rem 1.5rem;
-        min-width: 260px;
-        position: relative;
-        z-index: 2;
-    }
-
-    .dash-banner-feature h4 {
-        color: #ffffff;
-        font-size: 0.92rem;
-        font-weight: 750;
+    
+    .dash-card-progress {
+        height: 6px;
+        background: #e2e5ed;
+        border-radius: 3px;
+        overflow: hidden;
         margin-bottom: 0.25rem;
     }
-
-    .dash-banner-feature p {
-        color: #94a3b8;
-        font-size: 0.78rem;
-        margin: 0;
-    }
-
-    /* ── Recent Events Section ── */
-    .dash-recent-section {
-        margin-bottom: 2rem;
-    }
-
-    .dash-section-title {
-        font-size: 1.1rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin-bottom: 1.15rem;
-        letter-spacing: -0.01em;
-    }
-
-    .dash-recent-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr 240px;
-        gap: 1.25rem;
-    }
-
-    .dash-event-card {
-        background: #ffffff;
-        border-radius: 16px;
-        overflow: hidden;
-        border: 1px solid #e2e8f0;
-        transition: all 0.25s ease;
-        cursor: pointer;
-        text-decoration: none;
-        color: inherit;
-        display: block;
-    }
-
-    .dash-event-card:hover {
-        box-shadow: 0 8px 25px -5px rgba(15, 23, 42, 0.1);
-        border-color: #cbd5e1;
-        transform: translateY(-2px);
-    }
-
-    .dash-event-cover {
-        height: 140px;
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .dash-event-cover img {
-        width: 100%;
+    
+    .dash-card-progress-bar {
         height: 100%;
-        object-fit: cover;
-        object-position: center 15%;
+        background: #405189;
+        border-radius: 3px;
     }
-
-    .dash-event-body {
-        padding: 1rem 1.15rem;
+    
+    .dash-card-split {
+        display: flex;
+        justify-content: space-around;
+        text-align: center;
+        border-top: 1px solid #e9ebec;
+        padding-top: 1rem;
+        margin-top: 1rem;
     }
-
-    .dash-event-body h4 {
-        font-size: 0.92rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin-bottom: 0.2rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    
+    .dash-card-split-val {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #f06548;
     }
-
-    .dash-event-body span {
-        font-size: 0.78rem;
-        color: #64748b;
-        font-weight: 500;
+    
+    .dash-card-split-label {
+        font-size: 0.75rem;
+        color: #878a99;
     }
 
     .dash-events-count-widget {
@@ -845,106 +770,104 @@
             </div>
         </div>
 
-        <!-- ── Stat Cards Row (Top) ── -->
-        <div class="dash-stat-grid" style="margin-bottom: 1.75rem;">
-            <div class="dash-stat-card" style="background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; border: none; position: relative; overflow: hidden;">
-                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.1);"></div>
-                <div style="position: absolute; bottom: -30px; left: -15px; width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.06);"></div>
-                <div class="dash-stat-icon" style="background: rgba(255,255,255,0.2); color: white;">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="16" height="13" rx="2" stroke="white" stroke-width="1.8"/><path d="M2 7h16M6 1v4M14 1v4" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <!-- ── Studio Insights Row ── -->
+        <h3 class="dash-section-title" style="margin-top: 1rem;">Studio Insights</h3>
+        <div class="dash-grid" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="dash-card">
+                <div class="dash-card-header">
+                    <span class="dash-card-title">Gross</span>
+                    <span class="dash-card-icon" style="margin:0; font-size:1.25rem;">☁️</span>
                 </div>
-                <div class="dash-stat-num" style="color: white;">{{ total_events }}</div>
-                <div class="dash-stat-label" style="color: rgba(255,255,255,0.8);">Total Events</div>
+                <div class="dash-card-value" style="text-align: left;">
+                    {{ total_images }} <span style="font-size: 1.1rem; color: #878a99; font-weight: 500;">/ {{ allowed_uploads }}</span>
+                </div>
+                <div class="dash-card-subtitle" style="margin-bottom: 0.75rem;">Photos Uploaded / Allowed</div>
+                <div class="dash-card-progress-wrap">
+                    <div class="dash-card-progress">
+                        <div class="dash-card-progress-bar" style="width: {{ upload_percentage }}%;"></div>
+                    </div>
+                </div>
             </div>
-            <div class="dash-stat-card" style="background: linear-gradient(135deg, #059669, #10b981); color: white; border: none; position: relative; overflow: hidden;">
-                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.1);"></div>
-                <div class="dash-stat-icon" style="background: rgba(255,255,255,0.2); color: white;">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="3" stroke="white" stroke-width="1.8"/><path d="M2 13l5-5 3 3 4-4 4 4" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="7" r="2" stroke="white" stroke-width="1.4"/></svg>
+            
+            <div class="dash-card">
+                <div class="dash-card-header">
+                    <span class="dash-card-title">Net Uploads</span>
+                    <span class="dash-card-icon" style="margin:0; font-size:1.25rem; background: #212529; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">✓</span>
                 </div>
-                <div class="dash-stat-num" style="color: white;">{{ total_images }}</div>
-                <div class="dash-stat-label" style="color: rgba(255,255,255,0.8);">Total Photos</div>
-            </div>
-            <div class="dash-stat-card" style="background: linear-gradient(135deg, #d946ef, #ec4899); color: white; border: none; position: relative; overflow: hidden;">
-                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.1);"></div>
-                <div class="dash-stat-icon" style="background: rgba(255,255,255,0.2); color: white;">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="white" stroke-width="1.8"/><path d="M3 18c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <div class="dash-card-value" style="text-align: left;">
+                    {{ total_images }} <span style="font-size: 1.1rem; color: #878a99; font-weight: 500;">/ {{ allowed_uploads }}</span>
                 </div>
-                <div class="dash-stat-num" style="color: white;">{{ total_faces }}</div>
-                <div class="dash-stat-label" style="color: rgba(255,255,255,0.8);">Faces Detected</div>
-            </div>
-            <div class="dash-stat-card" style="background: linear-gradient(135deg, #f59e0b, #f97316); color: white; border: none; position: relative; overflow: hidden;">
-                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.1);"></div>
-                <div class="dash-stat-icon" style="background: rgba(255,255,255,0.2); color: white;">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2v8l4 4" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="10" r="8" stroke="white" stroke-width="1.8"/></svg>
+                <div class="dash-card-subtitle" style="margin-bottom: 0.75rem;">Photos Uploaded / Allowed</div>
+                <div class="dash-card-progress-wrap">
+                    <div class="dash-card-progress">
+                        <div class="dash-card-progress-bar" style="width: {{ upload_percentage }}%; background-color: #0ab39c;"></div>
+                    </div>
                 </div>
-                <div class="dash-stat-num" style="color: white;">{{ profile.storage_percentage }}%</div>
-                <div class="dash-stat-label" style="color: rgba(255,255,255,0.8);">Storage Used</div>
             </div>
         </div>
-
-        <!-- ── Announcement Banner ── -->
-        <div class="dash-banner" style="margin-bottom: 1.75rem;">
-            <div style="position: relative; z-index: 2; max-width: 55%;">
-                <div class="dash-banner-badge">
-                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #ffffff;"></span>
-                    What's New
-                </div>
-                <h2>AI-Powered Face Search & Smart Photo Delivery</h2>
-                <p style="margin-bottom: 1.25rem;">Upload photos, let our AI detect faces, and share events instantly. Guests find their photos with a selfie search!</p>
-                <a href="{% url 'gallery:search' %}" class="dash-banner-btn">
-                    Try AI Search
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </a>
+        
+        <div class="dash-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
+                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">👤</div>
+                <div class="dash-card-value">{{ total_users }}</div>
+                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Users</div>
             </div>
-            <div class="dash-banner-feature">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.65rem;">
-                    <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(5, 150, 105, 0.25); display: flex; align-items: center; justify-content: center;">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M8 3H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-3M11 3h6m0 0v6m0-6L9 11" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            
+            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
+                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">📅</div>
+                <div class="dash-card-value">{{ total_events }}</div>
+                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Events</div>
+            </div>
+            
+            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
+                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">🖼️</div>
+                <div class="dash-card-value">{{ events_with_photos }}</div>
+                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Events with Photo Selection</div>
+            </div>
+            
+            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
+                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">☑️</div>
+                <div class="dash-card-value">0</div>
+                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Confirmed Photo Selections</div>
+            </div>
+            
+            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
+                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">❓</div>
+                <div class="dash-card-value">0</div>
+                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Unconfirmed Photo Selections</div>
+            </div>
+            
+            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 1.5rem;">
+                <div class="dash-card-icon" style="font-size: 1.5rem; color: #f06548;">⏳</div>
+                <div class="dash-card-title" style="margin-bottom: 0.5rem; color: #212529;">Expiring Photo Selection</div>
+                <div class="dash-card-split" style="width: 100%;">
+                    <div>
+                        <div class="dash-card-split-val">0</div>
+                        <div class="dash-card-split-label">Expired</div>
                     </div>
-                    <h4>Client Access Links</h4>
-                </div>
-                <p style="margin: 0; line-height: 1.5;">Share event links with clients. No login needed for guests to search their photos via selfie.</p>
-            </div>
-        </div>
-
-        <!-- ── Studio Insights ── -->
-        <div class="dash-insights-row" style="margin-bottom: 1.75rem;">
-            <!-- Storage Usage Card -->
-            <div class="dash-insight-card" style="position: relative; overflow: hidden;">
-                <div style="position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; border-radius: 50%; background: rgba(79, 70, 229, 0.04);"></div>
-                <div class="dash-insight-header">
-                    <span class="dash-insight-label">Storage Usage</span>
-                    <div class="dash-insight-icon" style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(124, 58, 237, 0.15));">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="1" width="10" height="14" rx="2" stroke="#4f46e5" stroke-width="1.5"/><path d="M6 5h4M6 8h4M6 11h2" stroke="#4f46e5" stroke-width="1.5" stroke-linecap="round"/></svg>
-                    </div>
-                </div>
-                <div class="dash-insight-value">
-                    {{ profile.used_storage_mb|floatformat:0 }} <span>/ {{ profile.subscription_plan.storage_limit_mb|default:"0" }} MB</span>
-                </div>
-                <div class="dash-insight-sub">{{ profile.storage_percentage }}% of your storage is used</div>
-                {% if profile.subscription_plan %}
-                <div class="dash-insight-bar" style="height: 8px; margin-top: 1rem;">
-                    <div class="dash-insight-bar-fill" style="width: {{ profile.storage_percentage }}%; background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 9999px;"></div>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Photos Indexed Card -->
-            <div class="dash-insight-card" style="position: relative; overflow: hidden;">
-                <div style="position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; border-radius: 50%; background: rgba(5, 150, 105, 0.04);"></div>
-                <div class="dash-insight-header">
-                    <span class="dash-insight-label">AI Processing</span>
-                    <div class="dash-insight-icon" style="background: linear-gradient(135deg, rgba(5, 150, 105, 0.15), rgba(16, 185, 129, 0.15));">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#059669" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#059669" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <div style="border-left: 1px solid #e9ebec; padding-left: 2.5rem; margin-left: 2.5rem;">
+                        <div class="dash-card-split-val" style="color: #f7b84b;">0</div>
+                        <div class="dash-card-split-label">Expiring Soon</div>
                     </div>
                 </div>
-                <div class="dash-insight-value">
-                    {{ total_images }} <span>photos indexed</span>
-                </div>
-                <div class="dash-insight-sub">{{ total_faces }} faces detected across all events</div>
-                <div class="dash-insight-bar" style="height: 8px; margin-top: 1rem;">
-                    <div class="dash-insight-bar-fill" style="width: {% if total_images > 0 %}100{% else %}0{% endif %}%; background: linear-gradient(90deg, #059669, #10b981); border-radius: 9999px;"></div>
-                </div>
+            </div>
+            
+            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
+                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">📸</div>
+                <div class="dash-card-value">{{ events_with_photos }}</div>
+                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Events with Photos</div>
+            </div>
+            
+            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
+                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">📖</div>
+                <div class="dash-card-value">0</div>
+                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Events with e-Album</div>
+            </div>
+            
+            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
+                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">▶️</div>
+                <div class="dash-card-value">0</div>
+                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Events with Videos</div>
             </div>
         </div>
 

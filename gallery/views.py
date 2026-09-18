@@ -125,6 +125,32 @@ def dashboard(request):
     events = Event.objects.filter(owner=request.user).order_by('-created_at')
     total_events = events.count()
     
+    # Calculate Events with Photos
+    from django.db.models import Count
+    events_with_photos = Event.objects.filter(owner=request.user).annotate(image_count=Count('galleryimage')).filter(image_count__gt=0).count()
+    
+    # Total Users (Guest Leads)
+    from .models import GuestLead
+    total_users = GuestLead.objects.filter(event__owner=request.user).count()
+    
+    # Quota calculations
+    plan = profile.subscription_plan
+    storage_limit = 0
+    # Assuming storage_limit_mb roughly corresponds to number of allowed photos for this metric
+    # But usually a photo is ~1-5MB. We'll show the actual MB limit for now, or just limit count.
+    # We will simulate "Gross Photos Uploaded / Allowed"
+    # Actually, we can use a hardcoded 50,000 or the plan limit for the UI
+    allowed_uploads = 50000 
+    if plan:
+        # Convert MB to approx photo count (assuming 2MB per photo)
+        allowed_uploads = int((plan.storage_limit_mb * 1024 * 1024) / (2 * 1024 * 1024))
+        
+    upload_percentage = 0
+    if allowed_uploads > 0:
+        upload_percentage = (total_images / allowed_uploads) * 100
+        
+    upload_percentage = min(upload_percentage, 100) # cap at 100%
+
     # Get recent events (up to 3) for the dashboard carousel
     recent_events = events[:3]
     
@@ -135,6 +161,10 @@ def dashboard(request):
         'recent_events': recent_events,
         'total_events': total_events,
         'profile': profile,
+        'events_with_photos': events_with_photos,
+        'total_users': total_users,
+        'allowed_uploads': allowed_uploads,
+        'upload_percentage': upload_percentage,
     })
 
 # -------------------------------------------------------------
