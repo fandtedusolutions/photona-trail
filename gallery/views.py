@@ -127,7 +127,7 @@ def dashboard(request):
     
     # Calculate Events with Photos
     from django.db.models import Count
-    events_with_photos = Event.objects.filter(owner=request.user).annotate(image_count=Count('galleryimage')).filter(image_count__gt=0).count()
+    events_with_photos = Event.objects.filter(owner=request.user).annotate(image_count=Count('images')).filter(image_count__gt=0).count()
     
     # Total Users (Guest Leads)
     from .models import GuestLead
