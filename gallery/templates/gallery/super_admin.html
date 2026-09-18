@@ -407,32 +407,6 @@
 
     <!-- ══ RIGHT MAIN PANEL ══ -->
     <div class="admin-main-wrapper">
-        <header class="admin-topbar">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <button style="background: none; border: none; font-size: 1.25rem; color: var(--vz-text-main); cursor: pointer;">≡</button>
-                <div style="position: relative;">
-                    <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--vz-text-muted);">🔍</span>
-                    <input type="text" class="topbar-search" placeholder="Search..." style="padding-left: 30px;">
-                </div>
-            </div>
-            <div class="topbar-right">
-                <div class="topbar-profile" style="position: relative; display: flex; align-items: center; gap: 1rem; padding: 0.25rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; background: #f3f3f9; padding: 0.4rem 0.8rem; border-radius: 4px;">
-                        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--vz-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
-                            {{ request.user.username|make_list|first|upper|default:"A" }}
-                        </div>
-                        <div style="display: flex; flex-direction: column;">
-                            <span class="topbar-profile-name">{{ request.user.username|default:"Admin" }}</span>
-                            <span class="topbar-profile-role">Super Admin</span>
-                        </div>
-                    </div>
-                    <a href="{% url 'gallery:user_logout' %}" style="display: flex; align-items: center; gap: 0.4rem; color: var(--vz-danger); text-decoration: none; font-size: 0.85rem; font-weight: 500; padding: 0.4rem 0.8rem; border-radius: 4px; border: 1px solid var(--vz-danger-bg); transition: all 0.2s;" onmouseover="this.style.background='var(--vz-danger-bg)'" onmouseout="this.style.background='transparent'">
-                        <span>🚪</span> Logout
-                    </a>
-                </div>
-            </div>
-        </header>
-
         <main class="admin-main">
 
         <!-- ── OVERVIEW PANEL ── -->

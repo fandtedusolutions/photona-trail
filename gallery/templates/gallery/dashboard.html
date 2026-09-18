@@ -61,70 +61,69 @@
         font-size: 1.45rem;
         font-weight: 850;
         letter-spacing: -0.04em;
-        background: linear-gradient(135deg, #6366f1, #ec4899);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #111827;
     }
 
     .dash-nav {
-        padding: 0.75rem 0.75rem;
+        padding: 0.5rem 0;
         flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 0;
         overflow-y: auto;
     }
 
     .dash-nav-item {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 0.55rem 0.85rem;
-        border-radius: 10px;
+        gap: 15px;
+        padding: 0.85rem 1.75rem;
         text-decoration: none;
-        color: #475569;
-        font-size: 0.86rem;
-        font-weight: 600;
+        color: #111827;
+        font-size: 1.05rem;
+        font-weight: 500;
         transition: all 0.2s ease;
         white-space: nowrap;
-        min-height: 38px;
+        min-height: 48px;
     }
 
     .dash-nav-item:hover {
-        background: #f1f5f9;
-        color: #0f172a;
+        background: #f9fafb;
     }
 
     .dash-nav-item.active {
-        background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(124, 58, 237, 0.08));
-        color: #4f46e5;
-        font-weight: 750;
-        border: 1px solid rgba(79, 70, 229, 0.15);
+        background: #333333;
+        color: #ffffff;
+    }
+    
+    .dash-nav-item.active .dash-nav-icon,
+    .dash-nav-item.active .dash-nav-icon svg {
+        color: #ffffff;
     }
 
     .dash-nav-icon {
-        width: 20px;
-        height: 20px;
-        min-width: 20px;
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1rem;
+        font-size: 1.2rem;
+        color: #374151;
     }
 
     .dash-nav-icon svg {
-        width: 18px;
-        height: 18px;
+        width: 22px;
+        height: 22px;
     }
 
     .dash-nav-section-label {
-        font-size: 0.65rem;
-        font-weight: 800;
+        font-size: 0.75rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: #94a3b8;
-        padding: 0.75rem 0.85rem 0.35rem;
-        margin-top: 0.25rem;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        padding: 1rem 1.75rem 0.5rem;
     }
 
     .dash-sidebar-footer {
@@ -643,282 +642,255 @@
 
         <!-- Navigation -->
         <nav class="dash-nav">
-            <a href="{% url 'gallery:dashboard' %}" class="dash-nav-item active">
+            <a href="{% url 'gallery:dashboard' %}" class="dash-nav-item" style="font-weight: 700;">
                 <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="10.5" y="1" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="1" y="10.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="10.5" y="10.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z"/></svg>
                 </span>
                 Dashboard
             </a>
             <a href="javascript:void(0)" class="dash-nav-item" onclick="openModal('eventModal')">
                 <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 5.5v7M5.5 9h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                 </span>
                 Create Event
             </a>
             <a href="#events-section" class="dash-nav-item" onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'}); return false;">
                 <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 7h14M6 1v4M12 1v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><rect x="8" y="14" width="2" height="2"/><rect x="14" y="14" width="2" height="2"/></svg>
                 </span>
                 Events
             </a>
-            <a href="{% url 'gallery:search' %}" class="dash-nav-item">
+            <a href="javascript:void(0)" class="dash-nav-item">
                 <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.8"/><path d="M11.5 11.5L16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                 </span>
-                AI Search
+                Plans & Recharge
             </a>
             <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Downloads page coming soon!', 'info')">
                 <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v10M5 9l4 4 4-4M3 14h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </span>
                 Downloads
             </a>
-
-            <div class="dash-nav-section-label">AI Tools</div>
-
-            <a href="{% url 'gallery:group_by_face' %}" class="dash-nav-item">
-                <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="6" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                </span>
-                Face Grouping
+            <a href="javascript:void(0)" class="dash-nav-item" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="dash-nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                    </span>
+                    Pages
+                </div>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </a>
-            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Photo Enhancement coming soon!', 'info')">
+            <a href="javascript:void(0)" class="dash-nav-item">
                 <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1l2.2 4.5 5 .7-3.6 3.5.9 5L9 12.5 4.5 14.7l.9-5L1.8 6.2l5-.7L9 1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </span>
-                Photo Enhancement
-                <span style="margin-left: auto; font-size: 0.6rem; font-weight: 800; color: #4f46e5; background: rgba(79, 70, 229, 0.1); padding: 2px 7px; border-radius: 6px;">SOON</span>
+                Users
             </a>
-            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Eye Correction AI coming soon!', 'info')">
-                <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M1 9s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.6"/></svg>
-                </span>
-                Eye Correction
-                <span style="margin-left: auto; font-size: 0.6rem; font-weight: 800; color: #4f46e5; background: rgba(79, 70, 229, 0.1); padding: 2px 7px; border-radius: 6px;">SOON</span>
+            <a href="javascript:void(0)" class="dash-nav-item active" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="dash-nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    </span>
+                    Billing
+                    <span style="font-size: 0.7rem; font-weight: 700; background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; line-height: 1; margin-left: 5px;">New</span>
+                </div>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </a>
-            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Smart Filters coming soon!', 'info')">
-                <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 3h14M4 7h10M6 11h6M8 15h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                </span>
-                Smart Filters
-                <span style="margin-left: auto; font-size: 0.6rem; font-weight: 800; color: #4f46e5; background: rgba(79, 70, 229, 0.1); padding: 2px 7px; border-radius: 6px;">SOON</span>
-            </a>
-
-            <div class="dash-nav-section-label">Account</div>
-
             <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('WhatsApp sharing coming soon!', 'info')">
                 <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M15.5 2.5A8.5 8.5 0 003.2 14l-1.7 3.5 3.6-1A8.5 8.5 0 0015.5 2.5z" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 7.5c.3-.6.7-1 1.2-1s.8.5 1 .8l.2.4c.1.3 0 .6-.2.8l-.5.5s.5 1 1.2 1.7c.7.7 1.7 1.2 1.7 1.2l.5-.5c.2-.2.5-.3.8-.2l.4.2c.3.2.8.5.8 1s-.4.9-1 1.2c-.8.3-1.8.1-2.8-.5A10.5 10.5 0 016.5 7.5z" stroke="currentColor" stroke-width="1.2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
                 </span>
                 WhatsApp
-                <span style="margin-left: auto; font-size: 0.6rem; font-weight: 800; color: #059669; background: rgba(5, 150, 105, 0.1); padding: 2px 7px; border-radius: 6px;">NEW</span>
             </a>
             <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Email sharing coming soon!', 'info')">
                 <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 6l7 4.5L16 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                 </span>
                 Email
             </a>
-            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Billing & Plans coming soon!', 'info')">
-                <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 8h14" stroke="currentColor" stroke-width="1.8"/></svg>
-                </span>
-                Billing
+            <a href="javascript:void(0)" class="dash-nav-item" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="dash-nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </span>
+                    Settings
+                </div>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </a>
-            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Settings page coming soon!', 'info')">
+            <a href="javascript:void(0)" class="dash-nav-item">
                 <span class="dash-nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.4 3.4l1.4 1.4M13.2 13.2l1.4 1.4M3.4 14.6l1.4-1.4M13.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 </span>
-                Settings
+                Enquiries
             </a>
         </nav>
 
-        <!-- Sidebar Footer / Profile -->
-        <div class="dash-sidebar-footer">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
-                <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 850; box-shadow: 0 3px 10px rgba(79, 70, 229, 0.3);">
-                    {{ request.user.username|make_list|first|upper }}
-                </div>
-                <div style="overflow: hidden;">
-                    <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ request.user.username|title }}</div>
-                    <div style="font-size: 0.7rem; color: #4f46e5; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">{{ profile.subscription_plan.name|default:"Free Plan" }}</div>
-                </div>
+        <div style="border-top: 1px solid #e2e8f0; padding: 1rem 1.75rem 0;">
+            <div style="font-size: 0.7rem; font-weight: 700; color: #6b7280; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-transform: uppercase;">Dedicated Support Manager</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: #111827;">Aswathy Murugan</div>
+            <div style="font-size: 0.85rem; color: #475569; display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                +91 9344904440
             </div>
-            <a href="{% url 'gallery:user_logout' %}" style="display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 0.55rem; border-radius: 10px; background: rgba(225, 29, 72, 0.06); color: #e11d48; border: 1px solid rgba(225, 29, 72, 0.2); font-size: 0.82rem; font-weight: 700; text-decoration: none; transition: all 0.2s ease;" onmouseover="this.style.background='#e11d48'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(225, 29, 72, 0.06)'; this.style.color='#e11d48';">
-                Logout
-            </a>
+            
+            <div style="font-size: 0.7rem; font-weight: 700; color: #6b7280; letter-spacing: 0.05em; margin-top: 1.25rem; margin-bottom: 0.5rem; text-transform: uppercase;">My Account</div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <a href="{% url 'gallery:user_logout' %}" style="font-size: 0.95rem; font-weight: 600; color: #111827; text-decoration: none; display: flex; align-items: center; gap: 0.5rem;">
+                    Logout
+                </a>
+            </div>
         </div>
     </aside>
 
     <!-- ════════════════════ MAIN CONTENT ════════════════════ -->
-    <div class="dash-main">
+    <div class="dash-main" style="background: #f8fafc; padding: 2rem;">
         <!-- Header -->
-        <div class="dash-header">
-            <div>
-                <h1 style="margin-bottom: 4px;">Welcome back, {{ request.user.username|title }} 👋</h1>
-                <p style="font-size: 0.85rem; color: #64748b; font-weight: 500; margin: 0;">Here's what's happening with your studio today</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="text-align: right; margin-right: 4px;">
-                    <div style="font-size: 0.82rem; font-weight: 700; color: #0f172a;">{{ request.user.profile.subscription_plan.name|default:"Free Plan" }}</div>
-                    <div style="font-size: 0.72rem; color: #64748b; font-weight: 500;">Active Plan</div>
-                </div>
-                <div style="background: rgba(5, 150, 105, 0.08); padding: 0.5rem 1rem; border-radius: 12px; border: 1px solid rgba(5, 150, 105, 0.2); display: flex; align-items: center; gap: 8px;">
-                    <span style="display: flex; height: 8px; width: 8px; border-radius: 50%; background-color: #059669; box-shadow: 0 0 8px #059669; animation: pulse 2s infinite;"></span>
-                    <span style="font-size: 0.82rem; font-weight: 700; color: #059669;">AI Online</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">Dashboard</h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <a href="javascript:void(0)" style="display: flex; align-items: center; gap: 0.5rem; background: #10b981; color: white; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 600; text-decoration: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                    Join us on WhatsApp
+                </a>
+                <a href="javascript:void(0)" style="display: flex; align-items: center; gap: 0.5rem; background: #ef4444; color: white; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 600; text-decoration: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    Setup Guide
+                    <span style="background: rgba(255,255,255,0.25); padding: 2px 6px; border-radius: 9999px; font-size: 0.75rem;">33%</span>
+                </a>
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: white; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; position: relative;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span style="position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: #f59e0b; border-radius: 50%; border: 2px solid white;"></span>
                 </div>
             </div>
         </div>
 
-        <!-- ── Studio Insights Row ── -->
-        <h3 class="dash-section-title" style="margin-top: 1rem;">Studio Insights</h3>
-        <div class="dash-grid" style="grid-template-columns: repeat(2, 1fr);">
-            <div class="dash-card">
-                <div class="dash-card-header">
-                    <span class="dash-card-title">Gross</span>
-                    <span class="dash-card-icon" style="margin:0; font-size:1.25rem;">☁️</span>
+        <!-- ── Announcement Banner ── -->
+        <div style="background: #1e293b; border-radius: 16px; padding: 2.5rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; position: relative; overflow: hidden;">
+            <div style="position: relative; z-index: 2; max-width: 50%;">
+                <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 1rem; text-transform: uppercase;">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399;"></span>
+                    What's New
                 </div>
-                <div class="dash-card-value" style="text-align: left;">
-                    {{ total_images }} <span style="font-size: 1.1rem; color: #878a99; font-weight: 500;">/ {{ allowed_uploads }}</span>
-                </div>
-                <div class="dash-card-subtitle" style="margin-bottom: 0.75rem;">Photos Uploaded / Allowed</div>
-                <div class="dash-card-progress-wrap">
-                    <div class="dash-card-progress">
-                        <div class="dash-card-progress-bar" style="width: {{ upload_percentage }}%;"></div>
-                    </div>
-                </div>
+                <h2 style="color: white; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; line-height: 1.3;">New: Faster login, smarter delivery & stunning themes</h2>
+                <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem;">Your workflow just got an upgrade — see how.</p>
+                <a href="javascript:void(0)" style="display: inline-flex; align-items: center; gap: 0.5rem; background: #3b82f6; color: white; padding: 0.65rem 1.25rem; border-radius: 9999px; font-size: 0.9rem; font-weight: 600; text-decoration: none;">
+                    Explore features
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </a>
             </div>
             
-            <div class="dash-card">
-                <div class="dash-card-header">
-                    <span class="dash-card-title">Net Uploads</span>
-                    <span class="dash-card-icon" style="margin:0; font-size:1.25rem; background: #212529; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">✓</span>
-                </div>
-                <div class="dash-card-value" style="text-align: left;">
-                    {{ total_images }} <span style="font-size: 1.1rem; color: #878a99; font-weight: 500;">/ {{ allowed_uploads }}</span>
-                </div>
-                <div class="dash-card-subtitle" style="margin-bottom: 0.75rem;">Photos Uploaded / Allowed</div>
-                <div class="dash-card-progress-wrap">
-                    <div class="dash-card-progress">
-                        <div class="dash-card-progress-bar" style="width: {{ upload_percentage }}%; background-color: #0ab39c;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="dash-grid" style="grid-template-columns: repeat(3, 1fr);">
-            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
-                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">👤</div>
-                <div class="dash-card-value">{{ total_users }}</div>
-                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Users</div>
-            </div>
-            
-            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
-                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">📅</div>
-                <div class="dash-card-value">{{ total_events }}</div>
-                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Events</div>
-            </div>
-            
-            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
-                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">🖼️</div>
-                <div class="dash-card-value">{{ events_with_photos }}</div>
-                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Events with Photo Selection</div>
-            </div>
-            
-            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
-                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">☑️</div>
-                <div class="dash-card-value">0</div>
-                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Confirmed Photo Selections</div>
-            </div>
-            
-            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
-                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">❓</div>
-                <div class="dash-card-value">0</div>
-                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Unconfirmed Photo Selections</div>
-            </div>
-            
-            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 1.5rem;">
-                <div class="dash-card-icon" style="font-size: 1.5rem; color: #f06548;">⏳</div>
-                <div class="dash-card-title" style="margin-bottom: 0.5rem; color: #212529;">Expiring Photo Selection</div>
-                <div class="dash-card-split" style="width: 100%;">
+            <div style="position: relative; z-index: 2; width: 45%;">
+                <div style="background: white; border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                    <div style="width: 48px; height: 48px; background: #4285F4; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; font-weight: 700;">G</div>
                     <div>
-                        <div class="dash-card-split-val">0</div>
-                        <div class="dash-card-split-label">Expired</div>
-                    </div>
-                    <div style="border-left: 1px solid #e9ebec; padding-left: 2.5rem; margin-left: 2.5rem;">
-                        <div class="dash-card-split-val" style="color: #f7b84b;">0</div>
-                        <div class="dash-card-split-label">Expiring Soon</div>
+                        <h4 style="margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 700; color: #1e293b;">Sign in with Google</h4>
+                        <p style="margin: 0; font-size: 0.8rem; color: #64748b;">No passwords, no OTP — login instantly</p>
                     </div>
                 </div>
-            </div>
-            
-            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
-                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">📸</div>
-                <div class="dash-card-value">{{ events_with_photos }}</div>
-                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Events with Photos</div>
-            </div>
-            
-            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
-                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">📖</div>
-                <div class="dash-card-value">0</div>
-                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Events with e-Album</div>
-            </div>
-            
-            <div class="dash-card" style="align-items: center; justify-content: center; text-align: center; padding: 2rem 1.5rem;">
-                <div class="dash-card-icon" style="font-size: 2.2rem; color: #212529;">▶️</div>
-                <div class="dash-card-value">0</div>
-                <div class="dash-card-subtitle" style="font-size: 0.85rem;">Events with Videos</div>
             </div>
         </div>
 
         <!-- ── Recent Events Section ── -->
-        <div class="dash-recent-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.15rem;">
-                <h3 class="dash-section-title" style="margin-bottom: 0;">Recent Events</h3>
-                <a href="#events-section" onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'}); return false;" style="font-size: 0.82rem; font-weight: 700; color: #4f46e5; text-decoration: none;">View All →</a>
-            </div>
-            <div class="dash-recent-row">
-                {% for ev in recent_events %}
-                <a href="{% url 'gallery:event_detail' ev.slug %}" class="dash-event-card">
-                    <div class="dash-event-cover" style="position: relative;">
-                        {% with first_img=ev.images.first %}
-                            {% if first_img %}
-                                <img src="{% url 'gallery:secure_image' first_img.get_secure_thumbnail_token %}" alt="{{ ev.name }}">
-                            {% endif %}
-                        {% endwith %}
-                        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 60px; background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);"></div>
-                        <div style="position: absolute; bottom: 10px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 0.72rem; font-weight: 700; color: white; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); padding: 3px 10px; border-radius: 8px;">{{ ev.images.count }} photos</span>
-                            <span style="font-size: 0.68rem; font-weight: 600; color: rgba(255,255,255,0.8);">{{ ev.created_at|date:"M d" }}</span>
-                        </div>
+        <div style="margin-bottom: 2.5rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #111827; margin-bottom: 1rem;">Recent Events</h3>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+                <!-- Event 1 -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="height: 140px; background: #ffe4e6; display: flex; align-items: center; justify-content: center;">
+                        <span style="font-size: 3rem;">🌸</span>
                     </div>
-                    <div class="dash-event-body">
-                        <h4>{{ ev.name|title }}</h4>
-                        <span>{{ ev.description|default:"Photography Event"|truncatewords:6 }}</span>
-                    </div>
-                </a>
-                {% empty %}
-                <div class="dash-event-card" style="display: flex; align-items: center; justify-content: center; min-height: 200px; grid-column: 1 / -1; cursor: default;">
-                    <div style="text-align: center; padding: 2rem;">
-                        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📅</div>
-                        <div style="font-size: 0.92rem; font-weight: 700; color: #0f172a; margin-bottom: 0.3rem;">No events yet</div>
-                        <div style="font-size: 0.82rem; color: #64748b;">Create your first event to get started</div>
+                    <div style="padding: 1.25rem;">
+                        <h4 style="margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 700; color: #111827;">THU KUJA MAN KUJA</h4>
+                        <p style="margin: 0; font-size: 0.8rem; color: #64748b;">Family Meet</p>
                     </div>
                 </div>
-                {% endfor %}
-
-                <!-- Events Count Widget -->
-                <div class="dash-events-count-widget" style="background: linear-gradient(135deg, #f8fafc, #f1f5f9); position: relative; overflow: hidden;">
-                    <div style="position: absolute; top: -30px; right: -30px; width: 100px; height: 100px; border-radius: 50%; background: rgba(79, 70, 229, 0.05);"></div>
-                    <span class="dash-events-count-label">Events Count</span>
-                    <span class="dash-events-count-num" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{{ total_events }}</span>
-                    <button onclick="openModal('eventModal')" class="dash-events-count-btn primary" style="box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);">
-                        Create Event
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                
+                <!-- Event 2 -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="height: 140px; background: #ffe4e6; display: flex; align-items: center; justify-content: center;">
+                        <span style="font-size: 3rem;">🌸</span>
+                    </div>
+                    <div style="padding: 1.25rem;">
+                        <h4 style="margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 700; color: #111827;">sugumaran / subadhra</h4>
+                        <p style="margin: 0; font-size: 0.8rem; color: #64748b;">Pre-wedding Photography</p>
+                    </div>
+                </div>
+                
+                <!-- Event 3 -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="height: 140px; background: #ffe4e6; display: flex; align-items: center; justify-content: center;">
+                        <span style="font-size: 3rem;">🌸</span>
+                    </div>
+                    <div style="padding: 1.25rem;">
+                        <h4 style="margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 700; color: #111827;">Shahid wedding</h4>
+                        <p style="margin: 0; font-size: 0.8rem; color: #64748b;">Wedding Photography</p>
+                    </div>
+                </div>
+                
+                <!-- Events Count -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; font-weight: 600; color: #64748b;">Events Count</h4>
+                    <div style="font-size: 3rem; font-weight: 800; color: #111827; line-height: 1; margin-bottom: 1.5rem;">{{ total_events|default:"5" }}</div>
+                    <button onclick="openModal('eventModal')" style="width: 100%; background: #3b82f6; color: white; border: none; border-radius: 9999px; padding: 0.6rem; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; cursor: pointer;">
+                        Create Event +
                     </button>
-                    <a href="#events-section" class="dash-events-count-btn secondary" onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'}); return false;">
-                        Go to Events →
-                    </a>
+                    <button onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'});" style="width: 100%; background: #111827; color: white; border: none; border-radius: 9999px; padding: 0.6rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        Go to Events <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Studio Insights ── -->
+        <div style="margin-bottom: 2.5rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #111827; margin-bottom: 1rem;">Studio Insights</h3>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+                
+                <!-- Gross -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <span style="font-size: 0.9rem; font-weight: 600; color: #111827;">Gross</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    </div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #111827; margin-bottom: 0.5rem;">
+                        {{ total_images|default:"50971" }} <span style="font-size: 1rem; color: #64748b; font-weight: 500;">/ {{ allowed_uploads|default:"100000" }}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">Photos Uploaded / Allowed</div>
+                    <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
+                        <div style="width: {{ upload_percentage|default:'50' }}%; height: 100%; background: #3b82f6;"></div>
+                    </div>
+                </div>
+                
+                <!-- Net Uploads -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <span style="font-size: 0.9rem; font-weight: 600; color: #111827;">Net Uploads</span>
+                        <div style="width: 20px; height: 20px; background: #111827; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </div>
+                    </div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #111827; margin-bottom: 0.5rem;">
+                        {{ total_images|default:"26596" }} <span style="font-size: 1rem; color: #64748b; font-weight: 500;">/ {{ allowed_uploads|default:"50000" }}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">Photos Uploaded / Allowed</div>
+                    <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
+                        <div style="width: {{ upload_percentage|default:'53' }}%; height: 100%; background: #10b981;"></div>
+                    </div>
+                </div>
+                
+                <!-- Users -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 2rem 1.25rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <div style="font-size: 1.75rem; font-weight: 800; color: #111827; margin-bottom: 0.25rem;">{{ total_users|default:"133" }}</div>
+                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 500;">Users</div>
+                </div>
+                
+                <!-- Events -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 2rem 1.25rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <div style="font-size: 1.75rem; font-weight: 800; color: #111827; margin-bottom: 0.25rem;">{{ total_events|default:"5" }}</div>
+                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 500;">Events</div>
                 </div>
             </div>
         </div>
