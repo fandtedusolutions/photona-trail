@@ -633,6 +633,11 @@ def upload_single_photo(request):
 
         safe_filename = os.path.basename(file.name)
         gallery_image = GalleryImage(filename=safe_filename, event=event)
+        
+        file.seek(0)
+        raw_bytes = file.read()
+        file.seek(0)
+        
         gallery_image.file.save(safe_filename, file, save=False)
         
         try:
@@ -652,7 +657,7 @@ def upload_single_photo(request):
             
         gallery_image.save()
         
-        num_faces = process_gallery_image(gallery_image, uploaded_file=file)
+        num_faces = process_gallery_image(gallery_image, raw_bytes=raw_bytes)
         
         from django.urls import reverse
         token = gallery_image.get_secure_thumbnail_token() if gallery_image.thumbnail else gallery_image.get_secure_file_token()
