@@ -530,7 +530,7 @@
                                         <div class="progress-bar" style="width: 100px; margin-top: 0; height: 8px; background: #e2e8f0;">
                                             <div class="progress-fill" style="width: {{ admin.profile.storage_percentage }}%;"></div>
                                         </div>
-                                        <span style="font-size: 0.8rem; color: #334155; white-space: nowrap; font-weight: 600;">{{ admin.profile.used_storage_mb|floatformat:1 }} / {{ admin.profile.subscription_plan.storage_limit_mb|default:"0" }} MB</span>
+                                        <span style="font-size: 0.8rem; color: #334155; white-space: nowrap; font-weight: 600;">{{ admin.profile.used_storage_mb|floatformat:1 }} / {{ admin.profile.effective_storage_limit_mb|default:"0" }} MB</span>
                                     </div>
                                 </td>
                                 <td>
@@ -629,7 +629,7 @@
                                         <div class="progress-bar" style="width: 100px; margin-top: 0; height: 8px; background: #e2e8f0;">
                                             <div class="progress-fill" style="width: {{ admin.profile.storage_percentage }}%;"></div>
                                         </div>
-                                        <span style="font-size: 0.8rem; color: #334155; white-space: nowrap; font-weight: 600;">{{ admin.profile.used_storage_mb|floatformat:1 }} / {{ admin.profile.subscription_plan.storage_limit_mb|default:"0" }} MB</span>
+                                        <span style="font-size: 0.8rem; color: #334155; white-space: nowrap; font-weight: 600;">{{ admin.profile.used_storage_mb|floatformat:1 }} / {{ admin.profile.effective_storage_limit_mb|default:"0" }} MB</span>
                                     </div>
                                 </td>
                                 <td>
