@@ -23,17 +23,29 @@ class UserProfile(models.Model):
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
     subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True, blank=True)
     used_storage_mb = models.FloatField(default=0.0)
+    custom_storage_limit_mb = models.IntegerField(null=True, blank=True, help_text="Override plan storage limit (in MB)")
 
     # Trial & Payment Fields
     trial_start_date = models.DateTimeField(auto_now_add=True)
     trial_duration_days = models.IntegerField(default=7, help_text="Number of days the trial is valid")
     is_paid = models.BooleanField(default=False, help_text="Set to True if the user has paid, bypassing trial limits")
 
+
+    @property
+    def effective_storage_limit_mb(self):
+        if self.custom_storage_limit_mb is not None:
+            return self.custom_storage_limit_mb
+        if self.subscription_plan:
+            return self.subscription_plan.storage_limit_mb
+        return 0
+
     @property
     def storage_percentage(self):
-        if not self.subscription_plan or self.subscription_plan.storage_limit_mb == 0:
+
+        limit = self.effective_storage_limit_mb
+        if limit == 0:
             return 0
-        return min(100, int((self.used_storage_mb / self.subscription_plan.storage_limit_mb) * 100))
+        return min(100, int((self.used_storage_mb / limit) * 100))
 
     @property
     def is_active_trial(self):

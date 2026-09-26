@@ -554,7 +554,7 @@
                                                 {% if admin.profile.is_paid %}Mark Unpaid{% else %}Mark Paid{% endif %}
                                             </button>
                                         </form>
-                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
                                         <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
                                     </div>
                                 </td>
@@ -653,7 +653,7 @@
                                                 {% if admin.profile.is_paid %}Mark Unpaid{% else %}Mark Paid{% endif %}
                                             </button>
                                         </form>
-                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
                                         <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
                                     </div>
                                 </td>
@@ -873,7 +873,7 @@
                 </div>
             </div>
             <div id="variableStorageContainer" style="display: none; margin-top: 1rem; padding: 1.25rem; background: rgba(16, 185, 129, 0.05); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 6px;">
-                <label class="form-label" style="color: #0f172a; font-weight: 700;">Required Storage (GB) <span style="color:#10b981;">*Variable Plan</span></label>
+                <label class="form-label" style="color: #0f172a; font-weight: 700;">Custom Storage Override (GB) <span style="color:#10b981;">*Optional</span></label>
                 <input type="number" name="custom_storage_gb" id="customStorageGb" class="form-input" placeholder="Enter amount of GB" oninput="calculateVariableCharge()" min="1">
                 <div id="variableChargeDisplay" style="margin-top: 0.75rem; font-size: 0.95rem; font-weight: 700; color: #10b981;">
                     Total Charge: ₹0 <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>
@@ -882,23 +882,18 @@
             
             <script>
             function toggleVariableStorage() {
-                const select = document.getElementById('planSelect');
-                if(!select.options.length) return;
-                const selectedOption = select.options[select.selectedIndex];
-                const planName = selectedOption.getAttribute('data-name');
                 const container = document.getElementById('variableStorageContainer');
-                
-                if (planName === 'Variable Storage') {
+                if(container) {
                     container.style.display = 'block';
-                    document.getElementById('customStorageGb').setAttribute('required', 'required');
-                } else {
-                    container.style.display = 'none';
                     document.getElementById('customStorageGb').removeAttribute('required');
-                    document.getElementById('customStorageGb').value = '';
-                    calculateVariableCharge();
                 }
             }
             
+            function calculateVariableChargeEdit() {
+                const gb = parseFloat(document.getElementById('customStorageGbEdit').value) || 0;
+                const charge = gb * 59;
+                document.getElementById('variableChargeDisplayEdit').innerHTML = `Total Charge: ₹${charge} <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>`;
+            }
             function calculateVariableCharge() {
                 const gb = parseFloat(document.getElementById('customStorageGb').value) || 0;
                 const charge = gb * 59;

@@ -274,20 +274,15 @@ def create_admin(request):
     user = User.objects.create_user(username=username, email=email, password=password)
     plan = SubscriptionPlan.objects.filter(id=plan_id).first()
     
-    # Handle Variable Storage logic
     custom_storage_gb = request.POST.get('custom_storage_gb')
-    if plan and plan.name == 'Variable Storage' and custom_storage_gb:
+    custom_mb = None
+    if custom_storage_gb and custom_storage_gb.strip():
         try:
-            gb = int(custom_storage_gb)
-            mb = gb * 1024
-            plan, _ = SubscriptionPlan.objects.get_or_create(
-                name=f'Variable Storage ({gb} GB)',
-                defaults={'storage_limit_mb': mb}
-            )
+            custom_mb = int(float(custom_storage_gb) * 1024)
         except ValueError:
             pass
             
-    UserProfile.objects.create(user=user, role=role, subscription_plan=plan)
+    UserProfile.objects.create(user=user, role=role, subscription_plan=plan, custom_storage_limit_mb=custom_mb)
     
     return JsonResponse({'success': True, 'message': f'Admin {username} created successfully.'})
 
@@ -317,6 +312,17 @@ def update_admin(request, user_id):
     if password:
         user.set_password(password)
     user.save()
+    
+    custom_storage_gb = request.POST.get('custom_storage_gb')
+    custom_mb = None
+    if custom_storage_gb and custom_storage_gb.strip():
+        try:
+            custom_mb = int(float(custom_storage_gb) * 1024)
+        except ValueError:
+            pass
+    if hasattr(user, 'profile'):
+        user.profile.custom_storage_limit_mb = custom_mb
+        user.profile.save()
 
     profile = user.profile
     if role:
@@ -532,7 +538,7 @@ def upload_photos(request):
         
         # 1. Storage Limit Check
         profile = request.user.profile
-        limit_mb = profile.subscription_plan.storage_limit_mb if profile.subscription_plan else 0
+        limit_mb = profile.effective_storage_limit_mb if profile else 0
         
         # Calculate incoming upload size
         incoming_size_mb = 0
@@ -610,8 +616,7 @@ def upload_single_photo(request):
         # Handle user profile & storage check
         if hasattr(request.user, 'profile') and request.user.profile and not request.user.is_superuser:
             profile = request.user.profile
-            if profile.subscription_plan:
-                limit_mb = profile.subscription_plan.storage_limit_mb
+            limit_mb = profile.effective_storage_limit_mb if profile else 0
                 file_size_mb = file.size / (1024 * 1024)
                 if (profile.used_storage_mb + file_size_mb) > limit_mb:
                     return JsonResponse({
@@ -805,7 +810,7 @@ def gdrive_import(request):
             
     # Storage Limit Check
     profile = request.user.profile
-    limit_mb = profile.subscription_plan.storage_limit_mb if profile.subscription_plan else 0
+    limit_mb = profile.effective_storage_limit_mb if profile else 0
     if profile.used_storage_mb >= limit_mb:
         return JsonResponse({'success': False, 'message': 'Storage limit exceeded. Please upgrade your plan.'})
         
