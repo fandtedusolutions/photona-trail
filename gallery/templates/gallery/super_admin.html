@@ -1166,13 +1166,24 @@ if (modalCreateAdminForm) {
 }
 
 // ── EDIT TENANT ──
-function openEditTenant(id, username, email, role, planId) {
+function openEditTenant(id, username, email, role, planId, customStorageMB) {
     document.getElementById('editTenantId').value = id;
     document.getElementById('editTenantUsername').value = username;
     document.getElementById('editTenantEmail').value = email;
     document.getElementById('editTenantPassword').value = '';
     document.getElementById('editTenantRole').value = role;
     if(planId) document.getElementById('editTenantPlan').value = planId;
+    
+    if(customStorageMB && customStorageMB !== 'None' && customStorageMB !== '') {
+        const gb = (parseInt(customStorageMB) / 1024).toFixed(2);
+        document.getElementById('customStorageGbEdit').value = gb.endsWith('.00') ? parseInt(gb) : gb;
+    } else {
+        document.getElementById('customStorageGbEdit').value = '';
+    }
+    
+    const container = document.getElementById('variableStorageContainerEdit');
+    if(container) container.style.display = 'block';
+    
     const modal = document.getElementById('editTenantModal');
     modal.style.display = 'flex';
 }
