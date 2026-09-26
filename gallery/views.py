@@ -617,14 +617,14 @@ def upload_single_photo(request):
         if hasattr(request.user, 'profile') and request.user.profile and not request.user.is_superuser:
             profile = request.user.profile
             limit_mb = profile.effective_storage_limit_mb if profile else 0
-                file_size_mb = file.size / (1024 * 1024)
-                if (profile.used_storage_mb + file_size_mb) > limit_mb:
-                    return JsonResponse({
-                        'success': False,
-                        'message': f"Storage limit reached ({limit_mb} MB limit)."
-                    })
-                profile.used_storage_mb += file_size_mb
-                profile.save()
+            file_size_mb = file.size / (1024 * 1024)
+            if (profile.used_storage_mb + file_size_mb) > limit_mb:
+                return JsonResponse({
+                    'success': False,
+                    'message': f"Storage limit reached ({limit_mb} MB limit)."
+                })
+            profile.used_storage_mb += file_size_mb
+            profile.save()
 
         gallery_image = GalleryImage(filename=file.name, event=event)
         gallery_image.file.save(file.name, file, save=True)
