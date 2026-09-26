@@ -1,0 +1,145 @@
+{% extends 'gallery/base.html' %}
+{% load static %}
+
+{% block title %}Plans - Photona Studio{% endblock %}
+
+{% block content %}
+<style>
+    /* ── Override base.html elements for sidebar dashboard layout ── */
+    header.glass-panel { display: none !important; }
+    /* bg-orbs enabled for glassmorphism */
+    #globalImportBanner { display: none !important; }
+    .app-container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+    body { background: #0f172a !important; color: #ffffff; font-family: 'Outfit', sans-serif; }
+    main { width: 100% !important; }
+
+    /* ── Reset global nav pill style for sidebar ── */
+    .dash-nav {
+        background: none !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        padding: 0.75rem 0.75rem !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 2px !important;
+    }
+
+    /* ── Dashboard Layout ── */
+    .dash-layout {
+        display: grid;
+        grid-template-columns: 270px 1fr;
+        min-height: 100vh;
+        background: transparent;
+    }
+
+    /* ── Sidebar ── */
+    
+</style>
+
+<div class="dash-layout">
+    <!-- ════════════════════ SIDEBAR ════════════════════ -->
+    {% include 'gallery/_sidebar.html' %}
+
+    <!-- ════════════════════ MAIN CONTENT ════════════════════ -->
+    <div style="padding: 3rem; overflow-y: auto; width: 100%; max-width: 1200px; margin: 0 auto;">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem;">
+            <div>
+                <h1 style="font-size: 1.85rem; font-weight: 700; color: #f3e5ab; font-family: 'Cormorant Garamond', serif; margin: 0 0 0.5rem 0; letter-spacing: -0.02em;">Subscription & Billing</h1>
+                <p style="margin: 0; color: #cbd5e1; font-size: 1rem;">Manage your studio's active package and storage limits.</p>
+            </div>
+        </div>
+
+        {% if plan %}
+        <div style="display: grid; grid-template-columns: minmax(400px, 1fr) 1fr; gap: 2rem; max-width: 1000px;">
+            <!-- Left Card: Plan Details -->
+            <div style="background: linear-gradient(145deg, #11141c 0%, #1a1f2e 100%); border: 1px solid rgba(212,175,55,0.2); border-radius: 24px; padding: 2.5rem; color: #ffffff; font-family: 'Outfit', sans-serif; position: relative; overflow: hidden; box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.3);">
+                <!-- Decorative background elements -->
+                <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, rgba(99,102,241,0) 70%); border-radius: 50%;"></div>
+                <div style="position: absolute; bottom: -50px; left: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0) 70%); border-radius: 50%;"></div>
+                
+                <div style="position: relative; z-index: 2;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3rem;">
+                        <div>
+                            <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); backdrop-filter: blur(8px); padding: 6px 14px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #d4af37; box-shadow: 0 0 12px #d4af37;"></span>
+                                Active Package
+                            </div>
+                            <h2 style="margin: 0; font-size: 2.5rem; font-weight: 700; letter-spacing: -0.03em; color: #ffffff; font-family: 'Outfit', sans-serif;">{{ plan.name|title }}</h2>
+                        </div>
+                        <div style="width: 54px; height: 54px; background: linear-gradient(135deg, #d4af37, #8a6c1c); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 16px rgba(212, 175, 55, 0.3);">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div style="font-size: 0.9rem; color: #94a3b8; font-weight: 500; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Current Limit</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #ffffff; font-family: 'Outfit', sans-serif; display: flex; align-items: baseline; gap: 8px;">
+                            {{ plan.storage_limit_mb }} <span style="font-size: 1rem; color: #94a3b8; font-weight: 500;">MB Total</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Card: Usage Stats -->
+            <div style="background: rgba(255,255,255,0.02); backdrop-filter: blur(20px); border: 1px solid rgba(212,175,55,0.15); border-radius: 24px; padding: 2.5rem; border: 1px solid rgba(212,175,55,0.15); display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 40px; height: 40px; background: transparent; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 750; color: #f3e5ab; font-family: 'Cormorant Garamond', serif;">Storage Usage</h3>
+                            <div style="font-size: 0.85rem; color: #cbd5e1;">Real-time consumption</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.25rem; font-weight: 800; color: #f3e5ab; font-family: 'Cormorant Garamond', serif;">{{ upload_percentage }}%</div>
+                    </div>
+                </div>
+                
+                <div style="width: 100%; height: 12px; background: transparent; border-radius: 9999px; overflow: hidden; margin-bottom: 1.5rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="width: {{ upload_percentage }}%; height: 100%; background: linear-gradient(90deg, #f3e5ab, #d4af37); border-radius: 9999px; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); position: relative;">
+                        <!-- Animated shine effect -->
+                        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%); animation: shine 2s infinite;"></div>
+                    </div>
+                </div>
+                <style>
+                    @keyframes shine {
+                        0% { transform: translateX(-100%); }
+                        100% { transform: translateX(100%); }
+                    }
+                </style>
+                
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600; color: #cbd5e1; margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #f1f5f9;">
+                    <span>{{ used_storage|floatformat:1 }} MB used</span>
+                    <span>{{ plan.storage_limit_mb }} MB total</span>
+                </div>
+                
+                <div style="display: flex; gap: 1rem;">
+                    <button onclick="showToast('Contact admin to upgrade your plan.', 'info')" style="flex: 1; background: linear-gradient(135deg, #d4af37, #aa7c11); color: #000; text-transform: uppercase; letter-spacing: 0.05em; border: none; color: #ffffff; font-family: 'Outfit', sans-serif; border: none; border-radius: 12px; padding: 0.9rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);" onmouseover="this.style.background='#f3e5ab'; this.style.transform='translateY(-1px)';" onmouseout="this.style.background='linear-gradient(135deg, #d4af37, #aa7c11)'; this.style.transform='none';">
+                        Request Upgrade
+                    </button>
+                    <button onclick="window.location.href='{% url 'gallery:dashboard' %}'" style="background: rgba(255,255,255,0.02); backdrop-filter: blur(20px); border: 1px solid rgba(212,175,55,0.15); color: #f3e5ab; font-family: 'Cormorant Garamond', serif; border: 1px solid #cbd5e1; border-radius: 12px; padding: 0.9rem 1.25rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(212,175,55,0.1)';" onmouseout="this.style.background='transparent';">
+                        Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div style="background: rgba(255,255,255,0.02); backdrop-filter: blur(20px); border: 1px solid rgba(212,175,55,0.15); border-radius: 24px; border: 1px solid rgba(212,175,55,0.15); padding: 5rem 2rem; text-align: center; max-width: 600px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);">
+            <div style="width: 80px; height: 80px; background: #f8fafc; border: 1px solid rgba(212,175,55,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+            </div>
+            <h2 style="margin: 0 0 0.75rem 0; font-size: 1.5rem; font-weight: 800; color: #f3e5ab; font-family: 'Cormorant Garamond', serif; letter-spacing: -0.02em;">No Active Plan Found</h2>
+            <p style="margin: 0 auto 2.5rem; font-size: 1rem; color: #cbd5e1; max-width: 350px; line-height: 1.6;">Your account hasn't been assigned a subscription package yet. Please contact your administrator to get started.</p>
+            <button onclick="window.location.href='{% url 'gallery:dashboard' %}'" style="background: linear-gradient(135deg, #d4af37, #aa7c11); color: #000; text-transform: uppercase; letter-spacing: 0.05em; border: none; color: #ffffff; font-family: 'Outfit', sans-serif; border: none; border-radius: 12px; padding: 0.9rem 2rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);" onmouseover="this.style.background='#f3e5ab'; this.style.transform='translateY(-1px)';" onmouseout="this.style.background='linear-gradient(135deg, #d4af37, #aa7c11)'; this.style.transform='none';">
+                Return to Dashboard
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

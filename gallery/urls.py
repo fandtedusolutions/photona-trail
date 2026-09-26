@@ -11,6 +11,8 @@ urlpatterns = [
 
     # Dashboards
     path('', views.dashboard, name='dashboard'),
+    path('events/', views.events_list, name='events_list'),
+    path('plans/', views.plans_view, name='plans'),
     path('super-admin/', views.super_admin_dashboard, name='super_admin_dashboard'),
     
     # Super Admin Actions

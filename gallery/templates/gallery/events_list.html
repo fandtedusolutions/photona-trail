@@ -1,0 +1,619 @@
+{% extends 'gallery/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Photona Studio{% endblock %}
+
+{% block content %}
+<style>
+    /* ── Override base.html elements for sidebar dashboard layout ── */
+    header.glass-panel { display: none !important; }
+    /* bg-orbs enabled for glassmorphism */
+    #globalImportBanner { display: none !important; }
+    .app-container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+    body { background: #0f172a !important; color: white; }
+    main { width: 100% !important; }
+
+    /* ── Reset global nav pill style for sidebar ── */
+    .dash-nav {
+        background: none !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        padding: 0.75rem 0.75rem !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 2px !important;
+    }
+
+    /* ── Dashboard Layout ── */
+    .dash-layout {
+        display: grid;
+        grid-template-columns: 270px 1fr;
+        min-height: 100vh;
+        background: transparent;
+    }
+
+    /* ── Sidebar ── */
+    
+
+    .dash-nav-section-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        padding: 1rem 1.75rem 0.5rem;
+    }
+
+    .dash-sidebar-footer {
+        padding: 1rem 1.25rem;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    /* ── Main Content ── */
+    .dash-main {
+        padding: 1.5rem 1.5rem;
+        overflow-y: auto;
+    }
+
+    .dash-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .dash-header h1 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #212529;
+        margin: 0;
+    }
+    
+    .dash-header-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .dash-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .dash-card {
+        background: #ffffff;
+        border-radius: 4px;
+        box-shadow: 0 1px 2px rgba(56, 65, 74, 0.15);
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .dash-card-header {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .dash-card-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .dash-card-subtitle {
+        font-size: 0.75rem;
+        color: #878a99;
+        margin-top: 0.25rem;
+    }
+
+    .dash-card-icon {
+        font-size: 1.5rem;
+        color: #878a99;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+
+    .dash-card-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #212529;
+        text-align: center;
+    }
+    
+    .dash-card-progress-wrap {
+        margin-top: 0.5rem;
+    }
+    
+    .dash-card-progress {
+        height: 6px;
+        background: #e2e5ed;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 0.25rem;
+    }
+    
+    .dash-card-progress-bar {
+        height: 100%;
+        background: #405189;
+        border-radius: 3px;
+    }
+    
+    .dash-card-split {
+        display: flex;
+        justify-content: space-around;
+        text-align: center;
+        border-top: 1px solid #e9ebec;
+        padding-top: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .dash-card-split-val {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #f06548;
+    }
+    
+    .dash-card-split-label {
+        font-size: 0.75rem;
+        color: #878a99;
+    }
+
+    .dash-events-count-widget {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 0.75rem;
+    }
+
+    .dash-events-count-label {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .dash-events-count-num {
+        font-size: 2.75rem;
+        font-weight: 900;
+        color: #0f172a;
+        letter-spacing: -0.04em;
+        line-height: 1;
+    }
+
+    .dash-events-count-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        padding: 0.55rem 1rem;
+        border-radius: 10px;
+        font-size: 0.82rem;
+        font-weight: 750;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: none;
+        font-family: inherit;
+    }
+
+    .dash-events-count-btn.primary {
+        background: #059669;
+        color: #ffffff;
+    }
+
+    .dash-events-count-btn.primary:hover {
+        background: #047857;
+    }
+
+    .dash-events-count-btn.secondary {
+        background: #1e293b;
+        color: #ffffff;
+    }
+
+    .dash-events-count-btn.secondary:hover {
+        background: #0f172a;
+    }
+
+    /* ── Studio Insights ── */
+    .dash-insights-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .dash-insight-card {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 1.35rem 1.5rem;
+    }
+
+    .dash-insight-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.6rem;
+    }
+
+    .dash-insight-label {
+        font-size: 0.85rem;
+        color: #475569;
+        font-weight: 600;
+    }
+
+    .dash-insight-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+    }
+
+    .dash-insight-value {
+        font-size: 1.65rem;
+        font-weight: 900;
+        color: #0f172a;
+        letter-spacing: -0.03em;
+        margin-bottom: 0.1rem;
+    }
+
+    .dash-insight-value span {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #94a3b8;
+    }
+
+    .dash-insight-sub {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        font-weight: 500;
+        margin-top: 0.2rem;
+    }
+
+    .dash-insight-bar {
+        width: 100%;
+        height: 5px;
+        background: #e2e8f0;
+        border-radius: 9999px;
+        margin-top: 0.75rem;
+        overflow: hidden;
+    }
+
+    .dash-insight-bar-fill {
+        height: 100%;
+        border-radius: 9999px;
+        transition: width 0.5s ease;
+    }
+
+    /* ── Stat Cards Grid ── */
+    .dash-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .dash-stat-card {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 1.5rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .dash-stat-card:hover {
+        box-shadow: 0 4px 15px -3px rgba(15, 23, 42, 0.08);
+    }
+
+    .dash-stat-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .dash-stat-num {
+        font-size: 2rem;
+        font-weight: 900;
+        color: #0f172a;
+        letter-spacing: -0.04em;
+        line-height: 1;
+    }
+
+    .dash-stat-label {
+        font-size: 0.78rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    /* ── All Events Section ── */
+    .dash-all-events-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .dash-events-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .dash-event-full-card {
+        background: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        transition: all 0.25s ease;
+    }
+
+    .dash-event-full-card:hover {
+        box-shadow: 0 8px 25px -5px rgba(15, 23, 42, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .dash-event-full-cover {
+        height: 150px;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .dash-event-full-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 15%;
+        transition: transform 0.4s ease;
+    }
+
+    .dash-event-full-card:hover .dash-event-full-cover img {
+        transform: scale(1.05);
+    }
+
+    .dash-event-full-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #ffffff;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(8px);
+        padding: 4px 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .dash-event-full-body {
+        padding: 1.15rem 1.25rem;
+    }
+
+    .dash-event-full-body h4 {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 0.3rem;
+        letter-spacing: -0.01em;
+    }
+
+    .dash-event-full-body p {
+        font-size: 0.82rem;
+        color: #64748b;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 0.6rem;
+    }
+
+    .dash-event-full-meta {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    .dash-event-full-footer {
+        padding: 0.75rem 1.25rem;
+        background: #f8fafc;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .dash-event-full-footer a {
+        font-size: 0.82rem;
+        font-weight: 750;
+        color: #4f46e5;
+        text-decoration: none;
+    }
+
+    .dash-event-full-footer a:hover {
+        color: #7c3aed;
+    }
+
+    .event-card-actions {
+        display: flex;
+        gap: 6px;
+    }
+
+    .action-edit, .action-delete {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        text-decoration: none;
+        font-family: inherit;
+    }
+
+    .action-edit {
+        background: rgba(79, 70, 229, 0.08);
+        color: #4f46e5;
+        border: 1px solid rgba(79, 70, 229, 0.2);
+    }
+
+    .action-edit:hover {
+        background: rgba(79, 70, 229, 0.15);
+    }
+
+    .action-delete {
+        background: rgba(225, 29, 72, 0.08);
+        color: #e11d48;
+        border: 1px solid rgba(225, 29, 72, 0.2);
+    }
+
+    .action-delete:hover {
+        background: rgba(225, 29, 72, 0.15);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+        .dash-recent-row {
+            grid-template-columns: 1fr 1fr;
+        }
+        .dash-stat-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dash-layout {
+            grid-template-columns: 1fr;
+        }
+        .dash-sidebar {
+            display: none;
+        }
+        .dash-main {
+            padding: 1.25rem;
+        }
+        .dash-recent-row {
+            grid-template-columns: 1fr;
+        }
+        .dash-insights-row {
+            grid-template-columns: 1fr;
+        }
+        .dash-stat-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        .dash-banner {
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .dash-banner-feature {
+            min-width: unset;
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="dash-layout">
+    <!-- ════════════════════ LEFT SIDEBAR ════════════════════ -->
+    {% include 'gallery/_sidebar.html' %}
+
+    <!-- ════════════════════ MAIN CONTENT ════════════════════ -->
+    <div class="dash-main" style="background: #f8fafc; padding: 2rem;">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">Events</h1>
+        </div>
+
+        <!-- ── All Events Section ── -->
+        <div id="events-section">
+            <div class="dash-all-events-header">
+                <h3 class="dash-section-title" style="margin-bottom: 0;">All Events</h3>
+                <button class="dash-events-count-btn primary" onclick="openModal('eventModal')" style="width: auto; padding: 0.55rem 1.25rem;">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                    New Event
+                </button>
+            </div>
+
+            <div class="dash-events-grid" id="eventsGrid">
+                {% for ev in events %}
+                <div class="dash-event-full-card">
+                    {% if ev.cover_image %}
+                        <div class="dash-event-full-cover" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'">
+                            <img src="{{ ev.cover_image.url }}" alt="{{ ev.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            <span class="dash-event-full-badge">🖼️ {{ ev.images.count }} photos</span>
+                        </div>
+                    {% else %}
+                        {% with random_img=ev.images.all|random %}
+                            {% if random_img %}
+                            <div class="dash-event-full-cover" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'">
+                                <img src="{% url 'gallery:secure_image' random_img.get_secure_thumbnail_token %}" alt="{{ ev.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                <span class="dash-event-full-badge">🖼️ {{ ev.images.count }} photos</span>
+                            </div>
+                            {% else %}
+                            <div class="dash-event-full-cover" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="display: flex; align-items: flex-end; padding: 1rem;">
+                                <span class="dash-event-full-badge">📷 0 photos</span>
+                            </div>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+
+                    <div class="dash-event-full-body" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="cursor: pointer;">
+                        <h4>{{ ev.name|title }}</h4>
+                        <p>{{ ev.description|default:"No description provided for this collection." }}</p>
+                        <span class="dash-event-full-meta">{% if ev.event_date %}📅 Event Date: {{ ev.event_date|date:"M d, Y" }} &bull; {% endif %}Created: {{ ev.created_at|date:"M d, Y" }}</span>
+                    </div>
+
+                    <div class="dash-event-full-footer">
+                        <a href="{% url 'gallery:event_detail' ev.slug %}">View Album →</a>
+                        <div class="event-card-actions">
+                            <a href="javascript:void(0)" class="action-edit" onclick="editEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}', '{{ ev.description|escapejs }}', '{% if ev.event_date %}{{ ev.event_date|date:"Y-m-d" }}{% endif %}')">✎ Edit</a>
+                            <button class="action-delete" onclick="confirmDeleteEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}')">✕ Delete</button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="dash-event-full-card" style="grid-column: 1 / -1; padding: 4rem 2rem; text-align: center;">
+                    <div style="font-size: 3.5rem; margin-bottom: 1rem;">📅</div>
+                    <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem;">No events created yet</h3>
+                    <p style="color: #64748b; max-width: 400px; margin: 0 auto 1.5rem; font-size: 0.88rem; line-height: 1.6;">Create your first photo event to start uploading and running AI face detection.</p>
+                    <button class="dash-events-count-btn primary" onclick="openModal('eventModal')" style="width: auto; padding: 0.65rem 1.5rem; margin: 0 auto;">
+                        Create First Event →
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'gallery/_event_modals.html' %}
+
+{% endblock %}

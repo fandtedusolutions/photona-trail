@@ -7,10 +7,10 @@
 <style>
     /* ── Override base.html elements for sidebar dashboard layout ── */
     header.glass-panel { display: none !important; }
-    .bg-mesh-container, .bg-orb, .bg-orb-1, .bg-orb-2, .bg-orb-3 { display: none !important; opacity: 0 !important; visibility: hidden !important; }
+    /* bg-orbs enabled for glassmorphism */
     #globalImportBanner { display: none !important; }
     .app-container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
-    body { background: #f1f5f9 !important; }
+    body { background: #0f172a !important; color: white; }
     main { width: 100% !important; }
 
     /* ── Reset global nav pill style for sidebar ── */
@@ -31,91 +31,11 @@
         display: grid;
         grid-template-columns: 270px 1fr;
         min-height: 100vh;
-        background: #f1f5f9;
+        background: transparent;
     }
 
     /* ── Sidebar ── */
-    .dash-sidebar {
-        background: #ffffff;
-        border-right: 1px solid #e2e8f0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        position: sticky;
-        top: 0;
-        height: 100vh;
-        overflow-y: auto;
-        z-index: 50;
-    }
-
-    .dash-sidebar-logo {
-        padding: 1.5rem 1.75rem;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        text-decoration: none;
-        border-bottom: 1px solid #f1f5f9;
-    }
-
-    .dash-sidebar-logo .logo-text {
-        font-size: 1.45rem;
-        font-weight: 850;
-        letter-spacing: -0.04em;
-        color: #111827;
-    }
-
-    .dash-nav {
-        padding: 0.5rem 0;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        overflow-y: auto;
-    }
-
-    .dash-nav-item {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        padding: 0.85rem 1.75rem;
-        text-decoration: none;
-        color: #111827;
-        font-size: 1.05rem;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-        min-height: 48px;
-    }
-
-    .dash-nav-item:hover {
-        background: #f9fafb;
-    }
-
-    .dash-nav-item.active {
-        background: #333333;
-        color: #ffffff;
-    }
     
-    .dash-nav-item.active .dash-nav-icon,
-    .dash-nav-item.active .dash-nav-icon svg {
-        color: #ffffff;
-    }
-
-    .dash-nav-icon {
-        width: 24px;
-        height: 24px;
-        min-width: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        color: #374151;
-    }
-
-    .dash-nav-icon svg {
-        width: 22px;
-        height: 22px;
-    }
 
     .dash-nav-section-label {
         font-size: 0.75rem;
@@ -623,125 +543,7 @@
 
 <div class="dash-layout">
     <!-- ════════════════════ LEFT SIDEBAR ════════════════════ -->
-    <aside class="dash-sidebar">
-        <!-- Logo -->
-        <a href="{% url 'gallery:dashboard' %}" class="dash-sidebar-logo">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 8px rgba(99, 102, 241, 0.35));">
-                <rect x="2" y="2" width="20" height="20" rx="8" fill="url(#dashGrad)"/>
-                <circle cx="12" cy="12" r="4.5" fill="white" opacity="0.95"/>
-                <circle cx="17.5" cy="6.5" r="1.5" fill="white" opacity="0.8"/>
-                <defs>
-                    <linearGradient id="dashGrad" x1="2" y1="2" x2="22" y2="22">
-                        <stop stop-color="#6366f1"/>
-                        <stop offset="1" stop-color="#ec4899"/>
-                    </linearGradient>
-                </defs>
-            </svg>
-            <span class="logo-text">Photona</span>
-        </a>
-
-        <!-- Navigation -->
-        <nav class="dash-nav">
-            <a href="{% url 'gallery:dashboard' %}" class="dash-nav-item" style="font-weight: 700;">
-                <span class="dash-nav-icon">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z"/></svg>
-                </span>
-                Dashboard
-            </a>
-            <a href="javascript:void(0)" class="dash-nav-item" onclick="openModal('eventModal')">
-                <span class="dash-nav-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                </span>
-                Create Event
-            </a>
-            <a href="#events-section" class="dash-nav-item" onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'}); return false;">
-                <span class="dash-nav-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><rect x="8" y="14" width="2" height="2"/><rect x="14" y="14" width="2" height="2"/></svg>
-                </span>
-                Events
-            </a>
-            <a href="javascript:void(0)" class="dash-nav-item">
-                <span class="dash-nav-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                </span>
-                Plans & Recharge
-            </a>
-            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Downloads page coming soon!', 'info')">
-                <span class="dash-nav-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                </span>
-                Downloads
-            </a>
-            <a href="javascript:void(0)" class="dash-nav-item" style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <span class="dash-nav-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                    </span>
-                    Pages
-                </div>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </a>
-            <a href="javascript:void(0)" class="dash-nav-item">
-                <span class="dash-nav-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                </span>
-                Users
-            </a>
-            <a href="javascript:void(0)" class="dash-nav-item active" style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <span class="dash-nav-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                    </span>
-                    Billing
-                    <span style="font-size: 0.7rem; font-weight: 700; background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; line-height: 1; margin-left: 5px;">New</span>
-                </div>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </a>
-            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('WhatsApp sharing coming soon!', 'info')">
-                <span class="dash-nav-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
-                </span>
-                WhatsApp
-            </a>
-            <a href="javascript:void(0)" class="dash-nav-item" onclick="showToast('Email sharing coming soon!', 'info')">
-                <span class="dash-nav-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                </span>
-                Email
-            </a>
-            <a href="javascript:void(0)" class="dash-nav-item" style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <span class="dash-nav-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                    </span>
-                    Settings
-                </div>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </a>
-            <a href="javascript:void(0)" class="dash-nav-item">
-                <span class="dash-nav-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </span>
-                Enquiries
-            </a>
-        </nav>
-
-        <div style="border-top: 1px solid #e2e8f0; padding: 1rem 1.75rem 0;">
-            <div style="font-size: 0.7rem; font-weight: 700; color: #6b7280; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-transform: uppercase;">Dedicated Support Manager</div>
-            <div style="font-size: 0.95rem; font-weight: 700; color: #111827;">Aswathy Murugan</div>
-            <div style="font-size: 0.85rem; color: #475569; display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                +91 9344904440
-            </div>
-            
-            <div style="font-size: 0.7rem; font-weight: 700; color: #6b7280; letter-spacing: 0.05em; margin-top: 1.25rem; margin-bottom: 0.5rem; text-transform: uppercase;">My Account</div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <a href="{% url 'gallery:user_logout' %}" style="font-size: 0.95rem; font-weight: 600; color: #111827; text-decoration: none; display: flex; align-items: center; gap: 0.5rem;">
-                    Logout
-                </a>
-            </div>
-        </div>
-    </aside>
+    {% include 'gallery/_sidebar.html' %}
 
     <!-- ════════════════════ MAIN CONTENT ════════════════════ -->
     <div class="dash-main" style="background: #f8fafc; padding: 2rem;">
@@ -798,58 +600,6 @@
                     <div style="width: 6px; height: 6px; background: rgba(255,255,255,0.3); border-radius: 50%;"></div>
                     <div style="width: 20px; height: 6px; background: #06b6d4; border-radius: 9999px;"></div>
                     <div style="width: 6px; height: 6px; background: rgba(255,255,255,0.3); border-radius: 50%;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── Recent Events Section ── -->
-        <div style="margin-bottom: 2.5rem;">
-            <h3 style="font-size: 1.1rem; font-weight: 700; color: #111827; margin-bottom: 1rem;">Recent Events</h3>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
-                
-                {% for ev in recent_events|slice:":3" %}
-                <a href="{% url 'gallery:event_detail' ev.slug %}" style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column; text-decoration: none;">
-                    <div style="height: 160px; background-image: url('https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&q=80&w=500'); background-size: cover; background-position: center;"></div>
-                    <div style="padding: 1.25rem;">
-                        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">{{ ev.name|title }}</h4>
-                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">{{ ev.description|default:"Event Photography"|truncatewords:4 }}</p>
-                    </div>
-                </a>
-                {% empty %}
-                <!-- Fallback dummy events to match screenshot -->
-                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
-                    <div style="height: 160px; background-image: url('https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&q=80&w=500'); background-size: cover; background-position: center;"></div>
-                    <div style="padding: 1.25rem;">
-                        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">THU KUJA MAN KUJA</h4>
-                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Family Meet</p>
-                    </div>
-                </div>
-                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
-                    <div style="height: 160px; background-image: url('https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&q=80&w=500'); background-size: cover; background-position: center;"></div>
-                    <div style="padding: 1.25rem;">
-                        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">sugumaran / subadhra</h4>
-                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Pre-wedding Photography</p>
-                    </div>
-                </div>
-                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
-                    <div style="height: 160px; background-image: url('https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&q=80&w=500'); background-size: cover; background-position: center;"></div>
-                    <div style="padding: 1.25rem;">
-                        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">Shahid wedding</h4>
-                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Wedding Photography</p>
-                    </div>
-                </div>
-                {% endfor %}
-                
-                <!-- Events Count -->
-                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-                    <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 600; color: #64748b;">Events Count</h4>
-                    <div style="font-size: 3.5rem; font-weight: 800; color: #111827; line-height: 1; margin-bottom: 1.5rem;">{{ total_events|default:"5" }}</div>
-                    <button onclick="openModal('eventModal')" style="width: 100%; background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 0.6rem; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; cursor: pointer;">
-                        Create Event +
-                    </button>
-                    <button onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'});" style="width: 100%; background: #111827; color: white; border: none; border-radius: 8px; padding: 0.6rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                        Go to Events <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                    </button>
                 </div>
             </div>
         </div>
@@ -911,154 +661,78 @@
 
 
 
-        <!-- ── All Events Section ── -->
-        <div id="events-section">
-            <div class="dash-all-events-header">
-                <h3 class="dash-section-title" style="margin-bottom: 0;">All Events</h3>
-                <button class="dash-events-count-btn primary" onclick="openModal('eventModal')" style="width: auto; padding: 0.55rem 1.25rem;">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-                    New Event
-                </button>
-            </div>
-
-            <div class="dash-events-grid" id="eventsGrid">
-                {% for ev in events %}
-                <div class="dash-event-full-card">
-                    {% with first_img=ev.images.first %}
-                        {% if first_img %}
-                        <div class="dash-event-full-cover" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'">
-                            <img src="{% url 'gallery:secure_image' first_img.get_secure_thumbnail_token %}" alt="{{ ev.name }}">
-                            <span class="dash-event-full-badge">🖼️ {{ ev.images.count }} photos</span>
-                        </div>
-                        {% else %}
-                        <div class="dash-event-full-cover" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="display: flex; align-items: flex-end; padding: 1rem;">
-                            <span class="dash-event-full-badge">📷 0 photos</span>
-                        </div>
-                        {% endif %}
-                    {% endwith %}
-
-                    <div class="dash-event-full-body" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="cursor: pointer;">
-                        <h4>{{ ev.name|title }}</h4>
-                        <p>{{ ev.description|default:"No description provided for this collection." }}</p>
-                        <span class="dash-event-full-meta">📅 {{ ev.created_at|date:"M d, Y" }}</span>
+        <!-- ── Recent Events Section ── -->
+        <div style="margin-bottom: 2.5rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #111827; margin-bottom: 1rem;">Recent Events</h3>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+                
+                {% for ev in recent_events|slice:":3" %}
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column; transition: all 0.25s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px -5px rgba(15,23,42,0.1)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
+                    {% if ev.cover_image %}
+                        <div onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="height: 160px; background-image: url('{{ ev.cover_image.url }}'); background-size: cover; background-position: center; cursor: pointer;"></div>
+                    {% else %}
+                        {% with random_img=ev.images.all|random %}
+                            {% if random_img %}
+                                <div onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="height: 160px; background-image: url('{% url 'gallery:secure_image' random_img.get_secure_thumbnail_token %}'); background-size: cover; background-position: center; cursor: pointer;"></div>
+                            {% else %}
+                                <div onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'" style="height: 160px; background: transparent; display: flex; align-items: center; justify-content: center; color: #94a3b8; cursor: pointer;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                    <div style="padding: 1.15rem 1.25rem; flex: 1; cursor: pointer;" onclick="window.location.href='{% url 'gallery:event_detail' ev.slug %}'">
+                        <h4 style="margin: 0 0 0.3rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; letter-spacing: -0.01em;">{{ ev.name|title }}</h4>
+                        <p style="margin: 0 0 0.6rem 0; font-size: 0.82rem; color: #64748b; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ ev.description|default:"No description provided for this collection."|truncatewords:4 }}</p>
+                        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">{% if ev.event_date %}📅 Event Date: {{ ev.event_date|date:"M d, Y" }} &bull; {% endif %}Created: {{ ev.created_at|date:"M d, Y" }}</span>
                     </div>
-
-                    <div class="dash-event-full-footer">
-                        <a href="{% url 'gallery:event_detail' ev.slug %}">View Album →</a>
-                        <div class="event-card-actions">
-                            <a href="javascript:void(0)" class="action-edit" onclick="editEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}', '{{ ev.description|escapejs }}')">✎ Edit</a>
-                            <button class="action-delete" onclick="confirmDeleteEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}')">✕ Delete</button>
+                    
+                    <div style="padding: 0.75rem 1.25rem; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                        <a href="{% url 'gallery:event_detail' ev.slug %}" style="font-size: 0.82rem; font-weight: 750; color: #4f46e5; text-decoration: none;">View Album →</a>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="editEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}', '{{ ev.description|escapejs }}', '{% if ev.event_date %}{{ ev.event_date|date:"Y-m-d" }}{% endif %}')" style="font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; border: 1px solid rgba(79, 70, 229, 0.2); background: rgba(79, 70, 229, 0.08); color: #4f46e5;">✎ Edit</button>
+                            <button onclick="confirmDeleteEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}')" style="font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; border: 1px solid rgba(225, 29, 72, 0.2); background: rgba(225, 29, 72, 0.08); color: #e11d48;">✕ Delete</button>
                         </div>
                     </div>
                 </div>
                 {% empty %}
-                <div class="dash-event-full-card" style="grid-column: 1 / -1; padding: 4rem 2rem; text-align: center;">
-                    <div style="font-size: 3.5rem; margin-bottom: 1rem;">📅</div>
-                    <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem;">No events created yet</h3>
-                    <p style="color: #64748b; max-width: 400px; margin: 0 auto 1.5rem; font-size: 0.88rem; line-height: 1.6;">Create your first photo event to start uploading and running AI face detection.</p>
-                    <button class="dash-events-count-btn primary" onclick="openModal('eventModal')" style="width: auto; padding: 0.65rem 1.5rem; margin: 0 auto;">
-                        Create First Event →
-                    </button>
+                <!-- Fallback dummy events to match screenshot -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="height: 160px; background-image: url('https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&q=80&w=500'); background-size: cover; background-position: center;"></div>
+                    <div style="padding: 1.25rem;">
+                        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">THU KUJA MAN KUJA</h4>
+                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Family Meet</p>
+                    </div>
+                </div>
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="height: 160px; background-image: url('https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&q=80&w=500'); background-size: cover; background-position: center;"></div>
+                    <div style="padding: 1.25rem;">
+                        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">sugumaran / subadhra</h4>
+                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Pre-wedding Photography</p>
+                    </div>
+                </div>
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="height: 160px; background-image: url('https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&q=80&w=500'); background-size: cover; background-position: center;"></div>
+                    <div style="padding: 1.25rem;">
+                        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">Shahid wedding</h4>
+                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Wedding Photography</p>
+                    </div>
                 </div>
                 {% endfor %}
+                
+                <!-- Events Count -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 600; color: #64748b;">Events Count</h4>
+                    <div style="font-size: 3.5rem; font-weight: 800; color: #111827; line-height: 1; margin-bottom: 1.5rem;">{{ total_events|default:"5" }}</div>
+                    <button onclick="openModal('eventModal')" style="width: 100%; background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 0.6rem; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; cursor: pointer;">
+                        Create Event +
+                    </button>
+                    <button onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'});" style="width: 100%; background: #111827; color: white; border: none; border-radius: 8px; padding: 0.6rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        Go to Events <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+
+            </div>
 </div>
-
-<!-- ══════════ Create Event Modal ══════════ -->
-<div id="eventModal" class="modal-overlay">
-    <div class="card" style="width: 100%; max-width: 500px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
-            <h3 style="font-size: 1.35rem; font-weight: 850; letter-spacing: -0.02em; color: #0f172a;">Create New Event</h3>
-            <button onclick="closeModal('eventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s ease;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
-        </div>
-        <form method="post" action="{% url 'gallery:create_event' %}">
-            {% csrf_token %}
-            <div style="margin-bottom: 1.35rem;">
-                <label class="form-label">Event Name</label>
-                <input type="text" name="name" required placeholder="e.g. Annual Gala 2026, Wedding Photos" class="form-input">
-            </div>
-            <div style="margin-bottom: 2rem;">
-                <label class="form-label">Description</label>
-                <textarea name="description" placeholder="Optional details about this photo album..." rows="3" class="form-input" style="resize: none;"></textarea>
-            </div>
-            <button type="submit" class="btn" style="width: 100%; padding: 0.85rem;">Create Event Collection</button>
-        </form>
-    </div>
-</div>
-
-<!-- ══════════ Edit Event Modal ══════════ -->
-<div id="editEventModal" class="modal-overlay">
-    <div class="card" style="width: 100%; max-width: 500px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
-            <h3 style="font-size: 1.35rem; font-weight: 850; letter-spacing: -0.02em; color: #0f172a;">Edit Event Details</h3>
-            <button onclick="closeModal('editEventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s ease;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
-        </div>
-        <form id="editEventForm" method="post">
-            {% csrf_token %}
-            <div style="margin-bottom: 1.35rem;">
-                <label class="form-label">Event Name</label>
-                <input type="text" id="editEventName" name="name" required class="form-input">
-            </div>
-            <div style="margin-bottom: 2rem;">
-                <label class="form-label">Description</label>
-                <textarea id="editEventDescription" name="description" rows="3" class="form-input" style="resize: none;"></textarea>
-            </div>
-            <button type="submit" class="btn" style="width: 100%; padding: 0.85rem;">Save Changes</button>
-        </form>
-    </div>
-</div>
-
-<script>
-function openModal(id) {
-    const overlay = document.getElementById(id);
-    const card = overlay.querySelector('.card');
-    card.style.transform = 'scale(0.95)';
-    overlay.style.display = 'flex';
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => { card.style.transform = 'scale(1)'; });
-    });
-}
-
-function closeModal(id) {
-    const overlay = document.getElementById(id);
-    const card = overlay.querySelector('.card');
-    card.style.transform = 'scale(0.95)';
-    setTimeout(() => { overlay.style.display = 'none'; }, 180);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) closeModal(overlay.id);
-        });
-    });
-});
-
-function editEvent(slug, name, description) {
-    document.getElementById('editEventForm').action = `/event/update/${slug}/`;
-    document.getElementById('editEventName').value = name;
-    document.getElementById('editEventDescription').value = description;
-    openModal('editEventModal');
-}
-
-function confirmDeleteEvent(slug, name) {
-    customConfirm("Delete Event Collection", `Are you sure you want to delete event "${name}"? All associated photos and index data will be permanently removed.`, (confirmed) => {
-        if (!confirmed) return;
-        const form = document.createElement('form');
-        form.method = 'post';
-        form.action = `/event/delete/${slug}/`;
-        
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrfmiddlewaretoken';
-        csrfInput.value = '{{ csrf_token }}';
-        form.appendChild(csrfInput);
-        
-        document.body.appendChild(form);
-        form.submit();
-    });
-}
-</script>
+{% include 'gallery/_event_modals.html' %}
 {% endblock %}

@@ -167,6 +167,41 @@ def dashboard(request):
         'upload_percentage': upload_percentage,
     })
 
+@login_required
+def events_list(request):
+    if request.user.is_superuser:
+        return redirect('gallery:super_admin_dashboard')
+        
+    profile = request.user.profile
+    events = Event.objects.filter(owner=request.user).order_by('-created_at')
+    
+    return render(request, 'gallery/events_list.html', {
+        'events': events,
+        'profile': profile,
+    })
+
+@login_required
+def plans_view(request):
+    if request.user.is_superuser:
+        return redirect('gallery:super_admin_dashboard')
+        
+    profile = UserProfile.objects.filter(user=request.user).first()
+    plan = profile.subscription_plan if profile else None
+    
+    # Calculate storage
+    used_storage = 0
+    upload_percentage = 0
+    if profile:
+        used_storage = profile.used_storage_mb
+        upload_percentage = profile.storage_percentage
+        
+    context = {
+        'plan': plan,
+        'used_storage': used_storage,
+        'upload_percentage': upload_percentage,
+    }
+    return render(request, 'gallery/plans.html', context)
+
 # -------------------------------------------------------------
 # Super Admin Views
 # -------------------------------------------------------------
@@ -342,8 +377,12 @@ def delete_lead(request, lead_id):
 def create_event(request):
     name = request.POST.get('name')
     description = request.POST.get('description')
+    cover_image = request.FILES.get('cover_image')
+    event_date = request.POST.get('event_date')
+    if not event_date:
+        event_date = None
     if name:
-        Event.objects.create(name=name, description=description, owner=request.user)
+        Event.objects.create(name=name, description=description, owner=request.user, cover_image=cover_image, event_date=event_date)
     return redirect('gallery:dashboard')
 
 @login_required
@@ -352,9 +391,16 @@ def update_event(request, slug):
     event = get_object_or_404(Event, slug=slug, owner=request.user)
     name = request.POST.get('name')
     description = request.POST.get('description')
+    cover_image = request.FILES.get('cover_image')
+    event_date = request.POST.get('event_date')
+    if not event_date:
+        event_date = None
     if name:
         event.name = name
         event.description = description
+        event.event_date = event_date
+        if cover_image:
+            event.cover_image = cover_image
         event.save()
     return redirect('gallery:event_detail', slug=event.slug)
 

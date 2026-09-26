@@ -48,11 +48,17 @@ class UserProfile(models.Model):
 import uuid
 from django.utils.text import slugify
 
+def event_cover_upload_path(instance, filename):
+    organizer = instance.owner.username if instance.owner else 'unassigned'
+    return f'covers/{organizer}/{instance.slug}/{filename}'
+
 class Event(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='events', null=True, blank=True)
     slug = models.SlugField(max_length=255, unique=True, null=True, blank=True)
+    cover_image = models.ImageField(upload_to=event_cover_upload_path, null=True, blank=True)
+    event_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):

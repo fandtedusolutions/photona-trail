@@ -1,0 +1,206 @@
+<!-- Cropper.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<!-- ══════════ Create Event Modal ══════════ -->
+<div id="eventModal" class="modal-overlay">
+    <div class="card" style="width: 100%; max-width: 500px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+            <h3 style="font-size: 1.35rem; font-weight: 850; letter-spacing: -0.02em; color: #0f172a;">Create New Event</h3>
+            <button onclick="closeModal('eventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s ease;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
+        </div>
+        <form method="post" action="{% url 'gallery:create_event' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div style="margin-bottom: 1.35rem;">
+                <label class="form-label">Event Name</label>
+                <input type="text" name="name" required placeholder="e.g. Annual Gala 2026, Wedding Photos" class="form-input">
+            </div>
+            <div style="margin-bottom: 1.35rem;">
+                <label class="form-label">Event Description (Optional)</label>
+                <textarea name="description" rows="3" placeholder="Brief details about this event..." class="form-input" style="resize: vertical;"></textarea>
+            </div>
+            <div style="margin-bottom: 1.35rem;">
+                <label class="form-label">Event Date (Optional)</label>
+                <input type="date" name="event_date" class="form-input">
+            </div>
+            <div style="margin-bottom: 1.75rem;">
+                <label class="form-label">Cover Image (Optional)</label>
+                <input type="file" name="cover_image" accept="image/*" class="form-input">
+                <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">If left blank, a random uploaded photo will be used.</p>
+            </div>
+            <button type="submit" style="width: 100%; background: #0f172a; color: white; border: none; border-radius: 10px; padding: 0.9rem; font-size: 1.05rem; font-weight: 600; cursor: pointer; transition: background 0.2s ease; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);" onmouseover="this.style.background='#1e293b';" onmouseout="this.style.background='#0f172a';">
+                Create Event
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════ Edit Event Modal ══════════ -->
+<div id="editEventModal" class="modal-overlay">
+    <div class="card" style="width: 100%; max-width: 500px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+            <h3 style="font-size: 1.35rem; font-weight: 850; letter-spacing: -0.02em; color: #0f172a;">Edit Event</h3>
+            <button onclick="closeModal('editEventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s ease;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
+        </div>
+        <form id="editEventForm" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div style="margin-bottom: 1.35rem;">
+                <label class="form-label">Event Name</label>
+                <input type="text" name="name" id="editEventName" required class="form-input">
+            </div>
+            <div style="margin-bottom: 1.35rem;">
+                <label class="form-label">Event Description (Optional)</label>
+                <textarea name="description" id="editEventDescription" rows="3" class="form-input" style="resize: vertical;"></textarea>
+            </div>
+            <div style="margin-bottom: 1.35rem;">
+                <label class="form-label">Event Date (Optional)</label>
+                <input type="date" name="event_date" id="editEventDate" class="form-input">
+            </div>
+            <div style="margin-bottom: 1.75rem;">
+                <label class="form-label">Cover Image (Optional)</label>
+                <input type="file" name="cover_image" accept="image/*" class="form-input">
+                <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">Upload a new image to replace the current cover.</p>
+            </div>
+            <button type="submit" style="width: 100%; background: #0f172a; color: white; border: none; border-radius: 10px; padding: 0.9rem; font-size: 1.05rem; font-weight: 600; cursor: pointer; transition: background 0.2s ease; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);" onmouseover="this.style.background='#1e293b';" onmouseout="this.style.background='#0f172a';">
+                Save Changes
+            </button>
+        </form>
+    </div>
+</div>
+
+
+<!-- ══════════ Cropper Modal ══════════ -->
+<div id="cropperModal" class="modal-overlay" style="z-index: 10000;">
+    <div class="card" style="width: 100%; max-width: 600px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 24px; padding: 2.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+            <h3 style="font-size: 1.35rem; font-weight: 850; letter-spacing: -0.02em; color: #0f172a;">Crop Image</h3>
+            <button onclick="closeCropper()" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s ease;">✕</button>
+        </div>
+        <div style="max-height: 400px; overflow: hidden; margin-bottom: 1.5rem; background: #f8fafc; border-radius: 8px;">
+            <img id="cropperImage" src="" style="max-width: 100%; display: block;">
+        </div>
+        <button id="applyCropBtn" type="button" style="width: 100%; background: #0f172a; color: white; border: none; border-radius: 10px; padding: 0.9rem; font-size: 1.05rem; font-weight: 600; cursor: pointer; transition: background 0.2s ease;" onmouseover="this.style.background='#1e293b';" onmouseout="this.style.background='#0f172a';">
+            Crop & Apply
+        </button>
+    </div>
+</div>
+
+<script>
+
+let cropper = null;
+let currentFileInput = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const coverInputs = document.querySelectorAll('input[name="cover_image"]');
+    coverInputs.forEach(input => {
+        input.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                if (!file.type.startsWith('image/')) return;
+                
+                currentFileInput = this;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('cropperImage');
+                    img.src = e.target.result;
+                    
+                    openModal('cropperModal');
+                    
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+                    
+                    // Allow modal transition to finish before init
+                    setTimeout(() => {
+                        cropper = new Cropper(img, {
+                            aspectRatio: 15 / 8,
+                            viewMode: 1,
+                            autoCropArea: 1,
+                        });
+                    }, 200);
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    });
+    
+    document.getElementById('applyCropBtn').addEventListener('click', function() {
+        if (!cropper || !currentFileInput) return;
+        
+        cropper.getCroppedCanvas({
+            width: 900,
+            height: 480
+        }).toBlob((blob) => {
+            const originalFile = currentFileInput.files[0];
+            const croppedFile = new File([blob], originalFile.name, {
+                type: 'image/jpeg',
+                lastModified: new Date().getTime()
+            });
+            
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(croppedFile);
+            currentFileInput.files = dataTransfer.files;
+            
+            closeModal('cropperModal');
+        }, 'image/jpeg', 0.9);
+    });
+});
+
+function closeCropper() {
+    if (cropper) cropper.destroy();
+    if (currentFileInput) currentFileInput.value = ''; // Reset if cancelled
+    closeModal('cropperModal');
+}
+
+
+function openModal(id) {
+    const overlay = document.getElementById(id);
+    const card = overlay.querySelector('.card');
+    card.style.transform = 'scale(0.95)';
+    overlay.style.display = 'flex';
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => { card.style.transform = 'scale(1)'; });
+    });
+}
+
+function closeModal(id) {
+    const overlay = document.getElementById(id);
+    const card = overlay.querySelector('.card');
+    card.style.transform = 'scale(0.95)';
+    setTimeout(() => { overlay.style.display = 'none'; }, 180);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal(overlay.id);
+        });
+    });
+});
+
+function editEvent(slug, name, description, date) {
+    document.getElementById('editEventForm').action = `/event/update/${slug}/`;
+    document.getElementById('editEventName').value = name;
+    document.getElementById('editEventDescription').value = description;
+    document.getElementById('editEventDate').value = date || '';
+    openModal('editEventModal');
+}
+
+function confirmDeleteEvent(slug, name) {
+    customConfirm("Delete Event Collection", `Are you sure you want to delete event "${name}"? All associated photos and index data will be permanently removed.`, (confirmed) => {
+        if (!confirmed) return;
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = `/event/delete/${slug}/`;
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    });
+}
+</script>

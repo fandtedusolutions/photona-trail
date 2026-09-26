@@ -1562,6 +1562,20 @@
     </div>
 </div>
 
+
+<!-- QR Code Modal -->
+<div id="qrOverlay" style="display:none; position:fixed; inset:0; background:rgba(15,17,23,0.6); backdrop-filter:blur(10px); z-index:9900; align-items:center; justify-content:center; padding:1.5rem;">
+    <div style="background:var(--bg-secondary); border-radius:var(--radius-lg); width:320px; max-width:95vw; padding:2rem; box-shadow:0 40px 100px -20px rgba(15,17,23,0.3); text-align:center; position:relative;">
+        <button onclick="document.getElementById('qrOverlay').style.display='none'" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--text-muted);">×</button>
+        <div style="font-family:'Outfit',sans-serif; font-size:1.1rem; font-weight:800; color:var(--text-primary); margin-bottom:0.5rem;" id="qrTitle">QR Code</div>
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.5rem;">Guests can scan this to open the link instantly.</div>
+        <img id="qrImage" src="" alt="QR Code" style="width: 200px; height: 200px; margin: 0 auto; border-radius: 8px; background: white; padding: 10px; border: 1px solid var(--border-light);">
+        <div style="margin-top: 1.5rem;">
+             <a id="qrDownload" href="" download="QRCode.png" style="display:inline-block; font-size:0.8rem; font-weight:600; color:white; background:var(--accent-indigo); padding:0.6rem 1.25rem; border-radius:var(--radius-sm); text-decoration:none; cursor:pointer;">Download Image</a>
+        </div>
+    </div>
+</div>
+
 <script>
 // ── Share Manager
 const SLUG = '{{ event.slug }}';
@@ -1658,12 +1672,39 @@ function buildLinkRow(lnk) {
             <button onclick="copyShareUrl('${searchUrl}', this)" style="font-size:0.72rem; padding:5px 12px; border-radius:6px; border:1px solid rgba(79,70,229,0.3); background:rgba(79,70,229,0.08); cursor:pointer; font-weight:700; color:var(--accent-indigo); transition:var(--transition);">
                 🔍 Copy AI Search Link
             </button>
+            <button onclick="showQRCode('${publicUrl}', '${lnk.label}')" style="font-size:0.72rem; padding:5px 12px; border-radius:6px; border:1px solid #d97706; background:rgba(217,119,6,0.08); cursor:pointer; font-weight:700; color:#d97706; transition:var(--transition);">
+                📱 QR Code
+            </button>
+
             <span style="font-size:0.7rem; color:var(--text-muted);">Created ${lnk.created_at}</span>
             ${lnk.expires_at ? `<span style="font-size:0.7rem; color:var(--accent-amber);">⏰ Expires ${lnk.expires_at.replace('T',' ')}</span>` : ''}
         </div>
     `;
     return div;
 }
+
+
+function showQRCode(url, label) {
+    document.getElementById('qrTitle').innerText = label;
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(url);
+    document.getElementById('qrImage').src = qrUrl;
+    
+    // Fetch as blob for downloading
+    fetch(qrUrl)
+        .then(response => response.blob())
+        .then(blob => {
+            const blobUrl = window.URL.createObjectURL(blob);
+            document.getElementById('qrDownload').href = blobUrl;
+            document.getElementById('qrDownload').download = `QR_${label.replace(/\s+/g, '_')}.png`;
+        })
+        .catch(e => console.log('Error loading QR blob', e));
+        
+    document.getElementById('qrOverlay').style.display = 'flex';
+}
+
+document.getElementById('qrOverlay').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
 
 function copyShareUrl(url, btn) {
     navigator.clipboard.writeText(url).then(() => {
