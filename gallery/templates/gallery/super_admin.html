@@ -804,7 +804,7 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <span style="font-size: 0.75rem; background: var(--vz-warning-bg); color: var(--vz-warning); padding: 4px 8px; border-radius: 4px; font-weight: 600;">Tier #{{ forloop.counter }}</span>
                             <div style="display: flex; gap: 8px;">
-                                <button onclick="openEditPlan({{ plan.id }}, \'{{ plan.name|escapejs }}\', {{ plan.storage_limit_mb }}, \'{{ plan.is_active }}\')" style="background: none; border: none; font-size: 0.85rem; color: var(--vz-primary); cursor: pointer;">Edit</button>
+                                <button onclick="openEditPlan({{ plan.id }}, '{{ plan.name|escapejs }}', {{ plan.storage_limit_mb }}, '{{ plan.is_active }}')" style="background: none; border: none; font-size: 0.85rem; color: var(--vz-primary); cursor: pointer;">Edit</button>
                                 <button onclick="togglePlanStatus({{ plan.id }})" style="background: none; border: none; font-size: 0.85rem; color: {% if plan.is_active %}#f59e0b{% else %}#10b981{% endif %}; cursor: pointer;">{% if plan.is_active %}Disable{% else %}Enable{% endif %}</button>
                                 <button onclick="deletePlan({{ plan.id }}, '{{ plan.name|escapejs }}')" style="background: none; border: none; font-size: 0.85rem; color: var(--vz-danger); cursor: pointer;">Delete</button>
                             </div>
@@ -1007,7 +1007,11 @@
             </div>
             <div class="form-field">
                 <label class="form-label">Storage Limit (MB)</label>
-                <input type="number" id="editPlanStorage" class="form-input" placeholder="e.g. 2048">
+                <input type="number" id="editPlanStorage" name="storage_limit_mb" class="form-input" placeholder="e.g. 2048">
+            </div>
+            <div class="form-field" style="display: flex; align-items: center; gap: 8px; margin-top: 1rem;">
+                <input type="checkbox" id="editPlanIsActive" name="is_active" style="width:16px; height:16px; accent-color: var(--accent-indigo);">
+                <label for="editPlanIsActive" class="form-label" style="margin: 0; cursor: pointer;">Enable this plan</label>
             </div>
             
 
@@ -1232,10 +1236,12 @@ if (modalCreatePlanForm) {
 }
 
 // ── EDIT PLAN ──
-function openEditPlan(id, name, storage) {
+function openEditPlan(id, name, storage, isActive) {
     document.getElementById('editPlanId').value = id;
     document.getElementById('editPlanName').value = name;
     document.getElementById('editPlanStorage').value = storage;
+    const activeBox = document.getElementById('editPlanIsActive');
+    if(activeBox) activeBox.checked = (isActive === 'True');
     document.getElementById('editPlanModal').style.display = 'flex';
 }
 
@@ -1262,6 +1268,20 @@ if (editPlanForm) {
 }
 
 // ── DELETE PLAN ──
+async function togglePlanStatus(id) {
+    try {
+        const res = await fetch(`/super-admin/plan/toggle/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF }
+        });
+        const data = await res.json();
+        if(data.success) location.reload();
+        else customAlert('Error', data.message);
+    } catch(err) {
+        customAlert("Error", "Error toggling plan status.");
+    }
+}
+
 function deletePlan(id, name) {
     customConfirm('Delete Subscription Plan', `Are you sure you want to delete plan "${name}"? Tenants using this plan will revert to no assigned plan.`, (confirmed) => {
         if(!confirmed) return;
