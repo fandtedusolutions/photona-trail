@@ -866,7 +866,7 @@
                     <label class="form-label">Subscription Plan</label>
                     <select name="plan_id" required class="form-input" id="planSelect" onchange="toggleVariableStorage()">
                         {% for plan in plans %}
-                            <option value="{{ plan.id }}" data-name="{{ plan.name }}">{{ plan.name }} ({{ plan.storage_limit_mb }} MB)</option>
+                            <option value="{{ plan.id }}" data-name="{{ plan.name }}">{{ plan.name }} ({{ plan.storage_limit_mb }} MB) {% if not plan.is_active %}(Disabled){% endif %}</option>
                         {% endfor %}
                     </select>
                 </div>

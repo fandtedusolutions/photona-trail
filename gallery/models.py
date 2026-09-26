@@ -5,6 +5,7 @@ import numpy as np
 class SubscriptionPlan(models.Model):
     name = models.CharField(max_length=255)
     storage_limit_mb = models.IntegerField(help_text="Storage limit in Megabytes (MB)")
+    is_active = models.BooleanField(default=True, help_text="Set to False to hide this plan from users.")
 
     def __block__(self):
         return self.name

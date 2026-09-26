@@ -79,7 +79,7 @@ def user_register(request):
             login(request, user)
             return redirect('gallery:dashboard')
 
-    plans = SubscriptionPlan.objects.all()
+    plans = SubscriptionPlan.objects.filter(is_active=True)
     roles = UserProfile.ROLE_CHOICES
     return render(request, 'registration/register.html', {
         'error': error,
@@ -110,7 +110,7 @@ def recalculate_user_storage(user):
 # -------------------------------------------------------------
 def dashboard(request):
     if not request.user.is_authenticated:
-        plans = SubscriptionPlan.objects.all()
+        plans = SubscriptionPlan.objects.filter(is_active=True)
         return render(request, 'gallery/landing.html', {'plans': plans})
         
     if request.user.is_superuser:
@@ -208,7 +208,7 @@ def plans_view(request):
 @user_passes_test(lambda u: u.is_superuser)
 def super_admin_dashboard(request):
     admins = User.objects.filter(is_superuser=False).select_related('profile')
-    plans = SubscriptionPlan.objects.all()
+    plans = SubscriptionPlan.objects.filter(is_active=True)
     roles = UserProfile.ROLE_CHOICES
     
     total_tenants = admins.count()
@@ -333,8 +333,9 @@ def update_admin(request, user_id):
 def create_plan(request):
     name = request.POST.get('name')
     limit = request.POST.get('storage_limit_mb')
+    is_active = request.POST.get('is_active') == 'on'
     if name and limit:
-        SubscriptionPlan.objects.create(name=name, storage_limit_mb=int(limit))
+        SubscriptionPlan.objects.create(name=name, storage_limit_mb=int(limit), is_active=is_active)
         return JsonResponse({'success': True, 'message': f'Subscription Plan {name} created successfully.'})
     return JsonResponse({'success': False, 'message': 'Invalid plan details.'})
 
@@ -344,10 +345,12 @@ def update_plan(request, plan_id):
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
     name = request.POST.get('name', '').strip()
     limit = request.POST.get('storage_limit_mb', '').strip()
+    is_active = request.POST.get('is_active') == 'on'
     if name:
         plan.name = name
     if limit:
         plan.storage_limit_mb = int(limit)
+    plan.is_active = is_active
     plan.save()
     return JsonResponse({'success': True, 'message': f'Plan "{plan.name}" updated successfully.'})
 
