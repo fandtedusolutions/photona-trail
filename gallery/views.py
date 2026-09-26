@@ -626,8 +626,31 @@ def upload_single_photo(request):
             profile.used_storage_mb += file_size_mb
             profile.save()
 
-        gallery_image = GalleryImage(filename=file.name, event=event)
-        gallery_image.file.save(file.name, file, save=True)
+        import os
+        from io import BytesIO
+        from PIL import Image, ImageOps
+        from django.core.files import File
+
+        safe_filename = os.path.basename(file.name)
+        gallery_image = GalleryImage(filename=safe_filename, event=event)
+        gallery_image.file.save(safe_filename, file, save=False)
+        
+        try:
+            file.seek(0)
+            with Image.open(file) as img:
+                img = ImageOps.exif_transpose(img)
+                img.thumbnail((600, 600), Image.Resampling.LANCZOS)
+                thumb_io = BytesIO()
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+                img.save(thumb_io, format='WEBP', quality=80)
+                thumb_io.seek(0)
+                thumb_name = os.path.splitext(safe_filename)[0] + "_thumb.webp"
+                gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+        except Exception as e:
+            print(f"[DEBUG] thumbnail error: {e}")
+            
+        gallery_image.save()
         
         num_faces = process_gallery_image(gallery_image)
         

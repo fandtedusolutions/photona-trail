@@ -33,8 +33,9 @@ def process_image_upload_task(temp_paths, event_id, original_filenames):
     for temp_path, file_name in zip(temp_paths, original_filenames):
         if os.path.exists(temp_path):
             with open(temp_path, 'rb') as img_f:
-                gallery_image = GalleryImage(filename=file_name, event=event, total_faces=-1)
-                gallery_image.file.save(file_name, File(img_f), save=False)
+                safe_file_name = os.path.basename(file_name)
+                gallery_image = GalleryImage(filename=safe_file_name, event=event, total_faces=-1)
+                gallery_image.file.save(safe_file_name, File(img_f), save=False)
                 
                 thumb_io, ext = create_thumbnail(temp_path)
                 if thumb_io:
