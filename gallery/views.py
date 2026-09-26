@@ -213,7 +213,12 @@ def super_admin_dashboard(request):
     
     total_tenants = admins.count()
     total_plans = plans.count()
-    total_storage_used = sum(admin.profile.used_storage_mb for admin in admins if hasattr(admin, 'profile') and admin.profile)
+    total_storage_used = 0
+    for admin in admins:
+        try:
+            total_storage_used += admin.profile.used_storage_mb
+        except Exception:
+            pass
     
     leads = GuestLead.objects.all().select_related('event', 'event__owner').order_by('-created_at')
     
