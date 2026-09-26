@@ -549,7 +549,17 @@
     <div class="dash-main" style="background: #f8fafc; padding: 2rem;">
         <!-- Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <h1 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">Dashboard</h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="mobile-menu-btn" onclick="document.getElementById('mobileSidebar').classList.add('open')" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; cursor: pointer; display: none; color: #111827;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <style>
+                    @media (max-width: 768px) {
+                        .mobile-menu-btn { display: flex !important; }
+                    }
+                </style>
+                <h1 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">Dashboard</h1>
+            </div>
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <!-- WhatsApp Button -->
                 <a href="javascript:void(0)" style="display: flex; align-items: center; background: #10b981; color: white; padding: 0.4rem 1.25rem 0.4rem 2rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 700; text-decoration: none; position: relative;">

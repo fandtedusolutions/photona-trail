@@ -101,16 +101,36 @@
         height: 18px;
         stroke-width: 1.5px;
     }
+    @media (max-width: 768px) {
+        .dash-sidebar {
+            position: fixed;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            width: 280px;
+        }
+        .dash-sidebar.open {
+            transform: translateX(0);
+        }
+    }
 </style>
 
-<aside class="dash-sidebar">
-    <a href="{% url 'gallery:dashboard' %}" class="dash-sidebar-logo">
-        <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #d4af37, #aa7c11); border-radius: 8px; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);">
-            <div style="width: 16px; height: 16px; border: 1.5px solid white; border-radius: 50%; box-sizing: border-box;"></div>
-            <div style="width: 4px; height: 4px; background: white; border-radius: 50%; position: absolute; top: 8px; right: 8px;"></div>
-        </div>
-        <span class="logo-text">Photona</span>
-    </a>
+<aside class="dash-sidebar" id="mobileSidebar">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 1rem;">
+        <a href="{% url 'gallery:dashboard' %}" class="dash-sidebar-logo" style="border-bottom: none; margin-bottom: 0;">
+            <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #d4af37, #aa7c11); border-radius: 8px; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);">
+                <div style="width: 16px; height: 16px; border: 1.5px solid white; border-radius: 50%; box-sizing: border-box;"></div>
+                <div style="width: 4px; height: 4px; background: white; border-radius: 50%; position: absolute; top: 8px; right: 8px;"></div>
+            </div>
+            <span class="logo-text">Photona</span>
+        </a>
+        <button class="sidebar-close-btn" onclick="document.getElementById('mobileSidebar').classList.remove('open')" style="background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; display: none;">✕</button>
+    </div>
+    <style>
+        @media (max-width: 768px) {
+            .sidebar-close-btn { display: block !important; }
+        }
+    </style>
+    <div style="height: 1px; background: rgba(212, 175, 55, 0.1); margin: 0 1.75rem 1.5rem 1.75rem;"></div>
 
 
     <nav class="dash-nav">
