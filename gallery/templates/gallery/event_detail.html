@@ -473,32 +473,31 @@
 </style>
 
 <!-- ── Event Hero Header ── -->
-<div class="event-hero">
-    <div>
+<div class="event-hero" style="align-items: center;">
+    <div style="flex: 1; min-width: 250px;">
         <a href="{% url 'gallery:dashboard' %}" style="color: var(--accent-indigo); text-decoration: none; font-size: 0.8rem; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.75rem; opacity: 0.85; transition: var(--transition);" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             All Events
         </a>
-        <div class="event-hero-title">{{ event.name }}</div>
-        <div class="event-hero-desc">{{ event.description|default:"No description provided." }}</div>
-        <a href="{% url 'gallery:search' %}?event={{ event.slug }}" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            AI Search by Selfie
-        </a>
-    </div>
-    <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
-        {% if clusters %}
-        <div style="text-align: center; background: rgba(79,70,229,0.05); border: 1px solid rgba(79,70,229,0.1); border-radius: var(--radius-md); padding: 0.6rem 1.1rem;">
-            <div style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--accent-indigo);">{{ clusters|length }}</div>
-            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">People</div>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 0.3rem;">
+            <div class="event-hero-title" style="margin-bottom: 0;">{{ event.name }}</div>
+            {% if clusters %}
+            <span style="font-size: 0.75rem; font-weight: 800; color: var(--accent-indigo); background: rgba(79,70,229,0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(79,70,229,0.15);">👥 {{ clusters|length }} People</span>
+            {% endif %}
         </div>
-        {% endif %}
-        <button onclick="openShareManager()" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; background: var(--gradient-primary); color: white; border: none;">
+        <div class="event-hero-desc" style="margin-bottom: 0;">{{ event.description|default:"No description provided." }}</div>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <a href="{% url 'gallery:search' %}?event={{ event.slug }}" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; background: white; color: var(--accent-indigo); border: 1px solid rgba(79, 70, 229, 0.3); box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            AI Search
+        </a>
+        <button onclick="openShareManager()" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; background: var(--gradient-primary); color: white; border: none; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.2);">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             Share Event
         </button>
         <a href="{% url 'gallery:download_event_zip' event.slug %}" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
-            📦 Download All (ZIP)
+            📦 Download All
         </a>
     </div>
 </div>
