@@ -356,6 +356,16 @@ def update_plan(request, plan_id):
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def toggle_plan_status(request, plan_id):
+    plan = get_object_or_404(SubscriptionPlan, id=plan_id)
+    plan.is_active = not plan.is_active
+    plan.save()
+    status = "enabled" if plan.is_active else "disabled"
+    return JsonResponse({'success': True, 'message': f'Plan "{plan.name}" has been {status}.'})
+
 def delete_plan(request, plan_id):
     plan = SubscriptionPlan.objects.filter(id=plan_id).first()
     if plan:
