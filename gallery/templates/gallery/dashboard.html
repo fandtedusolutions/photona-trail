@@ -607,7 +607,7 @@
         <!-- ── Studio Insights ── -->
         <div style="margin-bottom: 2.5rem;">
             <h3 style="font-size: 1.1rem; font-weight: 700; color: #111827; margin-bottom: 1rem;">Studio Insights</h3>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem;">
                 
                 <!-- Gross -->
                 <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.25rem;">
@@ -664,7 +664,7 @@
         <!-- ── Recent Events Section ── -->
         <div style="margin-bottom: 2.5rem;">
             <h3 style="font-size: 1.1rem; font-weight: 700; color: #111827; margin-bottom: 1rem;">Recent Events</h3>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem;">
                 
                 {% for ev in recent_events|slice:":3" %}
                 <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column; transition: all 0.25s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px -5px rgba(15,23,42,0.1)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
