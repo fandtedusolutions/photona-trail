@@ -979,6 +979,13 @@
                 </div>
             </div>
             
+            <div id="variableStorageContainerEdit" style="display: none; margin-top: 1rem; padding: 1.25rem; background: rgba(16, 185, 129, 0.05); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 6px;">
+                <label class="form-label" style="color: #0f172a; font-weight: 700;">Custom Storage Override (GB) <span style="color:#10b981;">*Optional</span></label>
+                <input type="number" name="custom_storage_gb" id="customStorageGbEdit" class="form-input" placeholder="Enter amount of GB" oninput="calculateVariableChargeEdit()" min="1">
+                <div id="variableChargeDisplayEdit" style="margin-top: 0.75rem; font-size: 0.95rem; font-weight: 700; color: #10b981;">
+                    Total Charge: ₹0 <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>
+                </div>
+            </div>
 
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                 <button type="submit" class="btn" style="flex: 1; padding: 0.85rem;">Save Changes</button>
