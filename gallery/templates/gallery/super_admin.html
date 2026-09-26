@@ -864,13 +864,51 @@
                 </div>
                 <div class="form-field">
                     <label class="form-label">Subscription Plan</label>
-                    <select name="plan_id" required class="form-input">
+                    <select name="plan_id" required class="form-input" id="planSelect" onchange="toggleVariableStorage()">
                         {% for plan in plans %}
-                            <option value="{{ plan.id }}">{{ plan.name }} ({{ plan.storage_limit_mb }} MB)</option>
+                            <option value="{{ plan.id }}" data-name="{{ plan.name }}">{{ plan.name }} ({{ plan.storage_limit_mb }} MB)</option>
                         {% endfor %}
                     </select>
                 </div>
             </div>
+            
+            <div id="variableStorageContainer" style="display: none; margin-top: 1rem; padding: 1.25rem; background: rgba(16, 185, 129, 0.05); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 6px;">
+                <label class="form-label" style="color: #0f172a; font-weight: 700;">Required Storage (GB) <span style="color:#10b981;">*Variable Plan</span></label>
+                <input type="number" name="custom_storage_gb" id="customStorageGb" class="form-input" placeholder="Enter amount of GB" oninput="calculateVariableCharge()" min="1">
+                <div id="variableChargeDisplay" style="margin-top: 0.75rem; font-size: 0.95rem; font-weight: 700; color: #10b981;">
+                    Total Charge: ₹0 <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>
+                </div>
+            </div>
+            
+            <script>
+            function toggleVariableStorage() {
+                const select = document.getElementById('planSelect');
+                if(!select.options.length) return;
+                const selectedOption = select.options[select.selectedIndex];
+                const planName = selectedOption.getAttribute('data-name');
+                const container = document.getElementById('variableStorageContainer');
+                
+                if (planName === 'Variable Storage') {
+                    container.style.display = 'block';
+                    document.getElementById('customStorageGb').setAttribute('required', 'required');
+                } else {
+                    container.style.display = 'none';
+                    document.getElementById('customStorageGb').removeAttribute('required');
+                    document.getElementById('customStorageGb').value = '';
+                    calculateVariableCharge();
+                }
+            }
+            
+            function calculateVariableCharge() {
+                const gb = parseFloat(document.getElementById('customStorageGb').value) || 0;
+                const charge = gb * 59;
+                document.getElementById('variableChargeDisplay').innerHTML = `Total Charge: ₹${charge} <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>`;
+            }
+            
+            // Initialize on load
+            document.addEventListener('DOMContentLoaded', () => { toggleVariableStorage(); });
+            </script>
+
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                 <button type="submit" class="btn" style="flex: 1; padding: 0.85rem;">Create Studio Admin Account</button>
                 <button type="button" onclick="closeCreateTenantModal()" class="btn btn-secondary" style="flex: 1; padding: 0.85rem;">Cancel</button>
@@ -895,6 +933,44 @@
                 <label class="form-label">Storage Capacity (MB)</label>
                 <input type="number" name="storage_limit_mb" required placeholder="e.g. 5120" class="form-input">
             </div>
+            
+            <div id="variableStorageContainer" style="display: none; margin-top: 1rem; padding: 1.25rem; background: rgba(16, 185, 129, 0.05); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 6px;">
+                <label class="form-label" style="color: #0f172a; font-weight: 700;">Required Storage (GB) <span style="color:#10b981;">*Variable Plan</span></label>
+                <input type="number" name="custom_storage_gb" id="customStorageGb" class="form-input" placeholder="Enter amount of GB" oninput="calculateVariableCharge()" min="1">
+                <div id="variableChargeDisplay" style="margin-top: 0.75rem; font-size: 0.95rem; font-weight: 700; color: #10b981;">
+                    Total Charge: ₹0 <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>
+                </div>
+            </div>
+            
+            <script>
+            function toggleVariableStorage() {
+                const select = document.getElementById('planSelect');
+                if(!select.options.length) return;
+                const selectedOption = select.options[select.selectedIndex];
+                const planName = selectedOption.getAttribute('data-name');
+                const container = document.getElementById('variableStorageContainer');
+                
+                if (planName === 'Variable Storage') {
+                    container.style.display = 'block';
+                    document.getElementById('customStorageGb').setAttribute('required', 'required');
+                } else {
+                    container.style.display = 'none';
+                    document.getElementById('customStorageGb').removeAttribute('required');
+                    document.getElementById('customStorageGb').value = '';
+                    calculateVariableCharge();
+                }
+            }
+            
+            function calculateVariableCharge() {
+                const gb = parseFloat(document.getElementById('customStorageGb').value) || 0;
+                const charge = gb * 59;
+                document.getElementById('variableChargeDisplay').innerHTML = `Total Charge: ₹${charge} <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>`;
+            }
+            
+            // Initialize on load
+            document.addEventListener('DOMContentLoaded', () => { toggleVariableStorage(); });
+            </script>
+
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                 <button type="submit" class="btn" style="flex: 1; padding: 0.85rem;">Create Subscription Plan</button>
                 <button type="button" onclick="closeCreatePlanModal()" class="btn btn-secondary" style="flex: 1; padding: 0.85rem;">Cancel</button>
@@ -943,6 +1019,44 @@
                     </select>
                 </div>
             </div>
+            
+            <div id="variableStorageContainer" style="display: none; margin-top: 1rem; padding: 1.25rem; background: rgba(16, 185, 129, 0.05); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 6px;">
+                <label class="form-label" style="color: #0f172a; font-weight: 700;">Required Storage (GB) <span style="color:#10b981;">*Variable Plan</span></label>
+                <input type="number" name="custom_storage_gb" id="customStorageGb" class="form-input" placeholder="Enter amount of GB" oninput="calculateVariableCharge()" min="1">
+                <div id="variableChargeDisplay" style="margin-top: 0.75rem; font-size: 0.95rem; font-weight: 700; color: #10b981;">
+                    Total Charge: ₹0 <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>
+                </div>
+            </div>
+            
+            <script>
+            function toggleVariableStorage() {
+                const select = document.getElementById('planSelect');
+                if(!select.options.length) return;
+                const selectedOption = select.options[select.selectedIndex];
+                const planName = selectedOption.getAttribute('data-name');
+                const container = document.getElementById('variableStorageContainer');
+                
+                if (planName === 'Variable Storage') {
+                    container.style.display = 'block';
+                    document.getElementById('customStorageGb').setAttribute('required', 'required');
+                } else {
+                    container.style.display = 'none';
+                    document.getElementById('customStorageGb').removeAttribute('required');
+                    document.getElementById('customStorageGb').value = '';
+                    calculateVariableCharge();
+                }
+            }
+            
+            function calculateVariableCharge() {
+                const gb = parseFloat(document.getElementById('customStorageGb').value) || 0;
+                const charge = gb * 59;
+                document.getElementById('variableChargeDisplay').innerHTML = `Total Charge: ₹${charge} <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>`;
+            }
+            
+            // Initialize on load
+            document.addEventListener('DOMContentLoaded', () => { toggleVariableStorage(); });
+            </script>
+
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                 <button type="submit" class="btn" style="flex: 1; padding: 0.85rem;">Save Changes</button>
                 <button type="button" onclick="closeEditTenant()" class="btn btn-secondary" style="flex: 1; padding: 0.85rem;">Cancel</button>
@@ -967,6 +1081,44 @@
                 <label class="form-label">Storage Limit (MB)</label>
                 <input type="number" id="editPlanStorage" class="form-input" placeholder="e.g. 2048">
             </div>
+            
+            <div id="variableStorageContainer" style="display: none; margin-top: 1rem; padding: 1.25rem; background: rgba(16, 185, 129, 0.05); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 6px;">
+                <label class="form-label" style="color: #0f172a; font-weight: 700;">Required Storage (GB) <span style="color:#10b981;">*Variable Plan</span></label>
+                <input type="number" name="custom_storage_gb" id="customStorageGb" class="form-input" placeholder="Enter amount of GB" oninput="calculateVariableCharge()" min="1">
+                <div id="variableChargeDisplay" style="margin-top: 0.75rem; font-size: 0.95rem; font-weight: 700; color: #10b981;">
+                    Total Charge: ₹0 <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>
+                </div>
+            </div>
+            
+            <script>
+            function toggleVariableStorage() {
+                const select = document.getElementById('planSelect');
+                if(!select.options.length) return;
+                const selectedOption = select.options[select.selectedIndex];
+                const planName = selectedOption.getAttribute('data-name');
+                const container = document.getElementById('variableStorageContainer');
+                
+                if (planName === 'Variable Storage') {
+                    container.style.display = 'block';
+                    document.getElementById('customStorageGb').setAttribute('required', 'required');
+                } else {
+                    container.style.display = 'none';
+                    document.getElementById('customStorageGb').removeAttribute('required');
+                    document.getElementById('customStorageGb').value = '';
+                    calculateVariableCharge();
+                }
+            }
+            
+            function calculateVariableCharge() {
+                const gb = parseFloat(document.getElementById('customStorageGb').value) || 0;
+                const charge = gb * 59;
+                document.getElementById('variableChargeDisplay').innerHTML = `Total Charge: ₹${charge} <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>`;
+            }
+            
+            // Initialize on load
+            document.addEventListener('DOMContentLoaded', () => { toggleVariableStorage(); });
+            </script>
+
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                 <button type="submit" class="btn" style="flex: 1; padding: 0.85rem;">Save Changes</button>
                 <button type="button" onclick="closeEditPlan()" class="btn btn-secondary" style="flex: 1; padding: 0.85rem;">Cancel</button>
@@ -1000,6 +1152,44 @@
                 <label class="form-label">Email (Optional)</label>
                 <input type="email" id="editLeadEmail" class="form-input">
             </div>
+            
+            <div id="variableStorageContainer" style="display: none; margin-top: 1rem; padding: 1.25rem; background: rgba(16, 185, 129, 0.05); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 6px;">
+                <label class="form-label" style="color: #0f172a; font-weight: 700;">Required Storage (GB) <span style="color:#10b981;">*Variable Plan</span></label>
+                <input type="number" name="custom_storage_gb" id="customStorageGb" class="form-input" placeholder="Enter amount of GB" oninput="calculateVariableCharge()" min="1">
+                <div id="variableChargeDisplay" style="margin-top: 0.75rem; font-size: 0.95rem; font-weight: 700; color: #10b981;">
+                    Total Charge: ₹0 <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>
+                </div>
+            </div>
+            
+            <script>
+            function toggleVariableStorage() {
+                const select = document.getElementById('planSelect');
+                if(!select.options.length) return;
+                const selectedOption = select.options[select.selectedIndex];
+                const planName = selectedOption.getAttribute('data-name');
+                const container = document.getElementById('variableStorageContainer');
+                
+                if (planName === 'Variable Storage') {
+                    container.style.display = 'block';
+                    document.getElementById('customStorageGb').setAttribute('required', 'required');
+                } else {
+                    container.style.display = 'none';
+                    document.getElementById('customStorageGb').removeAttribute('required');
+                    document.getElementById('customStorageGb').value = '';
+                    calculateVariableCharge();
+                }
+            }
+            
+            function calculateVariableCharge() {
+                const gb = parseFloat(document.getElementById('customStorageGb').value) || 0;
+                const charge = gb * 59;
+                document.getElementById('variableChargeDisplay').innerHTML = `Total Charge: ₹${charge} <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(₹59 per GB)</span>`;
+            }
+            
+            // Initialize on load
+            document.addEventListener('DOMContentLoaded', () => { toggleVariableStorage(); });
+            </script>
+
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                 <button type="submit" class="btn" style="flex: 1; padding: 0.85rem;">Save Changes</button>
                 <button type="button" onclick="closeEditLeadModal()" class="btn btn-secondary" style="flex: 1; padding: 0.85rem;">Cancel</button>

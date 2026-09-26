@@ -273,6 +273,20 @@ def create_admin(request):
         
     user = User.objects.create_user(username=username, email=email, password=password)
     plan = SubscriptionPlan.objects.filter(id=plan_id).first()
+    
+    # Handle Variable Storage logic
+    custom_storage_gb = request.POST.get('custom_storage_gb')
+    if plan and plan.name == 'Variable Storage' and custom_storage_gb:
+        try:
+            gb = int(custom_storage_gb)
+            mb = gb * 1024
+            plan, _ = SubscriptionPlan.objects.get_or_create(
+                name=f'Variable Storage ({gb} GB)',
+                defaults={'storage_limit_mb': mb}
+            )
+        except ValueError:
+            pass
+            
     UserProfile.objects.create(user=user, role=role, subscription_plan=plan)
     
     return JsonResponse({'success': True, 'message': f'Admin {username} created successfully.'})
