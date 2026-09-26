@@ -624,20 +624,20 @@
                     </div>
                 </div>
                 
-                <!-- Net Uploads -->
+                <!-- Storage Usage -->
                 <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.25rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <span style="font-size: 0.9rem; font-weight: 600; color: #111827;">Net Uploads</span>
+                        <span style="font-size: 0.9rem; font-weight: 600; color: #111827;">Storage Usage</span>
                         <div style="width: 20px; height: 20px; background: #111827; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                         </div>
                     </div>
                     <div style="font-size: 1.5rem; font-weight: 800; color: #111827; margin-bottom: 0.5rem;">
-                        {{ total_images|default:"26596" }} <span style="font-size: 1rem; color: #64748b; font-weight: 500;">/ {{ allowed_uploads|default:"50000" }}</span>
+                        {{ request.user.profile.used_storage_mb|floatformat:1|default:"0" }} <span style="font-size: 1rem; color: #64748b; font-weight: 500;">MB / {{ request.user.profile.effective_storage_limit_mb|default:"0" }} MB</span>
                     </div>
-                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">Photos Uploaded / Allowed</div>
+                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">Storage Used / Allowed</div>
                     <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
-                        <div style="width: {{ upload_percentage|default:'53' }}%; height: 100%; background: #10b981;"></div>
+                        <div style="width: {{ request.user.profile.storage_percentage|default:'0' }}%; height: 100%; background: #10b981;"></div>
                     </div>
                 </div>
                 
