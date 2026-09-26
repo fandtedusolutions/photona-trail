@@ -33,11 +33,9 @@ class UserProfile(models.Model):
 
     @property
     def effective_storage_limit_mb(self):
-        if self.custom_storage_limit_mb is not None:
-            return self.custom_storage_limit_mb
-        if self.subscription_plan:
-            return self.subscription_plan.storage_limit_mb
-        return 0
+        base_limit = self.subscription_plan.storage_limit_mb if self.subscription_plan else 0
+        extra = self.custom_storage_limit_mb if self.custom_storage_limit_mb is not None else 0
+        return base_limit + extra
 
     @property
     def storage_percentage(self):
