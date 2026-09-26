@@ -16,7 +16,7 @@ def get_face_model():
         _face_app.prepare(ctx_id=0, det_size=DETECTION_SIZE)
     return _face_app
 
-def process_gallery_image(gallery_image, local_path=None):
+def process_gallery_image(gallery_image, local_path=None, uploaded_file=None):
     """
     Process an uploaded gallery image using InsightFace and save embeddings to DB.
     """
@@ -27,6 +27,10 @@ def process_gallery_image(gallery_image, local_path=None):
     img = None
     if local_path and os.path.exists(local_path):
         img = cv2.imread(local_path)
+    elif uploaded_file is not None:
+        uploaded_file.seek(0)
+        arr = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+        img = cv2.imdecode(arr, -1)
     else:
         try:
             try:
