@@ -205,8 +205,7 @@ def plans_view(request):
 # -------------------------------------------------------------
 # Super Admin Views
 # -------------------------------------------------------------
-@user_passes_test(lambda u: u.is_superuser)
-def super_admin_dashboard(request):
+def _get_super_admin_context(request):
     admins = User.objects.filter(is_superuser=False).select_related('profile')
     plans = SubscriptionPlan.objects.filter(is_active=True)
     roles = UserProfile.ROLE_CHOICES
@@ -222,7 +221,6 @@ def super_admin_dashboard(request):
     
     leads = GuestLead.objects.all().select_related('event', 'event__owner').order_by('-created_at')
     
-    # Filtering
     search_q = request.GET.get('search_q')
     organizer_id = request.GET.get('organizer_id')
     event_id = request.GET.get('event_id')
@@ -232,23 +230,18 @@ def super_admin_dashboard(request):
     if search_q:
         from django.db.models import Q
         leads = leads.filter(Q(name__icontains=search_q) | Q(phone__icontains=search_q) | Q(email__icontains=search_q))
-        
     if organizer_id:
         leads = leads.filter(event__owner_id=organizer_id)
-        
     if event_id:
         leads = leads.filter(event_id=event_id)
-        
     if start_date:
         leads = leads.filter(created_at__date__gte=start_date)
-        
     if end_date:
         leads = leads.filter(created_at__date__lte=end_date)
         
-    # Get distinct organizers and events for the dropdowns
     all_events = Event.objects.all().select_related('owner')
     
-    return render(request, 'gallery/super_admin.html', {
+    return {
         'admins': admins,
         'plans': plans,
         'roles': roles,
@@ -257,7 +250,31 @@ def super_admin_dashboard(request):
         'total_storage_used': total_storage_used,
         'leads': leads,
         'all_events': all_events,
-    })
+    }
+
+@user_passes_test(lambda u: u.is_superuser)
+def super_admin_dashboard(request):
+    context = _get_super_admin_context(request)
+    context['active_tab'] = 'overview'
+    return render(request, 'gallery/super_admin.html', context)
+
+@user_passes_test(lambda u: u.is_superuser)
+def super_admin_studio_admins(request):
+    context = _get_super_admin_context(request)
+    context['active_tab'] = 'tenants'
+    return render(request, 'gallery/super_admin.html', context)
+
+@user_passes_test(lambda u: u.is_superuser)
+def super_admin_guest_leads(request):
+    context = _get_super_admin_context(request)
+    context['active_tab'] = 'leads'
+    return render(request, 'gallery/super_admin.html', context)
+
+@user_passes_test(lambda u: u.is_superuser)
+def super_admin_manage_plans(request):
+    context = _get_super_admin_context(request)
+    context['active_tab'] = 'plans'
+    return render(request, 'gallery/super_admin.html', context)
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST

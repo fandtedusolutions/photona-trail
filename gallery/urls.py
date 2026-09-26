@@ -14,6 +14,9 @@ urlpatterns = [
     path('events/', views.events_list, name='events_list'),
     path('plans/', views.plans_view, name='plans'),
     path('super-admin/', views.super_admin_dashboard, name='super_admin_dashboard'),
+    path('super-admin/studio-admins/', views.super_admin_studio_admins, name='super_admin_studio_admins'),
+    path('super-admin/guest-leads/', views.super_admin_guest_leads, name='super_admin_guest_leads'),
+    path('super-admin/plans/', views.super_admin_manage_plans, name='super_admin_manage_plans'),
     
     # Super Admin Actions
     path('super-admin/create-admin/', views.create_admin, name='create_admin'),

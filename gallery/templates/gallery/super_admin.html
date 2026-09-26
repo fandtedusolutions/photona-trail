@@ -379,29 +379,29 @@
                 Dashboards
             </div>
             <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                <button class="sidebar-nav-item active" onclick="switchPanel('overview', this)">
+                <a href="{% url 'gallery:super_admin_dashboard' %}" class="sidebar-nav-item {% if active_tab == 'overview' %}active{% endif %}">
                     <span class="sidebar-nav-icon">📊</span> Overview
-                </button>
-                <button class="sidebar-nav-item" onclick="switchPanel('tenants', this)">
+                </a>
+                <a href="{% url 'gallery:super_admin_studio_admins' %}" class="sidebar-nav-item {% if active_tab == 'tenants' %}active{% endif %}">
                     <span class="sidebar-nav-icon">👥</span> Studio Admins
-                </button>
-                <button class="sidebar-nav-item" onclick="switchPanel('leads', this)">
+                </a>
+                <a href="{% url 'gallery:super_admin_guest_leads' %}" class="sidebar-nav-item {% if active_tab == 'leads' %}active{% endif %}">
                     <span class="sidebar-nav-icon">🎯</span> Guest Leads
-                </button>
-                <button class="sidebar-nav-item" onclick="switchPanel('plans', this)">
+                </a>
+                <a href="{% url 'gallery:super_admin_manage_plans' %}" class="sidebar-nav-item {% if active_tab == 'plans' %}active{% endif %}">
                     <span class="sidebar-nav-icon">💳</span> Manage Plans
-                </button>
+                </a>
             </div>
         </div>
 
         <div class="sidebar-section-label">Pages</div>
         <div style="padding: 0 1rem; display: flex; flex-direction: column; gap: 0.3rem;">
-            <button class="sidebar-nav-item">
+            <a href="{% url 'gallery:dashboard' %}" class="sidebar-nav-item">
                 <span class="sidebar-nav-icon">👤</span> Authentication
-            </button>
-            <button class="sidebar-nav-item">
+            </a>
+            <a href="/" class="sidebar-nav-item">
                 <span class="sidebar-nav-icon">📄</span> Pages
-            </button>
+            </a>
         </div>
     </aside>
 
@@ -410,6 +410,7 @@
         <main class="admin-main">
 
         <!-- ── OVERVIEW PANEL ── -->
+        {% if active_tab == 'overview' %}
         <div id="panel-overview" class="admin-content-panel visible">
             
             <!-- Welcome Header -->
@@ -575,9 +576,11 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- ── ALL TENANTS PANEL ── -->
-        <div id="panel-tenants" class="admin-content-panel">
+        {% if active_tab == 'tenants' %}
+        <div id="panel-tenants" class="admin-content-panel visible">
             
             <div class="welcome-header">
                 <div>
@@ -674,9 +677,11 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- ── GUEST LEADS PANEL ── -->
-        <div id="panel-leads" class="admin-content-panel">
+        {% if active_tab == 'leads' %}
+        <div id="panel-leads" class="admin-content-panel visible">
             
             <div class="welcome-header">
                 <div>
@@ -774,9 +779,11 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- ── SUBSCRIPTION PLANS PANEL ── -->
-        <div id="panel-plans" class="admin-content-panel">
+        {% if active_tab == 'plans' %}
+        <div id="panel-plans" class="admin-content-panel visible">
             
             <div class="welcome-header">
                 <div>
@@ -828,6 +835,7 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
 
     </main>
 </div>
