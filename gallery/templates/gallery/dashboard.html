@@ -694,27 +694,10 @@
                     </div>
                 </div>
                 {% empty %}
-                <!-- Fallback dummy events to match screenshot -->
-                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
-                    <div style="height: 160px; background-image: url('https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&q=80&w=500'); background-size: cover; background-position: center;"></div>
-                    <div style="padding: 1.25rem;">
-                        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">THU KUJA MAN KUJA</h4>
-                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Family Meet</p>
-                    </div>
-                </div>
-                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
-                    <div style="height: 160px; background-image: url('https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&q=80&w=500'); background-size: cover; background-position: center;"></div>
-                    <div style="padding: 1.25rem;">
-                        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">sugumaran / subadhra</h4>
-                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Pre-wedding Photography</p>
-                    </div>
-                </div>
-                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column;">
-                    <div style="height: 160px; background-image: url('https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&q=80&w=500'); background-size: cover; background-position: center;"></div>
-                    <div style="padding: 1.25rem;">
-                        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">Shahid wedding</h4>
-                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Wedding Photography</p>
-                    </div>
+                <div style="grid-column: span 3; background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 3rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #64748b;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; font-weight: 600; color: #334155;">No Events Yet</h4>
+                    <p style="margin: 0; font-size: 0.9rem;">You haven't created any events. Click the button to the right to get started!</p>
                 </div>
                 {% endfor %}
                 
