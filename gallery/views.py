@@ -1128,15 +1128,20 @@ def download_event_zip(request, slug):
                 name_only, ext = os.path.splitext(img.filename)
                 zip_filename = f"{name_only}_{event.slug}{ext}"
                 content = None
-                if hasattr(img.file, 'path') and os.path.exists(img.file.path):
-                    with open(img.file.path, 'rb') as f:
-                        content = f.read()
-                else:
+                try:
                     try:
+                        _path = img.file.path
+                        if os.path.exists(_path):
+                            with open(_path, 'rb') as f:
+                                content = f.read()
+                    except (NotImplementedError, AttributeError):
+                        pass
+                        
+                    if content is None:
                         with img.file.open('rb') as f:
                             content = f.read()
-                    except Exception as e:
-                        print(f"Error reading image from storage: {e}")
+                except Exception as e:
+                    print(f"Error reading image from storage: {e}")
                         
                 if content:
                     zip_file.writestr(zip_filename, content)
@@ -1170,15 +1175,20 @@ def download_single_image(request, image_id):
     download_name = f"{name_only}_{evt_tag}{ext}"
     
     content = None
-    if hasattr(img.file, 'path') and os.path.exists(img.file.path):
-        with open(img.file.path, 'rb') as f:
-            content = f.read()
-    else:
+    try:
         try:
+            _path = img.file.path
+            if os.path.exists(_path):
+                with open(_path, 'rb') as f:
+                    content = f.read()
+        except (NotImplementedError, AttributeError):
+            pass
+            
+        if content is None:
             with img.file.open('rb') as f:
                 content = f.read()
-        except Exception as e:
-            print(f"Error fetching single image file: {e}")
+    except Exception as e:
+        print(f"Error fetching single image file: {e}")
             
     if content is None:
         return HttpResponse("Failed to download image", status=500)
@@ -1238,15 +1248,20 @@ def download_images_zip(request):
                     evt_tag = slugify(img.event.name) if (img.event and img.event.name) else (img.event.slug if img.event else 'photo')
                     zip_filename = f"{name_only}_{evt_tag}{ext}"
                     content = None
-                    if hasattr(img.file, 'path') and os.path.exists(img.file.path):
-                        with open(img.file.path, 'rb') as f:
-                            content = f.read()
-                    else:
+                    try:
                         try:
+                            _path = img.file.path
+                            if os.path.exists(_path):
+                                with open(_path, 'rb') as f:
+                                    content = f.read()
+                        except (NotImplementedError, AttributeError):
+                            pass
+                            
+                        if content is None:
                             with img.file.open('rb') as f:
                                 content = f.read()
-                        except Exception as e:
-                            print(f"Error fetching zip image file: {e}")
+                    except Exception as e:
+                        print(f"Error fetching zip image file: {e}")
 
                     if content:
                         zip_file.writestr(zip_filename, content)
