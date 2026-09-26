@@ -27,13 +27,22 @@ def process_gallery_image(gallery_image, local_path=None):
     img = None
     if local_path and os.path.exists(local_path):
         img = cv2.imread(local_path)
-    elif hasattr(gallery_image.file, 'path') and os.path.exists(gallery_image.file.path):
-        img = cv2.imread(gallery_image.file.path)
     else:
         try:
-            req = urllib.request.urlopen(gallery_image.file.url)
-            arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
-            img = cv2.imdecode(arr, -1)
+            try:
+                # For local storage
+                _path = gallery_image.file.path
+                if os.path.exists(_path):
+                    img = cv2.imread(_path)
+            except (NotImplementedError, AttributeError):
+                pass
+                
+            if img is None:
+                # For remote storage (like S3)
+                gallery_image.file.open('rb')
+                arr = np.asarray(bytearray(gallery_image.file.read()), dtype=np.uint8)
+                img = cv2.imdecode(arr, -1)
+                gallery_image.file.close()
         except Exception as e:
             print(f"Error downloading image for face detection: {e}")
             return 0
