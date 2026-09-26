@@ -555,7 +555,7 @@
                                                 {% if admin.profile.is_paid %}Mark Unpaid{% else %}Mark Paid{% endif %}
                                             </button>
                                         </form>
-                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}', '{{ admin.profile.raw_password|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
                                         <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
                                     </div>
                                 </td>
@@ -656,7 +656,7 @@
                                                 {% if admin.profile.is_paid %}Mark Unpaid{% else %}Mark Paid{% endif %}
                                             </button>
                                         </form>
-                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}', '{{ admin.profile.raw_password|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
                                         <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
                                     </div>
                                 </td>
@@ -977,7 +977,7 @@
             </div>
             <div class="form-field">
                 <label class="form-label">New Password <span style="color: #64748b; font-weight: 400; text-transform: none;">(leave blank to keep current)</span></label>
-                <input type="password" id="editTenantPassword" class="form-input" placeholder="New password (optional)">
+                <input type="text" id="editTenantPassword" class="form-input" placeholder="New password (optional)">
             </div>
             <div class="form-row">
                 <div class="form-field">
@@ -1185,11 +1185,11 @@ if (modalCreateAdminForm) {
 }
 
 // ── EDIT TENANT ──
-function openEditTenant(id, username, email, role, planId, customStorageMB) {
+function openEditTenant(id, username, email, role, planId, customStorageMB, rawPassword) {
     document.getElementById('editTenantId').value = id;
     document.getElementById('editTenantUsername').value = username;
     document.getElementById('editTenantEmail').value = email;
-    document.getElementById('editTenantPassword').value = '';
+    document.getElementById('editTenantPassword').value = rawPassword || '';
     document.getElementById('editTenantRole').value = role;
     if(planId) document.getElementById('editTenantPlan').value = planId;
     

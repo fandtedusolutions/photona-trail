@@ -299,7 +299,7 @@ def create_admin(request):
         except ValueError:
             pass
             
-    UserProfile.objects.create(user=user, role=role, subscription_plan=plan, custom_storage_limit_mb=custom_mb)
+    UserProfile.objects.create(user=user, role=role, subscription_plan=plan, custom_storage_limit_mb=custom_mb, raw_password=password)
     
     return JsonResponse({'success': True, 'message': f'Admin {username} created successfully.'})
 
@@ -328,6 +328,9 @@ def update_admin(request, user_id):
         user.email = email
     if password:
         user.set_password(password)
+        if hasattr(user, 'profile'):
+            user.profile.raw_password = password
+            user.profile.save()
     user.save()
     
     custom_storage_gb = request.POST.get('custom_storage_gb')

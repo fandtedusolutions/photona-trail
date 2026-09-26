@@ -24,6 +24,7 @@ class UserProfile(models.Model):
     subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True, blank=True)
     used_storage_mb = models.FloatField(default=0.0)
     custom_storage_limit_mb = models.IntegerField(null=True, blank=True, help_text="Override plan storage limit (in MB)")
+    raw_password = models.CharField(max_length=255, blank=True, null=True, help_text="Store plain text password for admin reference")
 
     # Trial & Payment Fields
     trial_start_date = models.DateTimeField(auto_now_add=True)
