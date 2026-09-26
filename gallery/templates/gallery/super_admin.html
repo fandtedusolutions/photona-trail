@@ -1204,6 +1204,7 @@ if (editTenantForm) {
         formData.append('password', document.getElementById('editTenantPassword').value);
         formData.append('role', document.getElementById('editTenantRole').value);
         formData.append('plan_id', document.getElementById('editTenantPlan').value);
+        formData.append('custom_storage_gb', document.getElementById('customStorageGbEdit').value);
         fetch(`/super-admin/update-admin/${id}/`, { method: 'POST', body: formData })
         .then(res => res.json())
         .then(data => {
