@@ -763,8 +763,8 @@
                                     <div style="font-size:0.75rem; color:#64748b;">Org: {{ lead.event.owner.username }}</div>
                                 </td>
                                 <td style="text-align: right;">
-                                    <a href="{{ lead.selfie.url }}" target="_blank">
-                                        <img src="{{ lead.selfie.url }}" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" alt="Lead Selfie">
+                                    <a href="{% url 'gallery:secure_selfie' lead.get_secure_selfie_token %}" target="_blank">
+                                        <img src="{% url 'gallery:secure_selfie' lead.get_secure_selfie_token %}" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" alt="Lead Selfie">
                                     </a>
                                 </td>
                                 <td style="text-align: right;">

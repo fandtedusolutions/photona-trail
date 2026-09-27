@@ -979,6 +979,27 @@ def secure_image_serve(request, token):
             response['Content-Disposition'] = f'attachment; filename="{img.filename}"'
         return response
     except Exception as e:
+        return HttpResponse(f'Error accessing file: {str(e)}', status=500)
+
+def secure_selfie_serve(request, token):
+    try:
+        data = Signer().unsign(token)
+        lead_id_str, img_type = data.split(':', 1)
+        lead_id = int(lead_id_str)
+    except (BadSignature, ValueError):
+        return HttpResponse('Invalid token', status=403)
+        
+    from .models import GuestLead
+    lead = get_object_or_404(GuestLead, id=lead_id)
+    
+    if not lead.selfie or not lead.selfie.name:
+        return HttpResponse('Selfie not found', status=404)
+        
+    try:
+        f = lead.selfie.open('rb')
+        response = FileResponse(f, content_type='image/jpeg')
+        return response
+    except Exception as e:
         print(f"Error serving secure image: {e}")
         return HttpResponse('Error reading image', status=500)
 

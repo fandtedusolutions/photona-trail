@@ -68,6 +68,7 @@ urlpatterns = [
     path('api/photos/', views.photos_api, name='photos_api'),
     path('group-by-face/', views.group_by_face, name='group_by_face'),
     path('secure-media/<str:token>/', views.secure_image_serve, name='secure_image'),
+    path('secure-selfie/<str:token>/', views.secure_selfie_serve, name='secure_selfie'),
     path('event/<slug:slug>/download/', views.download_event_zip, name='download_event_zip'),
     path('download-zip/', views.download_images_zip, name='download_images_zip'),
     path('download/image/<int:image_id>/', views.download_single_image, name='download_single_image'),

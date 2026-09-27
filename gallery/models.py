@@ -161,6 +161,10 @@ class GuestLead(models.Model):
     selfie = models.ImageField(upload_to='leads/selfies/')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def get_secure_selfie_token(self):
+        from django.core.signing import Signer
+        return Signer().sign(f"{self.id}:selfie")
+
     def __str__(self):
         return f"{self.name} - {self.event.name}"
 
