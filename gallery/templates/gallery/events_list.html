@@ -594,7 +594,7 @@
                     <div class="dash-event-full-footer">
                         <a href="{% url 'gallery:event_detail' ev.slug %}">View Album →</a>
                         <div class="event-card-actions">
-                            <a href="javascript:void(0)" class="action-edit" onclick="editEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}', '{{ ev.description|escapejs }}', '{% if ev.event_date %}{{ ev.event_date|date:"Y-m-d" }}{% endif %}')">✎ Edit</a>
+                            <a href="javascript:void(0)" class="action-edit" onclick="editEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}', '{{ ev.description|escapejs }}', '{% if ev.event_date %}{{ ev.event_date|date:"Y-m-d" }}{% endif %}', '{{ ev.compression_percentage }}')">✎ Edit</a>
                             <button class="action-delete" onclick="confirmDeleteEvent('{{ ev.slug }}', '{{ ev.name|escapejs }}')">✕ Delete</button>
                         </div>
                     </div>

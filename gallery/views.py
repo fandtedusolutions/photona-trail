@@ -437,10 +437,16 @@ def create_event(request):
     description = request.POST.get('description')
     cover_image = request.FILES.get('cover_image')
     event_date = request.POST.get('event_date')
+    compression_percentage = request.POST.get('compression_percentage', 100)
+    try:
+        compression_percentage = int(compression_percentage)
+    except ValueError:
+        compression_percentage = 100
+        
     if not event_date:
         event_date = None
     if name:
-        Event.objects.create(name=name, description=description, owner=request.user, cover_image=cover_image, event_date=event_date)
+        Event.objects.create(name=name, description=description, owner=request.user, cover_image=cover_image, event_date=event_date, compression_percentage=compression_percentage)
     return redirect('gallery:dashboard')
 
 @login_required
@@ -451,12 +457,19 @@ def update_event(request, slug):
     description = request.POST.get('description')
     cover_image = request.FILES.get('cover_image')
     event_date = request.POST.get('event_date')
+    compression_percentage = request.POST.get('compression_percentage', event.compression_percentage)
+    try:
+        compression_percentage = int(compression_percentage)
+    except ValueError:
+        compression_percentage = event.compression_percentage
+        
     if not event_date:
         event_date = None
     if name:
         event.name = name
         event.description = description
         event.event_date = event_date
+        event.compression_percentage = compression_percentage
         if cover_image:
             event.cover_image = cover_image
         event.save()
@@ -655,6 +668,30 @@ def upload_single_photo(request):
         gallery_image = GalleryImage(filename=safe_filename, event=event)
         
         file.seek(0)
+        
+        # Compression logic for single upload
+        compression_percentage = event.compression_percentage if event else 100
+        if compression_percentage and compression_percentage < 100:
+            try:
+                with Image.open(file) as img:
+                    img = ImageOps.exif_transpose(img)
+                    if img.mode in ('RGBA', 'P'): 
+                        img = img.convert('RGB')
+                    
+                    ext = os.path.splitext(safe_filename)[1].lower()
+                    fmt = 'JPEG'
+                    if ext == '.webp': fmt = 'WEBP'
+                    if ext == '.png': fmt = 'JPEG'
+                    
+                    compressed_io = BytesIO()
+                    img.save(compressed_io, format=fmt, quality=int(compression_percentage), optimize=True)
+                    compressed_io.seek(0)
+                    
+                    file = File(compressed_io, name=safe_filename)
+            except Exception as e:
+                print(f"[DEBUG] single upload compression error: {e}")
+                file.seek(0)
+        
         raw_bytes = file.read()
         file.seek(0)
         

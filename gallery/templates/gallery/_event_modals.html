@@ -23,6 +23,11 @@
                 <label class="form-label">Event Date (Optional)</label>
                 <input type="date" name="event_date" class="form-input">
             </div>
+            <div style="margin-bottom: 1.35rem;">
+                <label class="form-label">Upload Compression %</label>
+                <input type="number" name="compression_percentage" value="100" min="1" max="100" class="form-input" help_text="100 = no extra compression. Lower values compress uploads more.">
+                <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">100 means no extra compression. e.g. 80 for 80% quality.</p>
+            </div>
             <div style="margin-bottom: 1.75rem;">
                 <label class="form-label">Cover Image (Optional)</label>
                 <input type="file" name="cover_image" accept="image/*" class="form-input">
@@ -55,6 +60,11 @@
             <div style="margin-bottom: 1.35rem;">
                 <label class="form-label">Event Date (Optional)</label>
                 <input type="date" name="event_date" id="editEventDate" class="form-input">
+            </div>
+            <div style="margin-bottom: 1.35rem;">
+                <label class="form-label">Upload Compression %</label>
+                <input type="number" name="compression_percentage" id="editEventCompression" min="1" max="100" class="form-input">
+                <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">100 means no extra compression. e.g. 80 for 80% quality.</p>
             </div>
             <div style="margin-bottom: 1.75rem;">
                 <label class="form-label">Cover Image (Optional)</label>
@@ -178,11 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-function editEvent(slug, name, description, date) {
+function editEvent(slug, name, description, date, compression) {
     document.getElementById('editEventForm').action = `/event/update/${slug}/`;
     document.getElementById('editEventName').value = name;
     document.getElementById('editEventDescription').value = description;
     document.getElementById('editEventDate').value = date || '';
+    document.getElementById('editEventCompression').value = compression || 100;
     openModal('editEventModal');
 }
 

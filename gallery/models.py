@@ -71,6 +71,7 @@ class Event(models.Model):
     slug = models.SlugField(max_length=255, unique=True, null=True, blank=True)
     cover_image = models.ImageField(upload_to=event_cover_upload_path, null=True, blank=True)
     event_date = models.DateField(null=True, blank=True)
+    compression_percentage = models.IntegerField(default=100, help_text="Image compression percentage (1-100). 100 means no extra compression.")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):

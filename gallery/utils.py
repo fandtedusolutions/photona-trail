@@ -274,6 +274,8 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                 'message': f"Found {total_files} files. Downloading & indexing..."
             })
 
+        uploaded_images = []
+
         for fid in file_ids:
             # Check if job was cancelled by user
             if job_id and get_job(job_id).get('cancelled'):
@@ -311,8 +313,12 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                                         profile.used_storage_mb += f_size_mb
                                         profile.save()
 
+                                    compression = event.compression_percentage if event else 100
+                                    from .tasks import compress_image_if_needed
+                                    compress_image_if_needed(full_img_path, compression)
+
                                     with open(full_img_path, 'rb') as img_f:
-                                        gallery_image = GalleryImage(filename=file_name, event=event)
+                                        gallery_image = GalleryImage(filename=file_name, event=event, total_faces=-1)
                                         gallery_image.file.save(file_name, File(img_f), save=False)
                                         
                                         from .tasks import create_thumbnail
@@ -323,8 +329,8 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                                             
                                         gallery_image.save()
                                         
-                                    num_faces = process_gallery_image(gallery_image, local_path=full_img_path)
-                                    total_faces += num_faces
+                                    from .tasks import process_single_image_task
+                                    process_single_image_task.delay(gallery_image.id, None)
                                     total_indexed += 1
 
                                     if job_id:
@@ -356,8 +362,12 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                         profile.used_storage_mb += file_size_mb
                         profile.save()
 
+                    compression = event.compression_percentage if event else 100
+                    from .tasks import compress_image_if_needed
+                    compress_image_if_needed(tmp_file_path, compression)
+
                     with open(tmp_file_path, 'rb') as img_f:
-                        gallery_image = GalleryImage(filename=file_name, event=event)
+                        gallery_image = GalleryImage(filename=file_name, event=event, total_faces=-1)
                         gallery_image.file.save(file_name, File(img_f), save=False)
                         
                         from .tasks import create_thumbnail
@@ -367,8 +377,8 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                             gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
                             
                         gallery_image.save()
-                    num_faces = process_gallery_image(gallery_image, local_path=tmp_file_path)
-                    total_faces += num_faces
+                    from .tasks import process_single_image_task
+                    process_single_image_task.delay(gallery_image.id, None)
                     total_indexed += 1
 
                     if job_id:
