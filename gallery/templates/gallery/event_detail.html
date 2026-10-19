@@ -5037,6 +5037,34 @@
             origImg.style.objectFit = 'contain';
             origImg.style.transform = `rotate(${totalAngle}deg) scale(${currentZoom}) scaleX(${scaleX}) scaleY(${scaleY})`;
         }
+        syncOriginalToMain();
+    }
+
+    // Pin the "Original" layer to the exact pixel box of the preset image so
+    // both halves of the split view are always identical in size & position.
+    function syncOriginalToMain() {
+        const mainImg = document.getElementById('pvMainImg');
+        const origImg = document.getElementById('pvOriginalImg');
+        const box = document.getElementById('pvSplitBox');
+        if (!mainImg || !origImg || !box) return;
+        if (isCropActive || box.classList.contains('is-cropped-view')) return;
+
+        const apply = () => {
+            const w = mainImg.offsetWidth;
+            const h = mainImg.offsetHeight;
+            if (!w || !h) return;
+            origImg.style.position = 'absolute';
+            origImg.style.left = mainImg.offsetLeft + 'px';
+            origImg.style.top = mainImg.offsetTop + 'px';
+            origImg.style.width = w + 'px';
+            origImg.style.height = h + 'px';
+            origImg.style.maxWidth = 'none';
+            origImg.style.maxHeight = 'none';
+            origImg.style.objectFit = 'fill';
+            origImg.style.transform = mainImg.style.transform || 'none';
+        };
+        apply();
+        requestAnimationFrame(apply);
     }
 
     // ── Split View Comparison Controller
@@ -5056,6 +5084,7 @@
             if (divider) divider.style.display = 'block';
             if (origBadge) origBadge.style.display = 'block';
             if (presetBadge) presetBadge.style.display = 'block';
+            syncOriginalToMain();
             updateSplitPosition(splitPos);
         } else {
             if (clipWrap) clipWrap.style.display = 'none';
@@ -6430,6 +6459,7 @@
     const applyCroppedViewToViewer = applyViewerCropDisplay;
 
     window.addEventListener('resize', () => {
+        syncOriginalToMain();
         if (isCropActive) {
             syncCropOverlayPosition();
             syncCropBoxOnScreen();
