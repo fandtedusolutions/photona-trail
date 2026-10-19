@@ -379,9 +379,16 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                             thumb_name = os.path.splitext(file_name)[0] + "_thumb" + ext
                             gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
                             
-                        gallery_image.save()
-                    from .tasks import process_single_image_task
-                    process_single_image_task.delay(gallery_image.id, None)
+                    try:
+                        from .tasks import process_single_image_task
+                        process_single_image_task.delay(gallery_image.id, None)
+                    except Exception as ce:
+                        try:
+                            num_f = process_gallery_image(gallery_image)
+                            gallery_image.total_faces = num_f
+                            gallery_image.save(update_fields=['total_faces'])
+                        except Exception as pe:
+                            print(f"[DEBUG] Direct processing fallback error: {pe}")
                     total_indexed += 1
 
                     if job_id:

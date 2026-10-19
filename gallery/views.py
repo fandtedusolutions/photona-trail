@@ -869,12 +869,8 @@ def event_detail(request, slug):
     if not request.user.is_superuser and event.owner != request.user:
         return HttpResponseForbidden("You do not have permission to access this Event.")
         
-    from .clustering import get_cached_clusters_for_event, run_clustering_on_upload
+    from .clustering import get_cached_clusters_for_event
     clusters = get_cached_clusters_for_event(event)
-    
-    if not clusters and event.images.exists():
-        run_clustering_on_upload(event)
-        clusters = get_cached_clusters_for_event(event)
         
     return render(request, 'gallery/event_detail.html', {
         'event': event,
@@ -979,7 +975,10 @@ def upload_photos(request):
                     for chunk in file.chunks():
                         f.write(chunk)
                 
-                process_zip_upload_task.delay(temp_zip_path, event_id)
+                try:
+                    process_zip_upload_task.delay(temp_zip_path, event_id)
+                except Exception as ce:
+                    print(f"[ERROR] Celery dispatch error for zip: {ce}")
             else:
                 has_background_images = True
                 safe_name = file.name.replace(' ', '_')
@@ -991,7 +990,10 @@ def upload_photos(request):
                 original_filenames.append(file.name)
                 
         if has_background_images:
-            process_image_upload_task.delay(temp_paths, event_id, original_filenames)
+            try:
+                process_image_upload_task.delay(temp_paths, event_id, original_filenames)
+            except Exception as ce:
+                print(f"[ERROR] Celery dispatch error for images: {ce}")
             
         return JsonResponse({
             'success': True,
@@ -1126,10 +1128,22 @@ def trigger_clustering(request, slug):
     else:
         event = get_object_or_404(Event, slug=slug, owner=request.user)
         
+    import threading
     from .clustering import run_clustering_on_upload
     try:
-        run_clustering_on_upload(event)
-        return JsonResponse({'success': True, 'message': 'Clustering complete.'})
+        def async_cluster(evt_id):
+            try:
+                from .models import Event
+                e = Event.objects.filter(id=evt_id).first()
+                if e:
+                    run_clustering_on_upload(e)
+            except Exception as ce:
+                print(f"[ERROR] Background clustering error: {ce}")
+
+        t = threading.Thread(target=async_cluster, args=(event.id,))
+        t.daemon = True
+        t.start()
+        return JsonResponse({'success': True, 'message': 'Clustering started in background.'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 

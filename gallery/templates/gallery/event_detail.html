@@ -3784,8 +3784,8 @@
         const csrfToken = document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value;
         const eventId = '{{ event.id }}';
 
-        // 2. High-Speed Concurrent Upload Queue (3 parallel streams)
-        const CONCURRENCY = Math.min(3, totalFiles);
+        // 2. High-Speed Stable Upload Queue (Sequential processing to protect server memory & avoid Gunicorn timeouts)
+        const CONCURRENCY = 1;
         let currentIndex = 0;
 
         async function processUploadTask(idx) {
