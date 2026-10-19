@@ -781,11 +781,18 @@
         overflow: hidden;
     }
 
+    :root {
+        --pv-img-max-w: 80vw;
+        --pv-img-max-h: calc(100vh - 275px);
+    }
+
     .pv-split-box {
         position: relative;
         display: inline-block;
-        max-height: calc(100vh - 275px);
-        max-width: 80vw;
+        flex-shrink: 0;
+        line-height: 0;
+        max-height: var(--pv-img-max-h);
+        max-width: var(--pv-img-max-w);
         border-radius: 20px;
         overflow: hidden;
         user-select: none;
@@ -802,8 +809,8 @@
 
     .pv-stage-img {
         display: block;
-        max-height: calc(100vh - 275px);
-        max-width: 80vw;
+        max-height: var(--pv-img-max-h);
+        max-width: var(--pv-img-max-w);
         width: auto;
         height: auto;
         object-fit: contain;
@@ -833,8 +840,9 @@
     }
 
     .pv-clip-wrap .pv-stage-img {
-        width: 100%;
-        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
         filter: none !important;
         image-rendering: -webkit-optimize-contrast;
         image-rendering: auto;
@@ -2582,13 +2590,28 @@
 
 
     @media (max-width: 768px) {
-        .pv-nav-btn {
-            width: 40px;
-            height: 40px;
+        :root {
+            --pv-img-max-w: calc(100vw - 1.5rem);
+            --pv-img-max-h: calc(100vh - 290px);
         }
-        .pv-split-box {
-            max-width: 95vw;
-            max-height: calc(100vh - 250px);
+        .pv-stage {
+            padding: 0.5rem 0.75rem;
+            justify-content: center;
+        }
+        .pv-split-stage-wrap {
+            padding: 0;
+        }
+        .pv-nav-btn {
+            width: 38px;
+            height: 38px;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .pv-nav-btn.pv-prev { left: 0.4rem; }
+        .pv-nav-btn.pv-next { right: 0.4rem; }
+        .pv-nav-btn:hover:not(:disabled) {
+            transform: translateY(-50%) scale(1.08);
         }
         .pv-strip-item {
             width: 56px;
@@ -4697,7 +4720,7 @@
             }
         }
         if (origImg) {
-            origImg.src = crispFullUrl;
+            origImg.src = (mainImg && mainImg.src) ? mainImg.src : crispFullUrl;
         }
         
         applyActiveFilterToImage();
@@ -4996,17 +5019,21 @@
 
         mainImg.style.width = 'auto';
         mainImg.style.height = 'auto';
-        mainImg.style.maxWidth = '80vw';
-        mainImg.style.maxHeight = 'calc(100vh - 275px)';
+        mainImg.style.maxWidth = 'var(--pv-img-max-w)';
+        mainImg.style.maxHeight = 'var(--pv-img-max-h)';
         mainImg.style.objectFit = 'contain';
         mainImg.style.opacity = '1';
         mainImg.style.transform = `rotate(${totalAngle}deg) scale(${currentZoom}) scaleX(${scaleX}) scaleY(${scaleY})`;
 
         if (origImg) {
-            origImg.style.width = '100%';
-            origImg.style.height = '100%';
-            origImg.style.maxWidth = 'none';
-            origImg.style.maxHeight = 'none';
+            // Mirror the main image geometry exactly so split halves line up
+            origImg.style.position = 'absolute';
+            origImg.style.left = '0';
+            origImg.style.top = '0';
+            origImg.style.width = 'auto';
+            origImg.style.height = 'auto';
+            origImg.style.maxWidth = 'var(--pv-img-max-w)';
+            origImg.style.maxHeight = 'var(--pv-img-max-h)';
             origImg.style.objectFit = 'contain';
             origImg.style.transform = `rotate(${totalAngle}deg) scale(${currentZoom}) scaleX(${scaleX}) scaleY(${scaleY})`;
         }
@@ -5093,8 +5120,8 @@
         if (mainImg) {
             mainImg.style.width = 'auto';
             mainImg.style.height = 'auto';
-            mainImg.style.maxWidth = '80vw';
-            mainImg.style.maxHeight = 'calc(100vh - 275px)';
+            mainImg.style.maxWidth = 'var(--pv-img-max-w)';
+            mainImg.style.maxHeight = 'var(--pv-img-max-h)';
             mainImg.style.objectFit = 'contain';
             mainImg.style.transform = 'none';
         }
@@ -6328,18 +6355,18 @@
             mainImg.style.position = 'relative';
             mainImg.style.width = 'auto';
             mainImg.style.height = 'auto';
-            mainImg.style.maxWidth = '80vw';
-            mainImg.style.maxHeight = 'calc(100vh - 275px)';
+            mainImg.style.maxWidth = 'var(--pv-img-max-w)';
+            mainImg.style.maxHeight = 'var(--pv-img-max-h)';
             mainImg.style.objectFit = 'contain';
             mainImg.style.left = '0';
             mainImg.style.top = '0';
 
             if (origImg) {
-                origImg.style.position = 'relative';
-                origImg.style.width = '100%';
-                origImg.style.height = '100%';
-                origImg.style.maxWidth = 'none';
-                origImg.style.maxHeight = 'none';
+                origImg.style.position = 'absolute';
+                origImg.style.width = 'auto';
+                origImg.style.height = 'auto';
+                origImg.style.maxWidth = 'var(--pv-img-max-w)';
+                origImg.style.maxHeight = 'var(--pv-img-max-h)';
                 origImg.style.objectFit = 'contain';
                 origImg.style.left = '0';
                 origImg.style.top = '0';
@@ -6352,8 +6379,11 @@
             ? (crop.cropRect.width / crop.cropRect.height)
             : (normCrop.width / normCrop.height);
 
-        const maxH = Math.max(300, window.innerHeight - 275);
-        const maxW = Math.max(400, window.innerWidth * 0.8);
+        const isMobileView = window.innerWidth <= 768;
+        const maxH = Math.max(240, window.innerHeight - (isMobileView ? 290 : 275));
+        const maxW = isMobileView
+            ? Math.max(200, window.innerWidth - 24)
+            : Math.max(400, window.innerWidth * 0.8);
 
         let targetH, targetW;
         if (cropAspect >= (maxW / maxH)) {
@@ -6862,16 +6892,18 @@
             mainImg.style.position = 'relative';
             mainImg.style.left = '0';
             mainImg.style.top = '0';
-            mainImg.style.maxWidth = '80vw';
-            mainImg.style.maxHeight = 'calc(100vh - 275px)';
+            mainImg.style.maxWidth = 'var(--pv-img-max-w)';
+            mainImg.style.maxHeight = 'var(--pv-img-max-h)';
             mainImg.style.objectFit = 'contain';
         }
 
         if (origImg) {
             origImg.style.transform = 'none';
-            origImg.style.position = 'relative';
-            origImg.style.width = '100%';
-            origImg.style.height = '100%';
+            origImg.style.position = 'absolute';
+            origImg.style.width = 'auto';
+            origImg.style.height = 'auto';
+            origImg.style.maxWidth = 'var(--pv-img-max-w)';
+            origImg.style.maxHeight = 'var(--pv-img-max-h)';
             origImg.style.objectFit = 'contain';
             origImg.style.left = '0';
             origImg.style.top = '0';
