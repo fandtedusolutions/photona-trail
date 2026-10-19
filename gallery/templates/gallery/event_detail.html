@@ -5006,6 +5006,7 @@
         const origImg = document.getElementById('pvOriginalImg');
         const box = document.getElementById('pvSplitBox');
         if (!mainImg || !box) return;
+        updateStageMaxSize();
 
         box.classList.remove('has-aspect');
         box.style.aspectRatio = 'unset';
@@ -5038,6 +5039,21 @@
             origImg.style.transform = `rotate(${totalAngle}deg) scale(${currentZoom}) scaleX(${scaleX}) scaleY(${scaleY})`;
         }
         syncOriginalToMain();
+    }
+
+    // Measure the real free area of the stage and expose it as CSS vars so the
+    // photo always fits completely (no clipping / no top cut-off on phones).
+    function updateStageMaxSize() {
+        const wrap = document.getElementById('pvSplitStageWrap');
+        if (!wrap || !wrap.clientWidth || !wrap.clientHeight) return null;
+        const cs = getComputedStyle(wrap);
+        const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+        const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+        const w = Math.max(120, Math.floor(wrap.clientWidth - padX - 4));
+        const h = Math.max(120, Math.floor(wrap.clientHeight - padY - 8));
+        document.documentElement.style.setProperty('--pv-img-max-w', w + 'px');
+        document.documentElement.style.setProperty('--pv-img-max-h', h + 'px');
+        return { w, h };
     }
 
     // Pin the "Original" layer to the exact pixel box of the preset image so
@@ -6409,10 +6425,11 @@
             : (normCrop.width / normCrop.height);
 
         const isMobileView = window.innerWidth <= 768;
-        const maxH = Math.max(240, window.innerHeight - (isMobileView ? 290 : 275));
-        const maxW = isMobileView
+        const measured = updateStageMaxSize();
+        const maxH = measured ? measured.h : Math.max(240, window.innerHeight - (isMobileView ? 290 : 275));
+        const maxW = measured ? measured.w : (isMobileView
             ? Math.max(200, window.innerWidth - 24)
-            : Math.max(400, window.innerWidth * 0.8);
+            : Math.max(400, window.innerWidth * 0.8));
 
         let targetH, targetW;
         if (cropAspect >= (maxW / maxH)) {
@@ -6459,6 +6476,7 @@
     const applyCroppedViewToViewer = applyViewerCropDisplay;
 
     window.addEventListener('resize', () => {
+        updateStageMaxSize();
         syncOriginalToMain();
         if (isCropActive) {
             syncCropOverlayPosition();
