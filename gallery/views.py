@@ -863,62 +863,57 @@ def upload_single_photo(request):
         gallery_image = GalleryImage(filename=safe_filename, event=event)
         
         file.seek(0)
+        raw_bytes = None
         
-        # Compression logic for single upload
-        compression_percentage = event.compression_percentage if event else 100
-        if compression_percentage and compression_percentage < 100:
-            try:
-                with Image.open(file) as img:
-                    img = ImageOps.exif_transpose(img)
-                    icc_profile = img.info.get('icc_profile')
+        # High-Speed Single-Pass Image Processing
+        try:
+            with Image.open(file) as img:
+                img = ImageOps.exif_transpose(img)
+                icc_profile = img.info.get('icc_profile')
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
 
+                # 1. Fast in-memory thumbnail (no duplicate disk read or re-decoding)
+                try:
+                    thumb_img = img.copy()
+                    thumb_img.thumbnail((600, 600), Image.Resampling.BILINEAR)
+                    thumb_io = BytesIO()
+                    thumb_img.save(thumb_io, format='WEBP', quality=80)
+                    thumb_io.seek(0)
+                    thumb_name = os.path.splitext(safe_filename)[0] + "_thumb.webp"
+                    gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                except Exception as te:
+                    print(f"[DEBUG] thumbnail error: {te}")
+
+                # 2. Fast dimension compression if event compression is set < 100%
+                compression_percentage = event.compression_percentage if event else 100
+                if compression_percentage and compression_percentage < 100:
                     scale_factor = float(compression_percentage) / 100.0
                     new_width = max(1, int(img.width * scale_factor))
                     new_height = max(1, int(img.height * scale_factor))
-
                     if new_width < img.width and new_height < img.height:
-                        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                        img = img.resize((new_width, new_height), Image.Resampling.BILINEAR)
 
-                    if img.mode in ('RGBA', 'P'): 
-                        img = img.convert('RGB')
-                    
-                    ext = os.path.splitext(safe_filename)[1].lower()
-                    fmt = 'JPEG'
-                    if ext == '.webp': fmt = 'WEBP'
-                    if ext == '.png': fmt = 'JPEG'
-                    
                     compressed_io = BytesIO()
-                    save_kwargs = {'format': fmt, 'quality': 92, 'optimize': True}
+                    save_kwargs = {'format': 'JPEG', 'quality': 88}
                     if icc_profile:
                         save_kwargs['icc_profile'] = icc_profile
 
                     img.save(compressed_io, **save_kwargs)
                     compressed_io.seek(0)
-                    
-                    file = File(compressed_io, name=safe_filename)
-            except Exception as e:
-                print(f"[DEBUG] single upload compression error: {e}")
-                file.seek(0)
-        
-        raw_bytes = file.read()
-        file.seek(0)
-        
-        gallery_image.file.save(safe_filename, file, save=False)
-        
-        try:
-            file.seek(0)
-            with Image.open(file) as img:
-                img = ImageOps.exif_transpose(img)
-                img.thumbnail((600, 600), Image.Resampling.LANCZOS)
-                thumb_io = BytesIO()
-                if img.mode in ('RGBA', 'P'):
-                    img = img.convert('RGB')
-                img.save(thumb_io, format='WEBP', quality=80)
-                thumb_io.seek(0)
-                thumb_name = os.path.splitext(safe_filename)[0] + "_thumb.webp"
-                gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                    raw_bytes = compressed_io.getvalue()
+                    gallery_image.file.save(safe_filename, File(compressed_io), save=False)
+                else:
+                    file.seek(0)
+                    raw_bytes = file.read()
+                    file.seek(0)
+                    gallery_image.file.save(safe_filename, file, save=False)
         except Exception as e:
-            print(f"[DEBUG] thumbnail error: {e}")
+            print(f"[DEBUG] single upload processing fallback: {e}")
+            file.seek(0)
+            raw_bytes = file.read()
+            file.seek(0)
+            gallery_image.file.save(safe_filename, file, save=False)
             
         gallery_image.save()
         

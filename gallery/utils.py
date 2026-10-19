@@ -61,12 +61,12 @@ def process_gallery_image(gallery_image, local_path=None, raw_bytes=None):
     elif img.shape[2] == 3:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # Downscale very large images (DSLR photos) for fast, robust face detection
+    # Downscale large DSLR images for lightning-fast, accurate face detection
     h, w = img.shape[:2]
-    max_dim = 1920
+    max_dim = 1280
     if max(h, w) > max_dim:
         scale = max_dim / float(max(h, w))
-        img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+        img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_LINEAR)
     
     # Detect faces
     faces = app.get(img)

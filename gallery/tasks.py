@@ -39,7 +39,7 @@ def compress_image_if_needed(image_path, compression_percentage):
             new_height = max(1, int(img.height * scale_factor))
             
             if new_width < img.width and new_height < img.height:
-                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                img = img.resize((new_width, new_height), Image.Resampling.BILINEAR)
                 
             if img.mode in ('RGBA', 'P'): 
                 img = img.convert('RGB')
@@ -47,11 +47,10 @@ def compress_image_if_needed(image_path, compression_percentage):
             ext = os.path.splitext(image_path)[1].lower()
             fmt = 'JPEG'
             if ext == '.webp': fmt = 'WEBP'
-            if ext == '.png': fmt = 'JPEG'
             
             temp_save_path = f"{image_path}.{uuid.uuid4().hex}.tmp"
             
-            save_kwargs = {'format': fmt, 'quality': 92, 'optimize': True}
+            save_kwargs = {'format': fmt, 'quality': 88}
             if icc_profile:
                 save_kwargs['icc_profile'] = icc_profile
                 

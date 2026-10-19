@@ -3525,36 +3525,19 @@
         const csrfToken = document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value;
         const eventId = '{{ event.id }}';
 
-        // 2. Sequential Upload Queue Loop
-        for (let idx = 0; idx < totalFiles; idx++) {
+        // 2. High-Speed Concurrent Upload Queue (3 parallel streams)
+        const CONCURRENCY = Math.min(3, totalFiles);
+        let currentIndex = 0;
+
+        async function processUploadTask(idx) {
             const file = filesToProcess[idx];
             const isZip = file.name.split('.').pop().toLowerCase() === 'zip';
             const statusBadge = document.getElementById(`queue-status-${idx}`);
             const localUrl = isZip ? '' : URL.createObjectURL(file);
 
-            // Calculate starting progress for this item
-            const pctStart = Math.round((idx / totalFiles) * 100);
-            queueProgressBar.style.width = `${pctStart}%`;
-
-            // Create or update the floating thumbnail on the progress bar
-            if (!isZip) {
-                let progressThumb = document.getElementById('progressThumb');
-                if (!progressThumb) {
-                    progressThumb = document.createElement('img');
-                    progressThumb.id = 'progressThumb';
-                    progressThumb.style.cssText = 'position: absolute; right: -14px; top: -11px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 10px rgba(79, 70, 229, 0.5); object-fit: cover; transition: opacity 0.3s ease, right 0.3s ease; opacity: 1; z-index: 20; background: var(--bg-secondary);';
-                    queueProgressBar.appendChild(progressThumb);
-                }
-                progressThumb.src = localUrl;
-                progressThumb.style.opacity = '1';
-            } else {
-                let progressThumb = document.getElementById('progressThumb');
-                if (progressThumb) progressThumb.style.opacity = '0';
-            }
-
             if (statusBadge) {
                 statusBadge.className = 'badge badge-purple';
-                statusBadge.innerText = '🔄 AI Processing...';
+                statusBadge.innerText = '🔄 Uploading & AI...';
             }
 
             try {
@@ -3587,7 +3570,7 @@
                             statusBadge.innerText = `✅ Finished (👤 ${img.total_faces} faces)`;
                         }
 
-                        // Stream & Add photo to Event Photos section at the same time!
+                        // Stream & Add photo to Event Photos section in real-time!
                         if (noPhotosMsg) noPhotosMsg.style.display = 'none';
                         if (!knownPhotoIds.has(img.id)) {
                             knownPhotoIds.add(img.id);
@@ -3621,7 +3604,31 @@
             queueCountText.innerText = `⚡ Processing Queue (${completedCount} / ${totalFiles})`;
             queuePercentText.innerText = `${pct}%`;
             queueProgressBar.style.width = `${pct}%`;
+
+            if (!isZip && localUrl) {
+                let progressThumb = document.getElementById('progressThumb');
+                if (!progressThumb) {
+                    progressThumb = document.createElement('img');
+                    progressThumb.id = 'progressThumb';
+                    progressThumb.style.cssText = 'position: absolute; right: -14px; top: -11px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 10px rgba(79, 70, 229, 0.5); object-fit: cover; transition: opacity 0.3s ease, right 0.3s ease; opacity: 1; z-index: 20; background: var(--bg-secondary);';
+                    queueProgressBar.appendChild(progressThumb);
+                }
+                progressThumb.src = localUrl;
+            }
         }
+
+        async function queueWorker() {
+            while (currentIndex < totalFiles) {
+                const idx = currentIndex++;
+                await processUploadTask(idx);
+            }
+        }
+
+        const workers = [];
+        for (let w = 0; w < CONCURRENCY; w++) {
+            workers.push(queueWorker());
+        }
+        await Promise.all(workers);
 
         showToast(`All ${totalFiles} photos processed & indexed!`, "success");
         
