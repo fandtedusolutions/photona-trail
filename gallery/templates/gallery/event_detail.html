@@ -35,12 +35,20 @@
         margin-bottom: 0.85rem;
     }
 
-    /* ── Upload Strip ── */
+    /* ── Upload Strip & Mobile Tabs ── */
     .upload-strip {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1.25rem;
         margin-bottom: 2rem;
+    }
+    .upload-mobile-tabs {
+        display: none;
+    }
+    @media (min-width: 901px) {
+        .upload-strip .upload-card-pane {
+            display: flex !important;
+        }
     }
 
     /* ── Main Two-Column Layout ── */
@@ -357,6 +365,54 @@
         }
         .upload-strip {
             grid-template-columns: 1fr;
+            margin-bottom: 1.25rem;
+        }
+        .upload-mobile-tabs {
+            display: flex;
+            gap: 6px;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 14px;
+            margin-bottom: 1rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        }
+        .upload-mobile-tab {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 9px 12px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 750;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .upload-mobile-tab.active {
+            background: #ffffff;
+            color: #0f172a;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+        .upload-mobile-tab#tabBtnLocalUpload.active {
+            color: #4f46e5;
+        }
+        .upload-mobile-tab#tabBtnDriveUpload.active {
+            color: #059669;
+        }
+        .upload-mobile-tab .upload-tab-icon {
+            font-size: 0.95rem;
+        }
+        .upload-strip .upload-card-pane {
+            display: none !important;
+        }
+        .upload-strip .upload-card-pane.active-mobile-pane {
+            display: flex !important;
         }
     }
     
@@ -2560,10 +2616,22 @@
     </div>
 </div>
 
+<!-- ── Mobile Upload Tab Switcher ── -->
+<div class="upload-mobile-tabs" id="uploadMobileTabs">
+    <button type="button" class="upload-mobile-tab active" id="tabBtnLocalUpload" onclick="switchUploadSourceTab('local')">
+        <span class="upload-tab-icon">📤</span>
+        <span class="upload-tab-text">Upload Photos</span>
+    </button>
+    <button type="button" class="upload-mobile-tab" id="tabBtnDriveUpload" onclick="switchUploadSourceTab('drive')">
+        <span class="upload-tab-icon">🔗</span>
+        <span class="upload-tab-text">Import from Drive</span>
+    </button>
+</div>
+
 <!-- ── Upload Strip ── -->
 <div class="upload-strip">
     <!-- Local Upload Card -->
-    <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+    <div class="card upload-card-pane active-mobile-pane" id="uploadCardLocal" style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                 <h3 class="card-title" style="margin-bottom: 0;">
@@ -2617,7 +2685,7 @@
     </div>
 
     <!-- Google Drive Card -->
-    <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+    <div class="card upload-card-pane" id="uploadCardDrive" style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                 <h3 class="card-title" style="margin-bottom: 0;">
@@ -3846,6 +3914,28 @@
 
     // Check status on initial page load
     checkImportStatus();
+
+    // ── Mobile Upload Tab Switching Logic ──
+    function switchUploadSourceTab(source) {
+        const btnLocal = document.getElementById('tabBtnLocalUpload');
+        const btnDrive = document.getElementById('tabBtnDriveUpload');
+        const cardLocal = document.getElementById('uploadCardLocal');
+        const cardDrive = document.getElementById('uploadCardDrive');
+
+        if (!btnLocal || !btnDrive || !cardLocal || !cardDrive) return;
+
+        if (source === 'drive') {
+            btnDrive.classList.add('active');
+            btnLocal.classList.remove('active');
+            cardDrive.classList.add('active-mobile-pane');
+            cardLocal.classList.remove('active-mobile-pane');
+        } else {
+            btnLocal.classList.add('active');
+            btnDrive.classList.remove('active');
+            cardLocal.classList.add('active-mobile-pane');
+            cardDrive.classList.remove('active-mobile-pane');
+        }
+    }
 
     // ── Tab Switching Logic ──
     function switchAdminTab(tabName) {
