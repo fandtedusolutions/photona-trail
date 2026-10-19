@@ -175,11 +175,22 @@ def extract_gdrive_id(url):
     return match.group(1) if match else None
 
 def download_gdrive_file_by_id(file_id, output_path):
-    # Pure requests approach with confirmation token handling (avoids gdown infinite loops on AWS EC2)
+    # 1. Try gdown first
+    try:
+        res = gdown.download(id=file_id, output=output_path, quiet=True, fuzzy=True)
+        if res and os.path.exists(output_path) and os.path.getsize(output_path) > 100:
+            return True
+    except Exception as e:
+        print(f"[DEBUG] gdown download failed for {file_id}: {e}")
+
+    # 2. Fallback with requests session and confirmation token
     try:
         import requests
-        URL = "https://docs.google.com/uc?export=download"
         session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        })
+        URL = "https://docs.google.com/uc?export=download"
         response = session.get(URL, params={'id': file_id}, stream=True, timeout=30)
 
         token = None
@@ -187,7 +198,11 @@ def download_gdrive_file_by_id(file_id, output_path):
             if key.startswith('download_warning'):
                 token = value
                 break
-                
+        if not token and response.status_code == 200:
+            match = re.search(r'confirm=([0-9A-Za-z_]+)', response.text)
+            if match:
+                token = match.group(1)
+
         if token:
             response = session.get(URL, params={'id': file_id, 'confirm': token}, stream=True, timeout=30)
 
@@ -210,6 +225,7 @@ def download_gdrive_file_by_id(file_id, output_path):
 
 def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=None):
     from .job_tracker import get_job, update_job
+    import cv2
     event = None
     if event_id:
         event = Event.objects.filter(id=event_id).first()
@@ -221,7 +237,6 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
     total_faces = 0
     
     try:
-        file_ids = []
         is_folder = "/folders/" in url or "/drive/folders/" in url or ("id=" in url and "folder" in url.lower())
         
         if is_folder:
@@ -229,192 +244,196 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
             if not folder_id:
                 raise ValueError("Could not extract Google Drive folder ID from URL.")
                 
-            print(f"[GDrive] Parsing folder {folder_id}...")
+            print(f"[GDrive] Processing folder {folder_id}...")
             
+            # 1. If official GDRIVE_API_KEY is configured, try it
+            api_downloaded = False
             if hasattr(settings, 'GDRIVE_API_KEY') and settings.GDRIVE_API_KEY:
-                print("[GDrive] Using official Google Drive API for pagination...")
-                api_key = settings.GDRIVE_API_KEY
-                page_token = ""
-                file_ids = []
-                while True:
-                    api_url = f"https://www.googleapis.com/drive/v3/files?q='{folder_id}'+in+parents+and+trashed=false&key={api_key}&pageToken={page_token}&pageSize=1000&fields=nextPageToken,files(id)"
-                    res = requests.get(api_url).json()
-                    if 'files' in res:
-                        file_ids.extend([item['id'] for item in res['files']])
-                    if 'error' in res:
-                        print(f"[GDrive] API Error: {res['error']}")
-                        break
-                    page_token = res.get('nextPageToken')
-                    if not page_token:
-                        break
-            else:
-                print("[GDrive] Using regex extraction for folder contents (limited to ~60 files)...")
-                folder_page_url = f"https://drive.google.com/drive/folders/{folder_id}?usp=sharing"
-                session = requests.Session()
-                session.headers.update({
-                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                })
-                resp = session.get(folder_page_url, timeout=20)
-                extracted = set(re.findall(r'\"([a-zA-Z0-9-_]{25,35})\"', resp.text))
-                file_ids = [fid for fid in extracted if fid != folder_id]
-                
-            print(f"[GDrive] Discovered {len(file_ids)} public files in folder {folder_id}")
+                try:
+                    print("[GDrive] Using official Google Drive API for pagination...")
+                    api_key = settings.GDRIVE_API_KEY
+                    page_token = ""
+                    api_files = []
+                    while True:
+                        api_url = f"https://www.googleapis.com/drive/v3/files?q='{folder_id}'+in+parents+and+trashed=false&key={api_key}&pageToken={page_token}&pageSize=1000&fields=nextPageToken,files(id,name)"
+                        res = requests.get(api_url, timeout=20).json()
+                        if 'files' in res:
+                            api_files.extend(res['files'])
+                        if 'error' in res or not res.get('nextPageToken'):
+                            break
+                        page_token = res.get('nextPageToken')
+                    
+                    if api_files:
+                        if job_id:
+                            update_job(job_id, {'message': f'Found {len(api_files)} files. Downloading...'})
+                        for item in api_files:
+                            fid = item['id']
+                            fname = item.get('name', f"{fid}.jpg")
+                            out_path = os.path.join(temp_dir, fname)
+                            download_gdrive_file_by_id(fid, out_path)
+                        api_downloaded = True
+                except Exception as api_err:
+                    print(f"[GDrive] API pagination failed: {api_err}")
+
+            # 2. Use gdown to download folder contents directly
+            if not api_downloaded or not any(os.scandir(temp_dir)):
+                print("[GDrive] Downloading folder via gdown...")
+                folder_url = f"https://drive.google.com/drive/folders/{folder_id}"
+                if job_id:
+                    update_job(job_id, {'message': 'Downloading photos from Google Drive folder...'})
+                try:
+                    gdown.download_folder(url=folder_url, output=temp_dir, quiet=True, use_cookies=False)
+                except Exception as gd_err:
+                    print(f"[GDrive] gdown folder download error: {gd_err}")
+                    err_text = str(gd_err)
+                    if '404' in err_text or 'permission' in err_text.lower() or 'cannot retrieve' in err_text.lower():
+                        raise ValueError("Could not access Google Drive folder. Please ensure the link sharing is set to 'Anyone with the link can view'.")
+                    raise ValueError(f"Google Drive folder download failed: {gd_err}")
+
         else:
+            # Single file or ZIP link
             file_id = extract_gdrive_id(url)
-            if file_id:
-                file_ids = [file_id]
+            if not file_id:
+                raise ValueError("Could not extract Google Drive file ID from URL.")
+                
+            if job_id:
+                update_job(job_id, {'message': 'Downloading file from Google Drive...'})
+                
+            tmp_file_path = os.path.join(temp_dir, f"{file_id}.tmp")
+            success = download_gdrive_file_by_id(file_id, tmp_file_path)
+            if not success:
+                try:
+                    gdown.download(url=url, output=tmp_file_path, quiet=True, fuzzy=True)
+                except Exception as ge:
+                    print(f"[GDrive] gdown single file download failed: {ge}")
+                    
+            if not os.path.exists(tmp_file_path) or os.path.getsize(tmp_file_path) < 100:
+                raise ValueError("Could not download file from Google Drive. Please ensure the link sharing is set to 'Anyone with the link can view'.")
 
-        if not file_ids:
-            raise ValueError("No public files found in the Google Drive link.")
+        # Extract any downloaded ZIP archives in temp_dir
+        raw_files = []
+        for root, dirs, files in os.walk(temp_dir):
+            for file_name in files:
+                if not file_name.startswith('.'):
+                    raw_files.append(os.path.join(root, file_name))
 
-        total_files = len(file_ids)
+        for fpath in raw_files:
+            if fpath.lower().endswith('.zip') or zipfile.is_zipfile(fpath):
+                try:
+                    extract_zip_path = os.path.join(temp_dir, f"zip_{uuid.uuid4().hex[:6]}")
+                    with zipfile.ZipFile(fpath, 'r') as zip_ref:
+                        zip_ref.extractall(extract_zip_path)
+                except Exception as ze:
+                    print(f"[DEBUG] Error extracting ZIP {fpath}: {ze}")
+
+        # Gather all valid images
+        valid_images = []
+        for root, dirs, files in os.walk(temp_dir):
+            for file_name in sorted(files):
+                if file_name.startswith('.') or file_name.lower().endswith('.zip'):
+                    continue
+                full_path = os.path.join(root, file_name)
+                ext = os.path.splitext(file_name)[1].lower()
+                if ext in VALID_IMAGE_EXTENSIONS:
+                    valid_images.append(full_path)
+                elif ext == '.tmp':
+                    test_img = cv2.imread(full_path)
+                    if test_img is not None:
+                        valid_images.append(full_path)
+
+        total_files = len(valid_images)
+        if total_files == 0:
+            raise ValueError("No photos found in Google Drive link. Please make sure the folder contains image files (JPG, PNG, WEBP) and link sharing is set to 'Anyone with the link can view'.")
+
+        print(f"[GDrive] Found {total_files} images to process.")
         if job_id:
             update_job(job_id, {
                 'total': total_files,
-                'message': f"Found {total_files} files. Downloading & indexing..."
+                'current': 0,
+                'percent': 0,
+                'message': f"Found {total_files} photos. Importing & indexing..."
             })
 
-        uploaded_images = []
-
-        for fid in file_ids:
+        for idx, img_path in enumerate(valid_images):
             # Check if job was cancelled by user
             if job_id and get_job(job_id).get('cancelled'):
-                print(f"[GDrive] Import job {job_id} was cancelled by user. Stopping download loop.")
+                print(f"[GDrive] Import job {job_id} was cancelled by user. Stopping.")
                 break
 
-            tmp_file_path = os.path.join(temp_dir, f"{fid}.tmp")
-            success = download_gdrive_file_by_id(fid, tmp_file_path)
-            if not success or not os.path.exists(tmp_file_path):
-                continue
-                
             # Re-fetch event inside thread loop to avoid cross-thread DB session issues
             event = Event.objects.filter(id=event_id).first() if event_id else None
+
+            # Storage limit check
+            if event and event.owner and hasattr(event.owner, 'profile'):
+                profile = event.owner.profile
+                file_size_mb = os.path.getsize(img_path) / (1024 * 1024)
+                limit_mb = profile.effective_storage_limit_mb if hasattr(profile, 'effective_storage_limit_mb') else (profile.subscription_plan.storage_limit_mb if profile.subscription_plan else 0)
+                if limit_mb > 0 and (profile.used_storage_mb + file_size_mb) > limit_mb:
+                    raise Exception("Storage limit exceeded. Upgrade your plan to import more photos.")
+                profile.used_storage_mb += file_size_mb
+                profile.save(update_fields=['used_storage_mb'])
+
+            # Compression
+            compression = event.compression_percentage if event else 100
+            from .tasks import compress_image_if_needed
+            compress_image_if_needed(img_path, compression)
+
+            file_name = os.path.basename(img_path)
+            if file_name.endswith('.tmp'):
+                clean_event_name = event.name if event else "Imported"
+                file_name = f"{clean_event_name}_Photo_{total_indexed + 1}.jpg"
+
+            with open(img_path, 'rb') as img_f:
+                gallery_image = GalleryImage(filename=file_name, event=event, total_faces=-1)
+                gallery_image.file.save(file_name, File(img_f), save=False)
                 
-            # Check if file is a ZIP archive
-            if zipfile.is_zipfile(tmp_file_path):
+                from .tasks import create_thumbnail
+                thumb_io, ext = create_thumbnail(img_path)
+                if thumb_io:
+                    thumb_name = os.path.splitext(file_name)[0] + "_thumb" + ext
+                    gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                    
+                gallery_image.save()
+
+            # Process faces
+            try:
+                from .tasks import process_single_image_task
+                process_single_image_task.delay(gallery_image.id, None)
+            except Exception:
                 try:
-                    extract_zip_path = os.path.join(temp_dir, f"zip_{fid}")
-                    with zipfile.ZipFile(tmp_file_path, 'r') as zip_ref:
-                        zip_ref.extractall(extract_zip_path)
-                        
-                    for root, dirs, files in os.walk(extract_zip_path):
-                        for file_name in files:
-                            f_ext = os.path.splitext(file_name)[1].lower()
-                            if f_ext in VALID_IMAGE_EXTENSIONS:
-                                full_img_path = os.path.join(root, file_name)
-                                img = cv2.imread(full_img_path)
-                                if img is not None:
-                                    if event and event.owner and hasattr(event.owner, 'profile'):
-                                        profile = event.owner.profile
-                                        f_size_mb = os.path.getsize(full_img_path) / (1024 * 1024)
-                                        if profile.subscription_plan and (profile.used_storage_mb + f_size_mb) > profile.subscription_plan.storage_limit_mb:
-                                            raise Exception("Storage limit exceeded. Upgrade your plan to import more photos.")
+                    num_f = process_gallery_image(gallery_image)
+                    gallery_image.total_faces = num_f
+                    gallery_image.save(update_fields=['total_faces'])
+                except Exception as pe:
+                    print(f"[DEBUG] Direct processing fallback error: {pe}")
 
-                                        profile.used_storage_mb += f_size_mb
-                                        profile.save()
+            total_indexed += 1
 
-                                    compression = event.compression_percentage if event else 100
-                                    from .tasks import compress_image_if_needed
-                                    compress_image_if_needed(full_img_path, compression)
-
-                                    with open(full_img_path, 'rb') as img_f:
-                                        gallery_image = GalleryImage(filename=file_name, event=event, total_faces=-1)
-                                        gallery_image.file.save(file_name, File(img_f), save=False)
-                                        
-                                        from .tasks import create_thumbnail
-                                        thumb_io, ext = create_thumbnail(full_img_path)
-                                        if thumb_io:
-                                            thumb_name = os.path.splitext(file_name)[0] + "_thumb" + ext
-                                            gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
-                                            
-                                        gallery_image.save()
-                                        
-                                    from .tasks import process_single_image_task
-                                    process_single_image_task.delay(gallery_image.id, None)
-                                    total_indexed += 1
-
-                                    if job_id:
-                                        pct = int((total_indexed / total_files) * 100)
-                                        update_job(job_id, {
-                                            'current': total_indexed,
-                                            'percent': min(99, pct),
-                                            'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
-                                            'new_photo': {
-                                                'id': gallery_image.id,
-                                                'url': f"/secure-media/{gallery_image.get_secure_thumbnail_token()}/",
-                                                'full_url': f"/secure-media/{gallery_image.get_secure_file_token()}/",
-                                                'filename': gallery_image.filename,
-                                                'total_faces': gallery_image.total_faces,
-                                                'preset_name': gallery_image.preset_name or 'original',
-                                                'preset_settings': gallery_image.preset_settings or {},
-                                            }
-                                        })
-                except Exception as ze:
-                    print(f"[DEBUG] Error extracting inner ZIP {fid}: {ze}")
-            else:
-                img = cv2.imread(tmp_file_path)
-                if img is not None:
-                    clean_event_name = event.name if event else "Imported"
-                    file_name = f"{clean_event_name}_Photo_{total_indexed + 1}.jpg"
-                    if event and event.owner and hasattr(event.owner, 'profile'):
-                        profile = event.owner.profile
-                        file_size_mb = os.path.getsize(tmp_file_path) / (1024 * 1024)
-                        if profile.subscription_plan and (profile.used_storage_mb + file_size_mb) > profile.subscription_plan.storage_limit_mb:
-                            raise Exception("Storage limit exceeded. Upgrade your plan to import more photos.")
-
-                        profile.used_storage_mb += file_size_mb
-                        profile.save()
-
-                    compression = event.compression_percentage if event else 100
-                    from .tasks import compress_image_if_needed
-                    compress_image_if_needed(tmp_file_path, compression)
-
-                    with open(tmp_file_path, 'rb') as img_f:
-                        gallery_image = GalleryImage(filename=file_name, event=event, total_faces=-1)
-                        gallery_image.file.save(file_name, File(img_f), save=False)
-                        
-                        from .tasks import create_thumbnail
-                        thumb_io, ext = create_thumbnail(tmp_file_path)
-                        if thumb_io:
-                            thumb_name = os.path.splitext(file_name)[0] + "_thumb" + ext
-                            gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
-                            
-                    try:
-                        from .tasks import process_single_image_task
-                        process_single_image_task.delay(gallery_image.id, None)
-                    except Exception as ce:
-                        try:
-                            num_f = process_gallery_image(gallery_image)
-                            gallery_image.total_faces = num_f
-                            gallery_image.save(update_fields=['total_faces'])
-                        except Exception as pe:
-                            print(f"[DEBUG] Direct processing fallback error: {pe}")
-                    total_indexed += 1
-
-                    if job_id:
-                        pct = int((total_indexed / total_files) * 100)
-                        update_job(job_id, {
-                            'current': total_indexed,
-                            'percent': min(99, pct),
-                            'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
-                            'new_photo': {
-                                'id': gallery_image.id,
-                                'url': f"/secure-media/{gallery_image.get_secure_thumbnail_token()}/",
-                                'full_url': f"/secure-media/{gallery_image.get_secure_file_token()}/",
-                                'filename': gallery_image.filename,
-                                'total_faces': gallery_image.total_faces,
-                                'preset_name': gallery_image.preset_name or 'original',
-                                'preset_settings': gallery_image.preset_settings or {},
-                            }
-                        })
+            if job_id:
+                pct = int((total_indexed / total_files) * 100)
+                update_job(job_id, {
+                    'current': total_indexed,
+                    'percent': min(99, pct),
+                    'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
+                    'new_photo': {
+                        'id': gallery_image.id,
+                        'url': f"/secure-media/{gallery_image.get_secure_thumbnail_token()}/",
+                        'full_url': f"/secure-media/{gallery_image.get_secure_file_token()}/",
+                        'filename': gallery_image.filename,
+                        'total_faces': gallery_image.total_faces,
+                        'preset_name': gallery_image.preset_name or 'original',
+                        'preset_settings': gallery_image.preset_settings or {},
+                    }
+                })
 
     except Exception as e:
         print(f"[DEBUG] Google Drive import error: {e}")
         raise e
     finally:
-        # Only clean up temp files — job status is managed by the caller (views.py)
+        # Clean up temp folder
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)
             
     return total_indexed, total_faces
+
 

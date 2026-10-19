@@ -1272,7 +1272,7 @@ def bulk_delete_images(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 
-from .job_tracker import get_job, update_job
+from .job_tracker import get_job, update_job, reset_job
 
 @login_required
 @require_POST
@@ -1304,31 +1304,31 @@ def gdrive_import(request):
         target_event_id = event.id
         target_event_name = event.name
         job_id = f"import_{event.id}"
-        update_job(job_id, {
-            'active': True,
-            'current': 0,
-            'total': 0,
-            'percent': 0,
-            'message': 'Connecting to Google Drive...',
-            'new_photos': []
-        })
+        reset_job(job_id)
         
         def run_import():
             try:
                 indexed, faces = download_and_index_gdrive_link(url, event_id=target_event_id, job_id=job_id)
                 print(f"[SUCCESS] Google Drive import finished for '{target_event_name}': {indexed} images, {faces} faces indexed.")
                 
-                # Run AI clustering on the newly imported faces
-                from .clustering import run_clustering_on_upload
-                re_fetched_event = Event.objects.filter(id=target_event_id).first()
-                if re_fetched_event:
-                    run_clustering_on_upload(re_fetched_event)
-                    
-                update_job(job_id, {
-                    'active': False,
-                    'percent': 100,
-                    'message': 'Import finished!'
-                })
+                if indexed > 0:
+                    # Run AI clustering on the newly imported faces
+                    from .clustering import run_clustering_on_upload
+                    re_fetched_event = Event.objects.filter(id=target_event_id).first()
+                    if re_fetched_event:
+                        run_clustering_on_upload(re_fetched_event)
+                        
+                    update_job(job_id, {
+                        'active': False,
+                        'percent': 100,
+                        'message': f'Import finished! ({indexed} photos imported)'
+                    })
+                else:
+                    update_job(job_id, {
+                        'active': False,
+                        'percent': 0,
+                        'message': 'Import error: No photos could be downloaded. Please verify the link sharing is set to "Anyone with the link can view".'
+                    })
                     
             except Exception as ex:
                 print(f"[DEBUG] Background GDrive import thread error: {ex}")

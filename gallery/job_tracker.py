@@ -16,6 +16,23 @@ def get_job(job_id):
         except:
             pass
     return {}
+def reset_job(job_id):
+    file_path = _get_job_file(job_id)
+    job = {
+        'active': True,
+        'current': 0,
+        'total': 0,
+        'percent': 0,
+        'message': 'Connecting to Google Drive...',
+        'new_photos': [],
+        'cancelled': False
+    }
+    try:
+        with open(file_path, 'w') as f:
+            json.dump(job, f)
+    except:
+        pass
+    return job
 
 def update_job(job_id, updates):
     job = get_job(job_id)

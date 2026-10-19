@@ -3999,16 +3999,18 @@
                     pollInterval = null;
                     wasPolling = true;
                 }
-                if (data.percent === 100 && data.message === 'Import finished!') {
-                    if (statusText) statusText.innerText = '✅ Import Complete!';
-                    if (percentText) percentText.innerText = '100%';
-                    if (progressBar) progressBar.style.width = '100%';
-                    setTimeout(() => {
-                        if (container) container.style.display = 'none';
-                        if (wasPolling) {
+                if (data.percent === 100 && (data.message === 'Import finished!' || (data.message && data.message.startsWith('Import finished')))) {
+                    if (wasPolling) {
+                        if (statusText) statusText.innerText = '✅ ' + (data.message || 'Import Complete!');
+                        if (percentText) percentText.innerText = '100%';
+                        if (progressBar) progressBar.style.width = '100%';
+                        setTimeout(() => {
+                            if (container) container.style.display = 'none';
                             loadPeople();
-                        }
-                    }, 2000);
+                        }, 3000);
+                    } else if (container) {
+                        container.style.display = 'none';
+                    }
                 } else if (data.message && data.message.startsWith('Import error:')) {
                     // Show the actual error to the user
                     if (container) container.style.display = 'block';
@@ -4022,7 +4024,7 @@
                     setTimeout(() => {
                         if (container) container.style.display = 'none';
                         if (statusText) statusText.style.color = '';
-                    }, 5000);
+                    }, 6000);
                 } else if (container) {
                     container.style.display = 'none';
                 }
@@ -4064,7 +4066,20 @@
         if (!url) return;
 
         const container = document.getElementById('gdriveProgressContainer');
+        const statusText = document.getElementById('gdriveStatusText');
+        const percentText = document.getElementById('gdrivePercentText');
+        const progressBar = document.getElementById('gdriveProgressBar');
+        const queueContainer = document.getElementById('gdriveAnimQueue');
+
+        // Immediately show clean 0% progress UI
         if (container) container.style.display = 'block';
+        if (statusText) {
+            statusText.innerText = '⚡ Connecting to Google Drive...';
+            statusText.style.color = '';
+        }
+        if (percentText) percentText.innerText = '0%';
+        if (progressBar) progressBar.style.width = '0%';
+        if (queueContainer) queueContainer.innerHTML = '';
 
         const formData = new FormData();
         formData.append('gdrive_url', url);
@@ -4079,7 +4094,6 @@
                 showToast("Google Drive import started!", "success");
                 if (pollInterval) clearInterval(pollInterval);
                 pollInterval = setInterval(checkImportStatus, 1200);
-                checkImportStatus();
             } else {
                 customAlert("Import Failed", data.message);
                 if (container) container.style.display = 'none';
