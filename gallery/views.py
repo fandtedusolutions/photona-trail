@@ -518,6 +518,179 @@ def _calc_wm_coords(W, H, w, h, margin, pos):
     elif pos == 'bottom-center': return ((W - w) // 2, H - h - margin)
     else: return (W - w - margin, H - h - margin) # default bottom-right
 
+def apply_preset_and_crop_to_image(image_bytes, preset_name, preset_settings):
+    """
+    Non-destructively applies preset color adjustments and framing/crop to image bytes
+    for user downloads, preserving the untouched original file on disk.
+    """
+    if not preset_name and not preset_settings:
+        return image_bytes
+
+    is_original = (not preset_name or preset_name.lower() in ('original', 'none', 'default', ''))
+    crop = preset_settings.get('crop') if isinstance(preset_settings, dict) else None
+
+    # Check if there are any crop settings to apply
+    has_crop = bool(crop and (
+        crop.get('cropRect') or crop.get('normCrop') or
+        crop.get('rotation') or crop.get('straightenAngle') or
+        crop.get('flipH') or crop.get('flipV') or
+        (crop.get('aspectRatio') and crop.get('aspectRatio') != 'original') or
+        (crop.get('zoom') and float(crop.get('zoom')) > 1.01)
+    ))
+
+    fine_tune = preset_settings if isinstance(preset_settings, dict) else {}
+    has_fine_tune = any(fine_tune.get(k) for k in ('exposure', 'contrast', 'saturation', 'temp', 'tint', 'highlights', 'shadows', 'bw'))
+
+    if is_original and not has_crop and not has_fine_tune:
+        return image_bytes
+
+    try:
+        from io import BytesIO
+        from PIL import Image, ImageOps, ImageEnhance
+        import numpy as np
+
+        img = Image.open(BytesIO(image_bytes))
+        img = ImageOps.exif_transpose(img)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        # 1. Apply Orientation & Crop
+        if crop and isinstance(crop, dict):
+            # Rotation
+            rotation = int(crop.get('rotation') or 0)
+            if rotation % 360 != 0:
+                img = img.rotate(-rotation, expand=True)
+
+            # Straighten
+            straighten = float(crop.get('straightenAngle') or 0)
+            if abs(straighten) > 0.01:
+                img = img.rotate(-straighten, resample=Image.Resampling.BICUBIC, expand=False)
+
+            # Flips
+            if crop.get('flipH'):
+                img = ImageOps.mirror(img)
+            if crop.get('flipV'):
+                img = ImageOps.flip(img)
+
+            # Crop rectangle
+            norm_crop = crop.get('normCrop')
+            crop_rect = crop.get('cropRect')
+            if norm_crop and isinstance(norm_crop, dict) and norm_crop.get('width', 1) < 0.999:
+                w, h = img.size
+                x1 = max(0, min(w - 10, int(norm_crop.get('x', 0) * w)))
+                y1 = max(0, min(h - 10, int(norm_crop.get('y', 0) * h)))
+                cw = max(10, min(w - x1, int(norm_crop.get('width', 1) * w)))
+                ch = max(10, min(h - y1, int(norm_crop.get('height', 1) * h)))
+                img = img.crop((x1, y1, x1 + cw, y1 + ch))
+            elif crop_rect and isinstance(crop_rect, dict) and crop_rect.get('width', 0) > 20:
+                w, h = img.size
+                rx = int(crop_rect.get('x', 0))
+                ry = int(crop_rect.get('y', 0))
+                rw = int(crop_rect.get('width', w))
+                rh = int(crop_rect.get('height', h))
+                x1 = max(0, min(w - 10, rx))
+                y1 = max(0, min(h - 10, ry))
+                x2 = max(x1 + 10, min(w, x1 + rw))
+                y2 = max(y1 + 10, min(h, y1 + rh))
+                img = img.crop((x1, y1, x2, y2))
+            elif crop.get('aspectRatio') and crop.get('aspectRatio') != 'original':
+                aspect_map = {
+                    '1:1': 1.0,
+                    '4:5': 4.0 / 5.0,
+                    '16:9': 16.0 / 9.0,
+                    '9:16': 9.0 / 16.0,
+                    '3:2': 3.0 / 2.0,
+                }
+                target_aspect = aspect_map.get(crop.get('aspectRatio'))
+                if target_aspect:
+                    w, h = img.size
+                    zoom = max(1.0, float(crop.get('zoom') or 1.0))
+                    norm_pan_x = float(crop.get('normPanX') or 0.0)
+                    norm_pan_y = float(crop.get('normPanY') or 0.0)
+
+                    if (w / h) >= target_aspect:
+                        box_h = h / zoom
+                        box_w = box_h * target_aspect
+                    else:
+                        box_w = w / zoom
+                        box_h = box_w / target_aspect
+
+                    cx = (w / 2.0) - (norm_pan_x * w)
+                    cy = (h / 2.0) - (norm_pan_y * h)
+                    x1 = max(0, min(w - box_w, cx - box_w / 2.0))
+                    y1 = max(0, min(h - box_h, cy - box_h / 2.0))
+                    img = img.crop((int(x1), int(y1), int(x1 + box_w), int(y1 + box_h)))
+
+        # 2. Preset Default Baseline
+        PRESET_PROFILES = {
+            'bw': {'exposure': 2, 'contrast': 26, 'saturation': -100, 'bw': True},
+            'warm': {'exposure': 4, 'contrast': 6, 'saturation': 25, 'temp': 20, 'tint': -4},
+            'editorial': {'exposure': 3, 'contrast': 24, 'saturation': -8, 'temp': -2, 'tint': 2},
+            'cinematic': {'exposure': -2, 'contrast': 18, 'saturation': 12, 'temp': -8, 'tint': 8},
+            'natural': {'exposure': 4, 'contrast': 8, 'saturation': 10, 'temp': 2, 'tint': 0},
+            'film': {'exposure': 5, 'contrast': 10, 'saturation': 14, 'temp': 8, 'tint': 4},
+            'vintage': {'exposure': 2, 'contrast': 12, 'saturation': 25, 'temp': 25, 'tint': -8},
+            'moody': {'exposure': -8, 'contrast': 30, 'saturation': -15, 'temp': 0},
+        }
+
+        active_settings = {}
+        if preset_name and preset_name.lower() in PRESET_PROFILES:
+            active_settings.update(PRESET_PROFILES[preset_name.lower()])
+
+        if isinstance(preset_settings, dict):
+            for k in ('exposure', 'contrast', 'saturation', 'temp', 'tint', 'highlights', 'shadows', 'bw'):
+                if k in preset_settings:
+                    active_settings[k] = preset_settings[k]
+
+        # 3. Apply Color Adjustments
+        is_bw = active_settings.get('bw') or active_settings.get('saturation') == -100 or (preset_name and preset_name.lower() == 'bw')
+        if is_bw:
+            img = ImageOps.grayscale(img).convert('RGB')
+
+        # Brightness / Exposure
+        exp = float(active_settings.get('exposure') or 0)
+        if abs(exp) > 0.01:
+            b_factor = max(0.2, min(2.5, 1.0 + (exp / 50.0) * 0.35))
+            img = ImageEnhance.Brightness(img).enhance(b_factor)
+
+        # Contrast
+        cnt = float(active_settings.get('contrast') or 0)
+        if abs(cnt) > 0.01:
+            c_factor = max(0.2, min(2.5, 1.0 + (cnt / 50.0) * 0.45))
+            img = ImageEnhance.Contrast(img).enhance(c_factor)
+
+        # Saturation (if not B&W)
+        if not is_bw:
+            sat = float(active_settings.get('saturation') or 0)
+            if abs(sat) > 0.01:
+                s_factor = max(0.0, min(3.0, 1.0 + (sat / 50.0) * 0.55))
+                img = ImageEnhance.Color(img).enhance(s_factor)
+
+        # Warmth (Temp) and Tint using numpy
+        temp = float(active_settings.get('temp') or 0)
+        tint = float(active_settings.get('tint') or 0)
+        if abs(temp) > 0.01 or abs(tint) > 0.01:
+            arr = np.array(img, dtype=np.float32)
+            if abs(temp) > 0.01:
+                w_delta = (temp / 50.0) * 22.0
+                arr[:, :, 0] += w_delta       # Red
+                arr[:, :, 2] -= w_delta       # Blue
+            if abs(tint) > 0.01:
+                t_delta = (tint / 50.0) * 16.0
+                arr[:, :, 1] -= t_delta       # Green
+                arr[:, :, 0] += t_delta * 0.5 # Red
+                arr[:, :, 2] += t_delta * 0.5 # Blue
+            arr = np.clip(arr, 0, 255).astype(np.uint8)
+            img = Image.fromarray(arr)
+
+        out_io = BytesIO()
+        img.save(out_io, format='JPEG', quality=95, optimize=False)
+        return out_io.getvalue()
+    except Exception as e:
+        print(f"[ERROR] apply_preset_and_crop_to_image failed: {e}")
+        return image_bytes
+
+
 def apply_watermark_to_image(image_bytes, event):
     """
     Dynamically burns the event watermark into image bytes for guest downloads.
@@ -1484,7 +1657,11 @@ def download_single_image(request, image_id):
     if content is None:
         return HttpResponse("Failed to download image", status=500)
 
-    # Apply watermark non-destructively if watermark is enabled on the event
+    # 1. Apply preset adjustments and crop non-destructively
+    if img.preset_name or img.preset_settings:
+        content = apply_preset_and_crop_to_image(content, img.preset_name, img.preset_settings)
+
+    # 2. Apply watermark non-destructively if watermark is enabled on the event
     if img.event and img.event.watermark_enabled:
         content = apply_watermark_to_image(content, img.event)
         
@@ -1559,6 +1736,8 @@ def download_images_zip(request):
                         print(f"Error fetching zip image file: {e}")
 
                     if content:
+                        if img.preset_name or img.preset_settings:
+                            content = apply_preset_and_crop_to_image(content, img.preset_name, img.preset_settings)
                         if img.event and img.event.watermark_enabled:
                             content = apply_watermark_to_image(content, img.event)
                         zip_file.writestr(zip_filename, content)
