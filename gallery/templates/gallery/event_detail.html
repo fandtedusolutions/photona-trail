@@ -726,6 +726,9 @@
         height: auto;
         object-fit: contain;
         pointer-events: none;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: auto;
+        transform: translateZ(0);
         transition: opacity 0.2s ease, filter 0.15s ease, transform 0.2s ease;
     }
 
@@ -751,6 +754,8 @@
         width: 100%;
         height: 100%;
         filter: none !important;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: auto;
     }
 
     /* Badges on the image */
@@ -3409,11 +3414,19 @@
     }
 
     function makePhotoCard(img, downloadName, uploading = false) {
-        if (img && img.id && !allPhotosList.some(p => p.id === img.id)) {
-            if (uploading) {
-                allPhotosList.unshift(img);
+        if (img && img.id) {
+            const existing = allPhotosList.find(p => p.id === img.id);
+            if (!existing) {
+                if (uploading) {
+                    allPhotosList.unshift(img);
+                } else {
+                    allPhotosList.push(img);
+                }
             } else {
-                allPhotosList.push(img);
+                if (img.full_url) existing.full_url = img.full_url;
+                if (img.url) existing.url = img.url;
+                if (img.preset_name) existing.preset_name = img.preset_name;
+                if (img.preset_settings) existing.preset_settings = img.preset_settings;
             }
         }
 
@@ -3878,7 +3891,13 @@
             }
             data.images.forEach(img => {
                 knownPhotoIds.add(img.id);
-                if (!allPhotosList.some(p => p.id === img.id)) {
+                const existing = allPhotosList.find(p => p.id === img.id);
+                if (existing) {
+                    if (img.full_url) existing.full_url = img.full_url;
+                    if (img.url) existing.url = img.url;
+                    if (img.preset_name) existing.preset_name = img.preset_name;
+                    if (img.preset_settings) existing.preset_settings = img.preset_settings;
+                } else {
                     allPhotosList.push(img);
                 }
                 if (document.getElementById(`image-card-${img.id}`)) return;
@@ -4492,21 +4511,77 @@
         if (prevBtn) prevBtn.disabled = currentPhotoIndex === 0;
         if (nextBtn) nextBtn.disabled = currentPhotoIndex === allPhotosList.length - 1;
         
-        const photoUrl = photo.full_url || photo.url;
+        // Auto-fetch full_url and preset settings if missing
+        if ((!photo.full_url || photo.full_url === photo.url) && photo.id) {
+            fetch(`/api/photos/?event_slug={{ event.slug }}&photo_id=${photo.id}`)
+                .then(r => r.json())
+                .then(d => {
+                    if (d.images && d.images.length > 0) {
+                        const fresh = d.images[0];
+                        if (fresh.full_url) photo.full_url = fresh.full_url;
+                        if (fresh.preset_name && !photo.preset_name) photo.preset_name = fresh.preset_name;
+                        if (fresh.preset_settings && (!photo.preset_settings || Object.keys(photo.preset_settings).length === 0)) {
+                            photo.preset_settings = fresh.preset_settings;
+                        }
+                        const current = allPhotosList[currentPhotoIndex];
+                        if (current && current.id === photo.id && photo.full_url) {
+                            if (mainImg && mainImg.src !== photo.full_url) mainImg.src = photo.full_url;
+                            if (origImg && origImg.src !== photo.full_url) origImg.src = photo.full_url;
+                        }
+                    }
+                })
+                .catch(err => console.error("Could not fetch full photo URL:", err));
+        }
+
+        const previewThumbUrl = photo.url || photo.full_url;
+        const crispFullUrl = photo.full_url || photo.url;
         
         if (mainImg) {
-            mainImg.src = photoUrl;
-            if (mainImg.complete && mainImg.naturalWidth > 0) {
-                if (spinner) spinner.style.display = 'none';
-                mainImg.style.opacity = '1';
-                if (!isCropActive) applyViewerCropDisplay(photo);
+            // First display preview immediately to prevent UI flicker
+            if (!mainImg.src || mainImg.dataset.activePhotoId != photo.id) {
+                mainImg.src = previewThumbUrl;
+                mainImg.dataset.activePhotoId = photo.id;
+            }
+
+            // High-Resolution crisp progressive loading
+            if (photo.full_url && photo.full_url !== photo.url) {
+                if (mainImg.src === photo.full_url && mainImg.complete && mainImg.naturalWidth > 0) {
+                    if (spinner) spinner.style.display = 'none';
+                    mainImg.style.opacity = '1';
+                    if (!isCropActive) applyViewerCropDisplay(photo);
+                } else {
+                    if (spinner) spinner.style.display = 'block';
+                    const hiResLoader = new Image();
+                    hiResLoader.onload = () => {
+                        const current = allPhotosList[currentPhotoIndex];
+                        if (current && current.id === photo.id) {
+                            mainImg.src = photo.full_url;
+                            if (origImg) origImg.src = photo.full_url;
+                            if (spinner) spinner.style.display = 'none';
+                            mainImg.style.opacity = '1';
+                            if (!isCropActive) applyViewerCropDisplay(photo);
+                        }
+                    };
+                    hiResLoader.onerror = () => {
+                        if (spinner) spinner.style.display = 'none';
+                        mainImg.style.opacity = '1';
+                    };
+                    hiResLoader.src = photo.full_url;
+                }
             } else {
-                if (spinner) spinner.style.display = 'block';
-                mainImg.style.opacity = '0.35';
+                mainImg.src = crispFullUrl;
+                if (mainImg.complete && mainImg.naturalWidth > 0) {
+                    if (spinner) spinner.style.display = 'none';
+                    mainImg.style.opacity = '1';
+                    if (!isCropActive) applyViewerCropDisplay(photo);
+                } else {
+                    if (spinner) spinner.style.display = 'block';
+                    mainImg.style.opacity = '0.35';
+                }
             }
         }
         if (origImg) {
-            origImg.src = photoUrl;
+            origImg.src = crispFullUrl;
         }
         
         applyActiveFilterToImage();

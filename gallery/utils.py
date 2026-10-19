@@ -342,8 +342,11 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                                             'new_photo': {
                                                 'id': gallery_image.id,
                                                 'url': f"/secure-media/{gallery_image.get_secure_thumbnail_token()}/",
+                                                'full_url': f"/secure-media/{gallery_image.get_secure_file_token()}/",
                                                 'filename': gallery_image.filename,
-                                                'total_faces': gallery_image.total_faces
+                                                'total_faces': gallery_image.total_faces,
+                                                'preset_name': gallery_image.preset_name or 'original',
+                                                'preset_settings': gallery_image.preset_settings or {},
                                             }
                                         })
                 except Exception as ze:
@@ -390,8 +393,11 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                             'new_photo': {
                                 'id': gallery_image.id,
                                 'url': f"/secure-media/{gallery_image.get_secure_thumbnail_token()}/",
+                                'full_url': f"/secure-media/{gallery_image.get_secure_file_token()}/",
                                 'filename': gallery_image.filename,
-                                'total_faces': gallery_image.total_faces
+                                'total_faces': gallery_image.total_faces,
+                                'preset_name': gallery_image.preset_name or 'original',
+                                'preset_settings': gallery_image.preset_settings or {},
                             }
                         })
 

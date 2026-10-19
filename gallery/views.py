@@ -714,11 +714,15 @@ def photos_api(request):
     page_num = request.GET.get('page', 1)
     person_label = request.GET.get('person_label', '').strip() or None
     
+    photo_id = request.GET.get('photo_id')
+    
     event = get_object_or_404(Event, slug=event_slug)
     if not request.user.is_superuser and event.owner != request.user:
         return HttpResponseForbidden("Unauthorized")
         
-    if person_label:
+    if photo_id:
+        images = GalleryImage.objects.filter(event=event, id=photo_id)
+    elif person_label:
         images = GalleryImage.objects.filter(
             event=event,
             embeddings__person_label=person_label
@@ -920,7 +924,8 @@ def upload_single_photo(request):
         num_faces = process_gallery_image(gallery_image, raw_bytes=raw_bytes)
         
         from django.urls import reverse
-        token = gallery_image.get_secure_thumbnail_token() if gallery_image.thumbnail else gallery_image.get_secure_file_token()
+        file_token = gallery_image.get_secure_file_token()
+        thumb_token = gallery_image.get_secure_thumbnail_token() if gallery_image.thumbnail else file_token
         return JsonResponse({
             'success': True,
             'image': {
@@ -928,9 +933,12 @@ def upload_single_photo(request):
                 'filename': gallery_image.filename,
                 'event_name': event.name if event else "Event",
                 'organiser_name': event.owner.username.title() if (event and event.owner) else "Studio",
-                'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[token])),
+                'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[thumb_token])),
+                'full_url': request.build_absolute_uri(reverse('gallery:secure_image', args=[file_token])),
                 'total_faces': gallery_image.total_faces,
-                'uploaded_at': gallery_image.uploaded_at.strftime("%b %d, %H:%M")
+                'uploaded_at': gallery_image.uploaded_at.strftime("%b %d, %H:%M"),
+                'preset_name': gallery_image.preset_name or 'original',
+                'preset_settings': gallery_image.preset_settings or {},
             }
         })
     except Exception as e:
