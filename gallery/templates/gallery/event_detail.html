@@ -6712,88 +6712,112 @@
         const photo = allPhotosList[currentPhotoIndex];
         if (!photo) return;
 
-        // Reset crop state
-        activeCropRect = null;
-        cropOrientation = {
-            rotation: 0,
-            straightenAngle: 0,
-            flipH: false,
-            flipV: false,
-            aspectRatio: 'free',
-            showGrid: false,
-            zoom: 1.0,
-            panX: 0,
-            panY: 0,
-            normPanX: 0,
-            normPanY: 0,
-            cropRect: null,
-            normCrop: null
-        };
+        const hasSavedEdits = (photo.preset_name && photo.preset_name !== 'original') ||
+            (photo.preset_settings && Object.keys(photo.preset_settings).length > 0);
 
-        // Reset fine-tuning
-        currentFineTune = {
-            exposure: 0,
-            contrast: 0,
-            saturation: 0,
-            temp: 0,
-            tint: 0,
-            highlights: 0,
-            shadows: 0,
-            grain: 0,
-            bw: false,
-            subtitle: 'Original · Untouched'
-        };
+        const hasUnsavedEdits = (activePresetId !== 'original') ||
+            (cropOrientation && (cropOrientation.aspectRatio !== 'free' && cropOrientation.aspectRatio !== 'original')) ||
+            (cropOrientation && ((cropOrientation.zoom || 1) > 1.01 || cropOrientation.rotation !== 0 || cropOrientation.straightenAngle !== 0 || cropOrientation.flipH || cropOrientation.flipV)) ||
+            (currentFineTune && (currentFineTune.exposure !== 0 || currentFineTune.contrast !== 0 || currentFineTune.saturation !== 0 || currentFineTune.temp !== 0 || currentFineTune.tint !== 0 || currentFineTune.bw));
 
-        // Set preset to original
-        activePresetId = 'original';
-
-        // Clear photo settings
-        photo.preset_name = 'original';
-        photo.preset_settings = {};
-
-        // Update UI
-        syncFineTuneDrawerUI();
-        syncCropDrawerUI();
-        syncCropAdjustUI();
-        updatePresetsScrollUI();
-        applyActiveFilterToImage();
-        applyOrientationToImages();
-        applyViewerCropDisplay(photo);
-        updateGalleryCardPhoto(photo);
-
-        // Save to server
-        showLoading('Restoring original camera photo…');
-        try {
-            const formData = new FormData();
-            formData.append('preset_name', 'original');
-            formData.append('preset_settings', '{}');
-            formData.append('event_slug', '{{ event.slug }}');
-            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-            formData.append('photo_id', photo.id);
-
-            const res = await fetch('{% url "gallery:apply_preset_api" %}', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await res.json();
-            hideLoading();
-
-            if (data.success) {
-                updateApplyButtonState('saved');
-                showSavedFloatBanner('Restored to Original Photo');
-                showToast('Photo reverted to original untouched camera file', 'success');
-                buildFilmstrip();
-                setTimeout(() => {
-                    updateApplyButtonState('persisted');
-                }, 2400);
-            } else {
-                showToast(data.message || 'Error restoring photo', 'error');
-            }
-        } catch (err) {
-            hideLoading();
-            console.error('Revert error:', err);
-            showToast('Failed to revert photo', 'error');
+        if (!hasSavedEdits && !hasUnsavedEdits) {
+            showToast("Photo is already at original untouched camera file.", "info");
+            return;
         }
+
+        customConfirm(
+            "Revert to Original Photo",
+            "Are you sure you want to revert this photo to its untouched original camera state? Any applied presets, fine-tuning, and crop framing will be cleared.",
+            async (confirmed) => {
+                if (!confirmed) return;
+
+                // Reset crop state
+                activeCropRect = null;
+                cropOrientation = {
+                    rotation: 0,
+                    straightenAngle: 0,
+                    flipH: false,
+                    flipV: false,
+                    aspectRatio: 'free',
+                    showGrid: false,
+                    zoom: 1.0,
+                    panX: 0,
+                    panY: 0,
+                    normPanX: 0,
+                    normPanY: 0,
+                    cropRect: null,
+                    normCrop: null
+                };
+
+                // Reset fine-tuning
+                currentFineTune = {
+                    exposure: 0,
+                    contrast: 0,
+                    saturation: 0,
+                    temp: 0,
+                    tint: 0,
+                    highlights: 0,
+                    shadows: 0,
+                    grain: 0,
+                    bw: false,
+                    subtitle: 'Original · Untouched'
+                };
+
+                // Set preset to original
+                activePresetId = 'original';
+
+                // Clear photo settings
+                photo.preset_name = 'original';
+                photo.preset_settings = {};
+
+                // Update UI
+                syncFineTuneDrawerUI();
+                syncCropDrawerUI();
+                syncCropAdjustUI();
+                updatePresetsScrollUI();
+                applyActiveFilterToImage();
+                applyOrientationToImages();
+                applyViewerCropDisplay(photo);
+                updateGalleryCardPhoto(photo);
+
+                // Save to server
+                showLoading('Restoring original camera photo…');
+                try {
+                    const formData = new FormData();
+                    formData.append('preset_name', 'original');
+                    formData.append('preset_settings', '{}');
+                    formData.append('event_slug', '{{ event.slug }}');
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                    formData.append('photo_id', photo.id);
+
+                    const res = await fetch('{% url "gallery:apply_preset_api" %}', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    hideLoading();
+
+                    if (data.success) {
+                        updateApplyButtonState('saved');
+                        showSavedFloatBanner('Restored to Original Photo');
+                        showToast(data.message || 'Photo reverted to original untouched camera file', 'success');
+                        buildFilmstrip();
+                        setTimeout(() => {
+                            updateApplyButtonState('persisted');
+                        }, 2400);
+                    } else {
+                        showToast(data.message || 'Error restoring photo', 'error');
+                    }
+                } catch (err) {
+                    hideLoading();
+                    console.error('Revert error:', err);
+                    showToast('Failed to revert photo', 'error');
+                }
+            }
+        );
+
+        const cBtn = document.getElementById('customModalConfirmBtn');
+        if (cBtn) cBtn.innerText = 'Revert Photo';
     }
 
     // ── Direct Download with Preset & Crop Applied
