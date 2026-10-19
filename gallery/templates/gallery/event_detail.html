@@ -371,26 +371,30 @@
             display: flex;
             gap: 6px;
             background: #f1f5f9;
-            padding: 4px;
+            padding: 5px;
             border-radius: 14px;
             margin-bottom: 1rem;
             border: 1px solid #e2e8f0;
             box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            align-items: stretch;
         }
         .upload-mobile-tab {
             flex: 1;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 7px;
-            padding: 9px 12px;
+            gap: 8px;
+            padding: 0 12px;
+            height: 44px;
+            box-sizing: border-box;
             border-radius: 10px;
-            font-size: 0.82rem;
+            font-size: 0.84rem;
             font-weight: 750;
             border: none;
             background: transparent;
             color: #64748b;
             cursor: pointer;
+            white-space: nowrap;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             -webkit-tap-highlight-color: transparent;
         }
@@ -406,7 +410,14 @@
             color: #059669;
         }
         .upload-mobile-tab .upload-tab-icon {
-            font-size: 0.95rem;
+            font-size: 1rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+        }
+        .upload-mobile-tab .upload-tab-text {
+            line-height: 1;
+            white-space: nowrap;
         }
         .upload-strip .upload-card-pane {
             display: none !important;
@@ -417,6 +428,21 @@
     }
     
     @media (max-width: 600px) {
+        .upload-card-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 10px !important;
+        }
+        .upload-header-badges {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .upload-strip .upload-card-pane {
+            padding: 1.25rem !important;
+        }
         .rich-gallery-grid {
             grid-template-columns: repeat(2, 1fr);
             gap: 0.5rem;
@@ -2624,7 +2650,7 @@
     </button>
     <button type="button" class="upload-mobile-tab" id="tabBtnDriveUpload" onclick="switchUploadSourceTab('drive')">
         <span class="upload-tab-icon">🔗</span>
-        <span class="upload-tab-text">Import from Drive</span>
+        <span class="upload-tab-text">Google Drive</span>
     </button>
 </div>
 
@@ -2633,12 +2659,12 @@
     <!-- Local Upload Card -->
     <div class="card upload-card-pane active-mobile-pane" id="uploadCardLocal" style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-                <h3 class="card-title" style="margin-bottom: 0;">
+            <div class="upload-card-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
+                <h3 class="card-title" style="margin-bottom: 0; white-space: nowrap;">
                     <span style="display: inline-flex; width: 32px; height: 32px; border-radius: 9px; background: rgba(99, 102, 241, 0.1); align-items: center; justify-content: center; font-size: 0.95rem;">📤</span>
                     Upload Photos
                 </h3>
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="upload-header-badges" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     {% if event.owner == request.user %}
                     <button type="button" onclick="openEventSettingsModal()" style="border: 1px solid rgba(79, 70, 229, 0.2); background: rgba(79, 70, 229, 0.05); color: #4f46e5; font-size: 0.72rem; font-weight: 750; padding: 4px 10px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;" onmouseover="this.style.background='rgba(79, 70, 229, 0.12)'" onmouseout="this.style.background='rgba(79, 70, 229, 0.05)'" title="Click to configure in Settings">
                         ⚙️ <span id="uploadBadgeCompression">{{ event.compression_percentage }}%</span> Compression
@@ -2687,8 +2713,8 @@
     <!-- Google Drive Card -->
     <div class="card upload-card-pane" id="uploadCardDrive" style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-                <h3 class="card-title" style="margin-bottom: 0;">
+            <div class="upload-card-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
+                <h3 class="card-title" style="margin-bottom: 0; white-space: nowrap;">
                     <span style="display: inline-flex; width: 32px; height: 32px; border-radius: 9999px; background: rgba(5, 150, 105, 0.1); align-items: center; justify-content: center; font-size: 0.95rem;">🔗</span>
                     Import from Drive
                 </h3>
