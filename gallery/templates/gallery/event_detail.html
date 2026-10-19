@@ -2034,6 +2034,114 @@
         text-transform: none;
     }
 
+    /* ── Mobile & Dedicated Crop Toolbar ── */
+    .pv-crop-bottom-toolbar {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        padding: 0.45rem 0.25rem 0.2rem;
+        width: 100%;
+        box-sizing: border-box;
+        animation: ftSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pv-cbt-ratios-scroll {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 2px 2px 6px;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+    .pv-cbt-ratios-scroll::-webkit-scrollbar {
+        display: none;
+    }
+    .pv-cbt-chip {
+        padding: 6px 14px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        color: #e2e8f0;
+        font-size: 0.78rem;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+        user-select: none;
+    }
+    .pv-cbt-chip:hover {
+        background: rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+    }
+    .pv-cbt-chip.active {
+        background: #ffffff;
+        color: #0f172a;
+        border-color: #ffffff;
+        font-weight: 750;
+        box-shadow: 0 2px 8px rgba(255, 255, 255, 0.25);
+    }
+    .pv-cbt-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding-top: 2px;
+    }
+    .pv-cbt-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 7px 11px;
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        color: #cbd5e1;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+    }
+    .pv-cbt-action-btn:hover {
+        background: rgba(255, 255, 255, 0.14);
+        color: #ffffff;
+    }
+    .pv-cbt-cancel-btn {
+        padding: 7px 13px;
+        border-radius: 9px;
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.28);
+        color: #fca5a5;
+        font-size: 0.79rem;
+        font-weight: 650;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+    }
+    .pv-cbt-cancel-btn:hover {
+        background: rgba(239, 68, 68, 0.22);
+    }
+    .pv-cbt-apply-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 7px 16px;
+        border-radius: 9px;
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        border: none;
+        color: #ffffff;
+        font-size: 0.82rem;
+        font-weight: 750;
+        cursor: pointer;
+        box-shadow: 0 3px 12px rgba(16, 185, 129, 0.35);
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+    }
+    .pv-cbt-apply-btn:hover {
+        filter: brightness(1.1);
+        transform: translateY(-1px);
+    }
+
     .cp-tools-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -2612,6 +2720,27 @@
         .pv-nav-btn.pv-next { right: 0.4rem; }
         .pv-nav-btn:hover:not(:disabled) {
             transform: translateY(-50%) scale(1.08);
+        }
+        /* Drawers become bottom sheets so the photo stays visible */
+        .pv-crop-drawer,
+        .pv-adjust-drawer {
+            top: auto !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            max-height: 40vh;
+            max-height: 40dvh;
+            border-radius: 18px 18px 0 0;
+            padding: 0.8rem 0.95rem calc(0.8rem + env(safe-area-inset-bottom));
+            gap: 0.6rem;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .pv-crop-drawer .cp-scroll-body {
+            max-height: none;
+            overflow: visible;
         }
         .pv-strip-item {
             width: 56px;
@@ -5195,6 +5324,30 @@
         if (overlay) overlay.style.display = 'block';
         initCropOverlayListeners();
 
+        // Switch bottom container to Crop Toolbar so photo is completely visible and unobstructed
+        const cropToolbar = document.getElementById('pvCropBottomToolbar');
+        const modeBar = document.querySelector('.pv-mode-bar');
+        const presetsScroll = document.getElementById('pvPresetsScroll');
+        const filmstripScroll = document.getElementById('pvFilmstripScroll');
+        const footerStrip = document.querySelector('.pv-footer-strip');
+        const cropBtn = document.getElementById('pvCropBtn');
+
+        if (cropBtn) cropBtn.classList.add('active');
+        if (modeBar) modeBar.style.display = 'none';
+        if (presetsScroll) presetsScroll.style.display = 'none';
+        if (filmstripScroll) filmstripScroll.style.display = 'none';
+        if (footerStrip) footerStrip.style.display = 'none';
+        if (cropToolbar) cropToolbar.style.display = 'flex';
+
+        // Sync active aspect ratio chip
+        const currentRatio = cropAspectRatioMode || 'free';
+        document.querySelectorAll('.pv-cbt-chip').forEach(c => {
+            c.classList.toggle('active', c.dataset.ratio === currentRatio);
+        });
+
+        // Re-measure stage size to maximize photo framing space
+        updateStageMaxSize();
+
         requestAnimationFrame(() => {
             syncCropOverlayPosition();
             syncCropBoxOnScreen();
@@ -5213,10 +5366,14 @@
         const holdBtn = document.getElementById('pvHoldCompareBtn');
         const box = document.getElementById('pvSplitBox');
         const overlay = document.getElementById('pvCropOverlay');
+        const cropDrawer = document.getElementById('pvCropDrawer');
+        const cropBtn = document.getElementById('pvCropBtn');
 
         if (overlay) overlay.style.display = 'none';
         if (presetBadge) presetBadge.style.display = '';
         if (box) box.classList.remove('crop-mode', 'dragging');
+        if (cropDrawer) cropDrawer.style.display = 'none';
+        if (cropBtn) cropBtn.classList.remove('active');
 
         if (splitBtn) {
             splitBtn.style.opacity = '';
@@ -5228,6 +5385,24 @@
             holdBtn.style.pointerEvents = '';
         }
 
+        // Restore normal bottom view (presets or filmstrip)
+        const cropToolbar = document.getElementById('pvCropBottomToolbar');
+        const modeBar = document.querySelector('.pv-mode-bar');
+        const presetsScroll = document.getElementById('pvPresetsScroll');
+        const filmstripScroll = document.getElementById('pvFilmstripScroll');
+        const footerStrip = document.querySelector('.pv-footer-strip');
+
+        if (cropToolbar) cropToolbar.style.display = 'none';
+        if (modeBar) modeBar.style.display = '';
+        if (currentViewerTab === 'presets') {
+            if (presetsScroll) presetsScroll.style.display = '';
+            if (filmstripScroll) filmstripScroll.style.display = 'none';
+        } else {
+            if (presetsScroll) presetsScroll.style.display = 'none';
+            if (filmstripScroll) filmstripScroll.style.display = '';
+        }
+        if (footerStrip) footerStrip.style.display = '';
+
         const photo = allPhotosList[currentPhotoIndex];
         if (photo) {
             applyViewerCropDisplay(photo);
@@ -5235,6 +5410,7 @@
 
         // Restore split view state to what it was before crop
         setSplitView(wasSplitViewActiveBeforeCrop);
+        updateStageMaxSize();
     }
 
     function updateSplitPosition(pct) {
@@ -5899,25 +6075,49 @@
         const drawer = document.getElementById('pvCropDrawer');
         const cropBtn = document.getElementById('pvCropBtn');
         const adjBtn = document.getElementById('pvAdjustBtn');
-        if (!drawer) return;
-        const isOpening = drawer.style.display === 'none' || !drawer.style.display;
-        
-        if (isOpening) {
-            // Close other drawers like adjustments
-            const adj = document.getElementById('pvAdjustDrawer');
-            if (adj) adj.style.display = 'none';
-            if (adjBtn) adjBtn.classList.remove('active');
 
-            enterCropMode();
+        if (isCropActive) {
+            exitCropMode();
+            return;
+        }
+
+        // Close other drawers like adjustments
+        const adj = document.getElementById('pvAdjustDrawer');
+        if (adj) adj.style.display = 'none';
+        if (adjBtn) adjBtn.classList.remove('active');
+
+        enterCropMode();
+        switchCropTab('framing');
+        syncCropDrawerUI();
+
+        // On desktop (>768px), open floating drawer. On mobile (<=768px), keep drawer closed
+        // so photo is 100% visible and interactive with bottom crop toolbar!
+        if (drawer) {
+            if (window.innerWidth > 768) {
+                drawer.style.display = 'flex';
+            } else {
+                drawer.style.display = 'none';
+            }
+        }
+        if (cropBtn) cropBtn.classList.add('active');
+    }
+
+    function toggleAdvancedCropDrawer() {
+        const drawer = document.getElementById('pvCropDrawer');
+        if (!drawer) return;
+        const isHidden = drawer.style.display === 'none' || !drawer.style.display;
+        if (isHidden) {
             switchCropTab('framing');
             syncCropDrawerUI();
             drawer.style.display = 'flex';
-            if (cropBtn) cropBtn.classList.add('active');
         } else {
             drawer.style.display = 'none';
-            if (cropBtn) cropBtn.classList.remove('active');
-            exitCropMode();
         }
+    }
+
+    function closeCropDrawerOnly() {
+        const drawer = document.getElementById('pvCropDrawer');
+        if (drawer) drawer.style.display = 'none';
     }
 
     function switchCropTab(tab) {
@@ -6143,11 +6343,15 @@
             }
         }
 
-        // Sync card active states
+        // Sync card and chip active states
         const ratioCardKey = mode.replace(':', '');
         document.querySelectorAll('.cp-ratio-card').forEach(c => c.classList.remove('active'));
         const matchingCard = document.getElementById(`cpRatio_${ratioCardKey}`);
         if (matchingCard) matchingCard.classList.add('active');
+
+        document.querySelectorAll('.pv-cbt-chip').forEach(c => {
+            c.classList.toggle('active', c.dataset.ratio === mode);
+        });
 
         syncCropBoxOnScreen();
         updateCropDrawerInputs();
@@ -6171,6 +6375,10 @@
         document.querySelectorAll('.cp-ratio-card').forEach(c => c.classList.remove('active'));
         const origCard = document.getElementById('cpRatio_original');
         if (origCard) origCard.classList.add('active');
+
+        document.querySelectorAll('.pv-cbt-chip').forEach(c => {
+            c.classList.toggle('active', c.dataset.ratio === 'free');
+        });
 
         syncCropBoxOnScreen();
         updateCropDrawerInputs();
@@ -7931,7 +8139,7 @@
                     </svg>
                     <span>Reset</span>
                 </button>
-                <button type="button" class="ft-close-btn" onclick="toggleCropDrawer()" title="Close Crop">✕</button>
+                <button type="button" class="ft-close-btn" onclick="closeCropDrawerOnly()" title="Hide Drawer">✕</button>
             </div>
         </div>
 
@@ -8260,15 +8468,51 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 <span>Save &amp; Apply Crop</span>
             </button>
-            <button type="button" class="cp-tool-btn" onclick="toggleCropDrawer()" style="flex: 1; padding: 0.75rem 0.6rem; border-radius: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                <span>Keep Editing</span>
+            <button type="button" class="cp-tool-btn" onclick="closeCropDrawerOnly()" style="flex: 1; padding: 0.75rem 0.6rem; border-radius: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                <span>Hide Drawer</span>
             </button>
         </div>
         <div class="ft-canvas-notice" style="margin-top: 6px;">Framing &amp; adjustments sync directly to event gallery photo</div>
     </div>
 
-    <!-- Bottom Container: Presets Strip or Filmstrip -->
+    <!-- Bottom Container: Presets Strip or Filmstrip or Crop Toolbar -->
     <div class="pv-bottom-container">
+        <!-- Dedicated Crop Toolbar (Shows when in Crop Mode) -->
+        <div class="pv-crop-bottom-toolbar" id="pvCropBottomToolbar" style="display: none;">
+            <div class="pv-cbt-ratios-scroll">
+                <button type="button" class="pv-cbt-chip active" data-ratio="free" onclick="setAspectRatio('free')">FreeForm</button>
+                <button type="button" class="pv-cbt-chip" data-ratio="original" onclick="setAspectRatio('original')">Original</button>
+                <button type="button" class="pv-cbt-chip" data-ratio="1:1" onclick="setAspectRatio('1:1')">1:1 Square</button>
+                <button type="button" class="pv-cbt-chip" data-ratio="4:5" onclick="setAspectRatio('4:5')">4:5 Portrait</button>
+                <button type="button" class="pv-cbt-chip" data-ratio="16:9" onclick="setAspectRatio('16:9')">16:9 Cinema</button>
+                <button type="button" class="pv-cbt-chip" data-ratio="9:16" onclick="setAspectRatio('9:16')">9:16 Story</button>
+                <button type="button" class="pv-cbt-chip" data-ratio="3:2" onclick="setAspectRatio('3:2')">3:2 Classic</button>
+                <button type="button" class="pv-cbt-chip" data-ratio="2:3" onclick="setAspectRatio('2:3')">2:3 Vertical</button>
+            </div>
+            <div class="pv-cbt-actions">
+                <button type="button" class="pv-cbt-action-btn" onclick="rotatePhoto(90)" title="Rotate 90°">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    <span>Rotate</span>
+                </button>
+                <button type="button" class="pv-cbt-action-btn" onclick="resetCropRect()" title="Reset Crop Frame">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                    <span>Reset</span>
+                </button>
+                <button type="button" class="pv-cbt-action-btn" onclick="toggleAdvancedCropDrawer()" title="More Fine-Tune Options">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <span>More</span>
+                </button>
+                <div style="flex: 1;"></div>
+                <button type="button" class="pv-cbt-cancel-btn" onclick="exitCropMode()" title="Cancel Crop">
+                    <span>Cancel</span>
+                </button>
+                <button type="button" class="pv-cbt-apply-btn" onclick="saveCropAndApply()" title="Save Crop">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Apply Crop</span>
+                </button>
+            </div>
+        </div>
+
         <!-- View Mode Switcher -->
         <div class="pv-mode-bar">
             <div class="pv-tabs">
