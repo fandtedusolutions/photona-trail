@@ -1070,7 +1070,7 @@ function renderPubViewerPhoto() {
     if (spinner) spinner.style.display = 'block';
     if (imgEl) {
         imgEl.style.opacity = '0.35';
-        imgEl.src = photo.full_url || photo.url;
+        imgEl.src = photo.processed_url || photo.full_url || photo.url;
     }
 }
 

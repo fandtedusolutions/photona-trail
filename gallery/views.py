@@ -1388,6 +1388,76 @@ def secure_image_serve(request, token):
         
     img = get_object_or_404(GalleryImage, id=image_id)
     
+    is_processed = (img_type in ('processed', 'processed_thumbnail')) or (request.GET.get('processed') == '1')
+    
+    if is_processed:
+        # Determine source field
+        if img_type == 'processed_thumbnail':
+            has_absolute_crop_rect = bool(
+                img.preset_settings and isinstance(img.preset_settings, dict) and
+                img.preset_settings.get('crop') and
+                img.preset_settings['crop'].get('cropRect') and
+                not img.preset_settings['crop'].get('normCrop')
+            )
+            target_field = img.file if has_absolute_crop_rect else (img.thumbnail or img.file)
+        else:
+            target_field = img.file
+
+        if not target_field or not target_field.name:
+            return HttpResponse('Image not found', status=404)
+
+        try:
+            content = None
+            try:
+                _path = getattr(target_field, 'path', None)
+                if _path and os.path.exists(_path):
+                    with open(_path, 'rb') as f:
+                        content = f.read()
+            except (NotImplementedError, AttributeError):
+                pass
+            if content is None:
+                with target_field.open('rb') as f:
+                    content = f.read()
+
+            if content is None:
+                return HttpResponse('Failed to read image', status=500)
+
+            # 1. Non-destructively apply preset and crop
+            if img.preset_name or img.preset_settings:
+                content = apply_preset_and_crop_to_image(content, img.preset_name, img.preset_settings)
+
+            # Downscale if thumbnail requested from full-res image
+            if img_type == 'processed_thumbnail':
+                try:
+                    from io import BytesIO
+                    from PIL import Image
+                    t_img = Image.open(BytesIO(content))
+                    if max(t_img.size) > 600:
+                        t_img.thumbnail((600, 600), Image.Resampling.LANCZOS)
+                        buf = BytesIO()
+                        t_img.save(buf, format='JPEG', quality=88)
+                        content = buf.getvalue()
+                except Exception as te:
+                    print(f"Error downscaling thumbnail: {te}")
+
+            # 2. Non-destructively apply watermark (on processed full view and downloads)
+            # If processed full image or download is requested, burn watermark if enabled on event
+            if img_type == 'processed' or request.GET.get('download'):
+                if img.event and img.event.watermark_enabled:
+                    content = apply_watermark_to_image(content, img.event)
+
+            response = HttpResponse(content, content_type='image/jpeg')
+            if request.GET.get('download'):
+                name_only, ext = os.path.splitext(img.filename)
+                evt_tag = slugify(img.event.name) if (img.event and img.event.name) else (img.event.slug if img.event else 'photo')
+                download_name = f"{name_only}_{evt_tag}{ext}"
+                response['Content-Disposition'] = f'attachment; filename="{download_name}"'
+            return response
+        except Exception as e:
+            print(f"Error serving processed image: {e}")
+            return HttpResponse(f'Error processing image: {str(e)}', status=500)
+
+    # Standard / raw serve (used by Preset Studio editor & raw asset endpoints)
     target_field = img.thumbnail if img_type == 'thumbnail' and img.thumbnail else img.file
     
     if not target_field or not target_field.name:
@@ -2078,11 +2148,13 @@ def public_photos_api(request):
         data = []
         for img in page_obj.object_list:
             file_token = img.get_secure_file_token()
+            processed_token = img.get_secure_processed_token()
             thumb_token = img.get_secure_thumbnail_token() if img.thumbnail else file_token
             data.append({
                 'id': img.id,
                 'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[thumb_token])),
                 'full_url': request.build_absolute_uri(reverse('gallery:secure_image', args=[file_token])),
+                'processed_url': request.build_absolute_uri(reverse('gallery:secure_image', args=[processed_token])),
                 'filename': img.filename,
                 'preset_name': img.preset_name or 'original',
                 'preset_settings': img.preset_settings or {},

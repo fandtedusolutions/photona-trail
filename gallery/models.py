@@ -145,6 +145,14 @@ class GalleryImage(models.Model):
             return self.get_secure_file_token()
         return Signer().sign(f"{self.id}:thumbnail")
 
+    def get_secure_processed_token(self):
+        from django.core.signing import Signer
+        return Signer().sign(f"{self.id}:processed")
+
+    def get_secure_processed_thumbnail_token(self):
+        from django.core.signing import Signer
+        return Signer().sign(f"{self.id}:processed_thumbnail")
+
 class FaceEmbedding(models.Model):
     image = models.ForeignKey(GalleryImage, on_delete=models.CASCADE, related_name='embeddings')
     embedding_data = models.JSONField()  # List of floats representing the 512-d face embedding
