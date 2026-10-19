@@ -2136,21 +2136,33 @@ def apply_preset_api(request):
             if not request.user.is_superuser and event.owner != request.user:
                 return HttpResponseForbidden("Unauthorized")
 
+            # Presets applied across all photos should only include color/tone fine-tuning, NEVER individual crops
+            global_settings = {k: v for k, v in preset_settings.items() if k != 'crop'} if isinstance(preset_settings, dict) else {}
+
             # Save default preset to the event settings
             event.default_preset = preset_name
-            event.default_preset_settings = preset_settings
+            event.default_preset_settings = global_settings
             event.save(update_fields=['default_preset', 'default_preset_settings'])
 
-            # Update all images in event (non-destructive)
-            count = event.images.all().update(preset_name=preset_name, preset_settings=preset_settings)
+            # Update all images in event (non-destructive) preserving individual crops if they already have one
+            images = event.images.all()
+            count = images.count()
+            for img in images:
+                img_crop = (img.preset_settings or {}).get('crop')
+                new_settings = {**global_settings}
+                if img_crop and not is_original:
+                    new_settings['crop'] = img_crop
+                img.preset_name = preset_name
+                img.preset_settings = new_settings
+                img.save(update_fields=['preset_name', 'preset_settings'])
 
-            msg = f'All {count} photos reverted to original camera files.' if (is_original and not preset_settings) else f'Preset "{preset_name}" saved across all {count} photos (Non-destructive: original files preserved).'
+            msg = f'All {count} photos reverted to original camera files.' if (is_original and not global_settings) else f'Preset "{preset_name}" saved across all {count} photos (Non-destructive: original files preserved).'
 
             return JsonResponse({
                 'success': True,
                 'count': count,
                 'preset_name': preset_name,
-                'preset_settings': preset_settings,
+                'preset_settings': global_settings,
                 'message': msg,
             })
 
@@ -2172,6 +2184,8 @@ def apply_preset_api(request):
                 msg = "Restored to original camera photo (untouched)."
             elif has_crop and is_original:
                 msg = "Crop & framing saved successfully!"
+            elif has_crop:
+                msg = f'Preset "{preset_name}" and crop framing saved! (Original camera file preserved).'
             else:
                 msg = f'Preset "{preset_name}" saved! (Original camera file preserved).'
 

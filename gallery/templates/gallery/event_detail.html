@@ -5799,6 +5799,7 @@
     }
 
     function syncCropOverlayPosition() {
+        if (!isCropActive) return;
         const overlay = document.getElementById('pvCropOverlay');
         const mainImg = document.getElementById('pvMainImg');
         const box = document.getElementById('pvSplitBox');
@@ -5817,6 +5818,7 @@
     }
 
     function syncCropBoxOnScreen() {
+        if (!isCropActive) return;
         const cropBox = document.getElementById('pvCropBox');
         const mainImg = document.getElementById('pvMainImg');
         const overlay = document.getElementById('pvCropOverlay');
@@ -6613,32 +6615,9 @@
         const nw = (mainImg && mainImg.naturalWidth) ? mainImg.naturalWidth : 1200;
         const nh = (mainImg && mainImg.naturalHeight) ? mainImg.naturalHeight : 800;
 
-        // Retrieve existing crop
-        let cropData = (photo && photo.preset_settings && photo.preset_settings.crop) ? photo.preset_settings.crop : null;
-        if (!cropData && activeCropRect && activeCropRect.width > 20 && activeCropRect.height > 20) {
-            const isFull = (activeCropRect.width >= nw - 4 && activeCropRect.height >= nh - 4 && activeCropRect.x <= 4 && activeCropRect.y <= 4);
-            if (!isFull) {
-                cropData = {
-                    rotation: cropOrientation.rotation || 0,
-                    straightenAngle: cropOrientation.straightenAngle || 0,
-                    flipH: !!cropOrientation.flipH,
-                    flipV: !!cropOrientation.flipV,
-                    aspectRatio: cropAspectRatioMode || 'free',
-                    cropRect: { ...activeCropRect },
-                    normCrop: {
-                        x: Math.max(0, activeCropRect.x) / nw,
-                        y: Math.max(0, activeCropRect.y) / nh,
-                        width: Math.min(nw, activeCropRect.width) / nw,
-                        height: Math.min(nh, activeCropRect.height) / nh
-                    },
-                    zoom: parseFloat(cropOrientation.zoom) || 1.0,
-                    panX: cropOrientation.panX || 0,
-                    panY: cropOrientation.panY || 0,
-                    normPanX: cropOrientation.normPanX || 0,
-                    normPanY: cropOrientation.normPanY || 0
-                };
-            }
-        }
+        // Retrieve existing crop strictly from saved photo settings
+        // Never auto-generate or infer a crop from temporary editor state when changing a preset!
+        let cropData = (!applyAll && photo && photo.preset_settings && photo.preset_settings.crop) ? photo.preset_settings.crop : null;
 
         const isRevertToOriginal = activePresetId === 'original' && !cropData;
 
@@ -6648,7 +6627,7 @@
         };
         
         updateApplyButtonState('saving');
-        showLoading(isRevertToOriginal ? 'Restoring original camera photo…' : `Saving "${preset.name}" preset & framing…`);
+        showLoading(isRevertToOriginal ? 'Restoring original camera photo…' : (cropData ? `Saving "${preset.name}" preset & framing…` : `Saving "${preset.name}" preset…`));
         
         try {
             const formData = new FormData();
@@ -6684,10 +6663,10 @@
                 updateApplyButtonState('saved');
 
                 // 2. Stage Floating Saved Badge
-                showSavedFloatBanner(isRevertToOriginal ? 'Restored to Original Photo' : `Preset & Framing Saved!`);
+                showSavedFloatBanner(isRevertToOriginal ? 'Restored to Original Photo' : (cropData ? 'Preset & Framing Saved!' : `Preset "${preset.name}" Saved!`));
 
                 // 3. Floating Toast
-                showToast(data.message || (isRevertToOriginal ? 'Photo restored to original' : `Preset "${preset.name}" & framing saved!`), "success");
+                showToast(data.message || (isRevertToOriginal ? 'Photo restored to original' : (cropData ? `Preset "${preset.name}" & framing saved!` : `Preset "${preset.name}" saved!`)), "success");
 
                 // 4. Update Filmstrip
                 buildFilmstrip();
