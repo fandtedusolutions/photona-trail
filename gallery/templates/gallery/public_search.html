@@ -170,6 +170,27 @@
                             <img class="rich-thumb" src="{% url 'gallery:secure_image' res.image.get_secure_thumbnail_token %}" alt="{{ res.image.filename }}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
                         </a>
 
+                        {% if link and link.event.watermark_enabled %}
+                            <div class="pub-photo-wm" style="position: absolute; pointer-events: none; z-index: 6; opacity: {{ link.event.watermark_opacity|default:75 }}%;
+                            {% if link.event.watermark_position == 'top-left' %}top: 10px; left: 10px;
+                            {% elif link.event.watermark_position == 'top-center' %}top: 10px; left: 50%; transform: translateX(-50%);
+                            {% elif link.event.watermark_position == 'top-right' %}top: 10px; right: 10px;
+                            {% elif link.event.watermark_position == 'center-left' %}top: 50%; left: 10px; transform: translateY(-50%);
+                            {% elif link.event.watermark_position == 'center' %}top: 50%; left: 50%; transform: translate(-50%, -50%);
+                            {% elif link.event.watermark_position == 'center-right' %}top: 50%; right: 10px; transform: translateY(-50%);
+                            {% elif link.event.watermark_position == 'bottom-left' %}bottom: 10px; left: 10px;
+                            {% elif link.event.watermark_position == 'bottom-center' %}bottom: 10px; left: 50%; transform: translateX(-50%);
+                            {% else %}bottom: 10px; right: 10px;{% endif %}">
+                                {% if link.event.watermark_type == 'image' and link.event.watermark_image %}
+                                    <img src="{{ link.event.watermark_image.url }}" alt="Watermark" style="width: 70px; max-height: 40px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));">
+                                {% else %}
+                                    <div style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); border-radius: 6px; padding: 3px 8px; color: #ffffff; font-size: 11px; font-weight: 750; letter-spacing: 0.03em; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,0.8); display: flex; align-items: center; gap: 4px;">
+                                        <span>🛡️</span> <span>{{ link.event.watermark_text|default:link.event.name }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
                         <a href="{% url 'gallery:download_single_image' res.image.id %}{% if link %}?token={{ link.token }}{% endif %}" class="thumb-action-btn" title="Download Photo" style="position: absolute; bottom: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(15, 23, 42, 0.75); color: white; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 0.9rem; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(15, 23, 42, 0.75)'">⬇</a>
                     </div>
                     <div class="rich-gallery-info" style="padding: 0.85rem 1rem;">

@@ -18,8 +18,11 @@
         align-items: center;
         justify-content: center;
     }
+
     @media (max-width: 768px) {
-        .hero-container { padding: 6rem 1rem 4rem; }
+        .hero-container {
+            padding: 6rem 1rem 4rem;
+        }
     }
 
     /* Animated Premium Orbs */
@@ -31,18 +34,58 @@
         animation: orb-drift 15s ease-in-out infinite alternate;
         opacity: 0.6;
     }
-    .premium-orb-1 { top: -15%; left: 10%; width: 500px; height: 500px; background: linear-gradient(135deg, rgba(79, 70, 229, 0.4), rgba(124, 58, 237, 0.4)); }
-    .premium-orb-2 { bottom: -10%; right: 10%; width: 600px; height: 600px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.3), rgba(244, 63, 94, 0.3)); animation-delay: -7s; }
-    .premium-orb-3 { top: 40%; left: 50%; transform: translateX(-50%); width: 800px; height: 300px; background: radial-gradient(ellipse, rgba(56, 189, 248, 0.15) 0%, transparent 70%); animation: pulse 8s ease-in-out infinite alternate; }
+
+    .premium-orb-1 {
+        top: -15%;
+        left: 10%;
+        width: 500px;
+        height: 500px;
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.4), rgba(124, 58, 237, 0.4));
+    }
+
+    .premium-orb-2 {
+        bottom: -10%;
+        right: 10%;
+        width: 600px;
+        height: 600px;
+        background: linear-gradient(135deg, rgba(236, 72, 153, 0.3), rgba(244, 63, 94, 0.3));
+        animation-delay: -7s;
+    }
+
+    .premium-orb-3 {
+        top: 40%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 800px;
+        height: 300px;
+        background: radial-gradient(ellipse, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+        animation: pulse 8s ease-in-out infinite alternate;
+    }
 
     @keyframes orb-drift {
-        0% { transform: translate(0, 0) scale(1); }
-        50% { transform: translate(40px, -30px) scale(1.1); }
-        100% { transform: translate(-30px, 40px) scale(0.95); }
+        0% {
+            transform: translate(0, 0) scale(1);
+        }
+
+        50% {
+            transform: translate(40px, -30px) scale(1.1);
+        }
+
+        100% {
+            transform: translate(-30px, 40px) scale(0.95);
+        }
     }
+
     @keyframes pulse {
-        0% { opacity: 0.4; transform: translateX(-50%) scale(1); }
-        100% { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
+        0% {
+            opacity: 0.4;
+            transform: translateX(-50%) scale(1);
+        }
+
+        100% {
+            opacity: 0.8;
+            transform: translateX(-50%) scale(1.05);
+        }
     }
 
     .hero-badge {
@@ -72,7 +115,7 @@
         color: var(--text-primary);
         animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
     }
-    
+
     .hero-title .text-gradient {
         background: linear-gradient(135deg, #4f46e5, #ec4899, #f59e0b);
         -webkit-background-clip: text;
@@ -83,9 +126,17 @@
     }
 
     @keyframes gradient-shift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+        0% {
+            background-position: 0% 50%;
+        }
+
+        50% {
+            background-position: 100% 50%;
+        }
+
+        100% {
+            background-position: 0% 50%;
+        }
     }
 
     .hero-subtitle {
@@ -119,11 +170,13 @@
         gap: 10px;
         text-decoration: none;
     }
+
     .btn-premium:hover {
         transform: translateY(-4px);
         box-shadow: 0 15px 35px rgba(15, 23, 42, 0.35);
         background: linear-gradient(135deg, #000000, #1e293b);
     }
+
     .btn-premium-outline {
         background: rgba(255, 255, 255, 0.5);
         backdrop-filter: blur(12px);
@@ -137,6 +190,7 @@
         transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         text-decoration: none;
     }
+
     .btn-premium-outline:hover {
         background: #ffffff;
         border-color: rgba(15, 23, 42, 0.3);
@@ -145,8 +199,15 @@
     }
 
     @keyframes fadeUp {
-        0% { opacity: 0; transform: translateY(30px); }
-        100% { opacity: 1; transform: translateY(0); }
+        0% {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     /* ── Premium Bento Features ── */
@@ -155,9 +216,13 @@
         max-width: 1200px;
         margin: 0 auto;
     }
+
     @media (max-width: 768px) {
-        .bento-section { padding: 2rem 1rem 4rem; }
+        .bento-section {
+            padding: 2rem 1rem 4rem;
+        }
     }
+
     .section-tag {
         font-size: 0.85rem;
         font-weight: 800;
@@ -170,6 +235,7 @@
         margin-bottom: 1.5rem;
         display: inline-block;
     }
+
     .section-header {
         font-size: clamp(2.5rem, 5vw, 3.5rem);
         font-weight: 900;
@@ -178,11 +244,13 @@
         line-height: 1.1;
         max-width: 700px;
     }
+
     .bento-grid {
         display: grid;
         grid-template-columns: repeat(12, 1fr);
         gap: 1.5rem;
     }
+
     .bento-card {
         background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(20px);
@@ -197,27 +265,55 @@
         position: relative;
         overflow: hidden;
     }
+
     .bento-card::before {
         content: '';
         position: absolute;
         inset: 0;
-        background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
         border-radius: inherit;
         pointer-events: none;
     }
+
     .bento-card:hover {
         transform: translateY(-8px);
         box-shadow: 0 30px 60px -15px rgba(15, 23, 42, 0.1);
         background: rgba(255, 255, 255, 0.95);
         border-color: rgba(99, 102, 241, 0.3);
     }
-    .bento-large { grid-column: span 8; }
-    .bento-small { grid-column: span 4; }
-    .bento-wide { grid-column: span 12; display: flex; flex-direction: row; align-items: center; gap: 3rem; padding: 4rem; }
-    @media (max-width: 900px) {
-        .bento-large, .bento-small, .bento-wide { grid-column: span 12; }
-        .bento-wide { flex-direction: column; align-items: flex-start; padding: 3rem; }
+
+    .bento-large {
+        grid-column: span 8;
     }
+
+    .bento-small {
+        grid-column: span 4;
+    }
+
+    .bento-wide {
+        grid-column: span 12;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 3rem;
+        padding: 4rem;
+    }
+
+    @media (max-width: 900px) {
+
+        .bento-large,
+        .bento-small,
+        .bento-wide {
+            grid-column: span 12;
+        }
+
+        .bento-wide {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 3rem;
+        }
+    }
+
     .bento-icon {
         width: 64px;
         height: 64px;
@@ -231,6 +327,7 @@
         box-shadow: var(--shadow-sm);
         border: 1px solid rgba(226, 232, 240, 0.8);
     }
+
     .bento-title {
         font-size: 1.75rem;
         font-weight: 850;
@@ -238,12 +335,13 @@
         margin-bottom: 1rem;
         letter-spacing: -0.02em;
     }
+
     .bento-desc {
         font-size: 1.1rem;
         color: var(--text-secondary);
         line-height: 1.6;
     }
-    
+
     /* ── Stats Section ── */
     .stats-section {
         background: #1e293b;
@@ -260,65 +358,249 @@
         position: relative;
         overflow: hidden;
     }
+
     .stats-bg-glow {
         position: absolute;
-        top: -20%; left: -10%;
-        width: 500px; height: 500px;
+        top: -20%;
+        left: -10%;
+        width: 500px;
+        height: 500px;
         background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
         pointer-events: none;
     }
+
     @media (max-width: 900px) {
-        .stats-section { grid-template-columns: 1fr; gap: 3rem; padding: 4rem 2rem; margin-bottom: 4rem; }
+        .stats-section {
+            grid-template-columns: 1fr;
+            gap: 3rem;
+            padding: 4rem 2rem;
+            margin-bottom: 4rem;
+        }
     }
+
     @media (max-width: 600px) {
-        .stats-section { padding: 3rem 1.5rem; }
-        .stats-grid-inner { grid-template-columns: 1fr; }
+        .stats-section {
+            padding: 3rem 1.5rem;
+        }
+
+        .stats-grid-inner {
+            grid-template-columns: 1fr;
+        }
     }
-    .stats-left h2 { font-size: clamp(2.2rem, 4vw, 3.2rem); font-weight: 900; margin-bottom: 1.5rem; color: #ffffff; letter-spacing: -0.02em; line-height: 1.1; }
-    .stats-left p { color: #94a3b8; font-size: 1.15rem; line-height: 1.7; margin-bottom: 2.5rem; }
-    .stats-grid-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; z-index: 2; position: relative; }
-    .stat-box { background: white; border-radius: 24px; padding: 2rem 1.5rem; color: #0f172a; box-shadow: var(--shadow-xl); transition: transform 0.4s ease; text-align: left; }
-    .stat-box:hover { transform: translateY(-8px); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-    .stat-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 1.5rem; background: var(--bg-primary); color: var(--accent-indigo); }
-    .stat-number { font-size: 2.5rem; font-weight: 900; letter-spacing: -0.05em; margin-bottom: 0.5rem; color: var(--text-primary); }
-    .stat-label { font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; }
+
+    .stats-left h2 {
+        font-size: clamp(2.2rem, 4vw, 3.2rem);
+        font-weight: 900;
+        margin-bottom: 1.5rem;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+    }
+
+    .stats-left p {
+        color: #94a3b8;
+        font-size: 1.15rem;
+        line-height: 1.7;
+        margin-bottom: 2.5rem;
+    }
+
+    .stats-grid-inner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        z-index: 2;
+        position: relative;
+    }
+
+    .stat-box {
+        background: white;
+        border-radius: 24px;
+        padding: 2rem 1.5rem;
+        color: #0f172a;
+        box-shadow: var(--shadow-xl);
+        transition: transform 0.4s ease;
+        text-align: left;
+    }
+
+    .stat-box:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        margin-bottom: 1.5rem;
+        background: var(--bg-primary);
+        color: var(--accent-indigo);
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .stat-label {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
 
     /* ── FAQ Section ── */
     .faq-section {
-        max-width: 1000px; margin: 0 auto 8rem; padding: 0 1.5rem;
+        max-width: 1000px;
+        margin: 0 auto 8rem;
+        padding: 0 1.5rem;
     }
-    .faq-header { text-align: center; font-size: clamp(2.2rem, 4vw, 3rem); font-weight: 900; margin-bottom: 4rem; letter-spacing: -0.03em; color: var(--text-primary); }
-    .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    @media (max-width: 768px) { .faq-grid { grid-template-columns: 1fr; } }
+
+    .faq-header {
+        text-align: center;
+        font-size: clamp(2.2rem, 4vw, 3rem);
+        font-weight: 900;
+        margin-bottom: 4rem;
+        letter-spacing: -0.03em;
+        color: var(--text-primary);
+    }
+
+    .faq-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .faq-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
     .faq-item {
-        background: white; border-radius: 16px; padding: 1.75rem; border: 1px solid var(--border-light);
-        cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        border: 1px solid var(--border-light);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         box-shadow: var(--shadow-sm);
     }
-    .faq-item:hover { border-color: var(--accent-indigo); box-shadow: var(--shadow-md); transform: translateY(-3px); }
-    .faq-question { font-size: 1.1rem; font-weight: 750; color: var(--text-primary); display: flex; justify-content: space-between; align-items: center; }
-    .faq-question svg { transition: transform 0.3s; color: var(--text-muted); }
-    .faq-item.active .faq-question svg { transform: rotate(180deg); color: var(--accent-indigo); }
-    .faq-answer { display: none; font-size: 1rem; color: var(--text-secondary); margin-top: 1.25rem; line-height: 1.6; }
-    .faq-item.active .faq-answer { display: block; animation: fadeUp 0.3s ease; }
+
+    .faq-item:hover {
+        border-color: var(--accent-indigo);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-3px);
+    }
+
+    .faq-question {
+        font-size: 1.1rem;
+        font-weight: 750;
+        color: var(--text-primary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .faq-question svg {
+        transition: transform 0.3s;
+        color: var(--text-muted);
+    }
+
+    .faq-item.active .faq-question svg {
+        transform: rotate(180deg);
+        color: var(--accent-indigo);
+    }
+
+    .faq-answer {
+        display: none;
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin-top: 1.25rem;
+        line-height: 1.6;
+    }
+
+    .faq-item.active .faq-answer {
+        display: block;
+        animation: fadeUp 0.3s ease;
+    }
 
     /* ── Bottom CTA ── */
     .bottom-cta {
-        background: var(--bg-secondary); border: 1px solid var(--border-light);
-        border-radius: 40px; padding: 6rem 3rem; margin: 0 auto 6rem; max-width: 1000px;
-        text-align: center; box-shadow: var(--shadow-xl); position: relative; overflow: hidden;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-light);
+        border-radius: 40px;
+        padding: 6rem 3rem;
+        margin: 0 auto 6rem;
+        max-width: 1000px;
+        text-align: center;
+        box-shadow: var(--shadow-xl);
+        position: relative;
+        overflow: hidden;
     }
+
     @media (max-width: 768px) {
-        .bottom-cta { padding: 4rem 1.5rem; border-radius: 24px; }
+        .bottom-cta {
+            padding: 4rem 1.5rem;
+            border-radius: 24px;
+        }
     }
+
     .bottom-cta::before {
-        content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(79, 70, 229, 0.05), transparent); pointer-events: none;
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.05), transparent);
+        pointer-events: none;
     }
-    .bottom-cta h2 { font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 900; margin-bottom: 1.5rem; letter-spacing: -0.04em; color: var(--text-primary); }
-    .bottom-cta p { font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.6; }
-    .cta-features { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: 3rem; }
-    .cta-feature { background: var(--bg-tertiary); padding: 10px 20px; border-radius: 9999px; font-size: 0.9rem; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-light); }
-    .cta-feature svg { color: var(--accent-emerald); }
+
+    .bottom-cta h2 {
+        font-size: clamp(2.5rem, 5vw, 3.5rem);
+        font-weight: 900;
+        margin-bottom: 1.5rem;
+        letter-spacing: -0.04em;
+        color: var(--text-primary);
+    }
+
+    .bottom-cta p {
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        margin-bottom: 3rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.6;
+    }
+
+    .cta-features {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 3rem;
+    }
+
+    .cta-feature {
+        background: var(--bg-tertiary);
+        padding: 10px 20px;
+        border-radius: 9999px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--border-light);
+    }
+
+    .cta-feature svg {
+        color: var(--accent-emerald);
+    }
 
     /* ── Premium Pricing ── */
     .pricing-section {
@@ -333,22 +615,33 @@
         overflow: hidden;
         box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
     }
+
     @media (max-width: 768px) {
-        .pricing-section { padding: 4rem 1rem; margin: 0 1rem 3rem; border-radius: 24px; }
+        .pricing-section {
+            padding: 4rem 1rem;
+            margin: 0 1rem 3rem;
+            border-radius: 24px;
+        }
     }
+
     .pricing-bg-glow {
         position: absolute;
-        top: 0; left: 50%; transform: translateX(-50%);
-        width: 800px; height: 600px;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 800px;
+        height: 600px;
         background: radial-gradient(ellipse, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
         pointer-events: none;
     }
+
     .pricing-header {
         font-size: clamp(2.5rem, 5vw, 3.5rem);
         font-weight: 900;
         margin-bottom: 4rem;
         color: #0f172a;
     }
+
     .pricing-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
@@ -358,6 +651,7 @@
         position: relative;
         z-index: 2;
     }
+
     .pricing-card {
         background: #ffffff;
         backdrop-filter: blur(12px);
@@ -369,34 +663,66 @@
         position: relative;
         box-shadow: 0 10px 25px rgba(15, 23, 42, 0.03);
     }
+
     .pricing-card:hover {
         background: #ffffff;
         border-color: rgba(99, 102, 241, 0.3);
         transform: translateY(-10px);
         box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
     }
+
     .pricing-card.popular {
         background: #ffffff;
         border: 2px solid #4f46e5;
         box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15);
     }
+
     .pricing-badge {
         position: absolute;
-        top: -15px; left: 50%; transform: translateX(-50%);
+        top: -15px;
+        left: 50%;
+        transform: translateX(-50%);
         background: linear-gradient(135deg, #4f46e5, #ec4899);
-        color: white; padding: 6px 18px; border-radius: 20px;
-        font-size: 0.8rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+        color: white;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
     }
+
     .pricing-price {
-        font-size: 3.5rem; font-weight: 900; margin-bottom: 0.5rem; color: #0f172a;
+        font-size: 3.5rem;
+        font-weight: 900;
+        margin-bottom: 0.5rem;
+        color: #0f172a;
     }
-    .pricing-price span { font-size: 1.25rem; font-weight: 500; color: #64748b; }
-    .pricing-list { list-style: none; margin: 2.5rem 0; padding: 0; }
+
+    .pricing-price span {
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: #64748b;
+    }
+
+    .pricing-list {
+        list-style: none;
+        margin: 2.5rem 0;
+        padding: 0;
+    }
+
     .pricing-list li {
-        margin-bottom: 1.2rem; display: flex; align-items: center; gap: 12px;
-        font-size: 1.05rem; color: #475569;
+        margin-bottom: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.05rem;
+        color: #475569;
     }
-    .pricing-list li svg { color: #10b981; }
+
+    .pricing-list li svg {
+        color: #10b981;
+    }
 </style>
 
 <!-- Premium Hero -->
@@ -408,12 +734,15 @@
         The Ultimate<br>Event Photo <span class="text-gradient">Experience</span>
     </h1>
     <p class="hero-subtitle">
-        Upload thousands of event photos in seconds. Our state-of-the-art AI instantly groups faces, builds beautiful personal galleries, and lets your guests find their selfies flawlessly.
+        Upload thousands of event photos in seconds. Our state-of-the-art AI instantly groups faces, builds beautiful
+        personal galleries, and lets your guests find their selfies flawlessly.
     </p>
     <div class="hero-cta">
         <a href="{% url 'gallery:user_login' %}" class="btn-premium">
             Get Started Free
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
         </a>
         <a href="#features" class="btn-premium-outline">See How It Works</a>
     </div>
@@ -423,10 +752,13 @@
 <section class="stats-section">
     <div class="stats-bg-glow"></div>
     <div class="stats-left">
-        <span class="section-tag" style="background: rgba(255,255,255,0.1); color: #fff; margin-bottom: 1rem;">AI-Powered Photo Sharing</span>
+        <span class="section-tag"
+            style="background: rgba(255,255,255,0.1); color: #fff; margin-bottom: 1rem;">AI-Powered Photo Sharing</span>
         <h2>Trusted by Professional Photography Teams</h2>
-        <p>Used by photographers and event organizers globally to manage large volumes of photos with absolute confidence. Streamline your workflow with our advanced AI tools.</p>
-        <a href="{% url 'gallery:user_login' %}" class="btn-premium-outline" style="background: white; color: #0f172a; border-color: white;">Try Photona Free</a>
+        <p>Used by photographers and event organizers globally to manage large volumes of photos with absolute
+            confidence. Streamline your workflow with our advanced AI tools.</p>
+        <a href="{% url 'gallery:user_login' %}" class="btn-premium-outline"
+            style="background: white; color: #0f172a; border-color: white;">Try Photona Free</a>
     </div>
     <div class="stats-grid-inner">
         <div class="stat-box">
@@ -456,47 +788,71 @@
 <section id="features" class="bento-section">
     <span class="section-tag">Next-Gen Capabilities</span>
     <h2 class="section-header">Everything you need to deliver photos, brilliantly.</h2>
-    
+
     <div class="bento-grid">
         <!-- Large Card -->
         <div class="bento-card bento-large">
             <div class="bento-icon" style="color: #4f46e5;">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12 2.1 2.1"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M12 2a10 10 0 1 0 10 10H12V2z" />
+                    <path d="M12 12 2.1 2.1" />
+                </svg>
             </div>
             <h3 class="bento-title">Ultra-Fast AI Face Recognition</h3>
-            <p class="bento-desc" style="max-width: 450px;">Guests upload one selfie, and our proprietary FAISS vector search instantly scans the entire event to deliver a custom private gallery of just their photos. Zero waiting.</p>
-            <div style="position: absolute; right: -40px; bottom: -40px; width: 45%; height: 75%; background: url('https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=800&auto=format&fit=crop') center/cover; border-radius: 24px; box-shadow: var(--shadow-2xl); border: 4px solid white;"></div>
+            <p class="bento-desc" style="max-width: 450px;">Guests upload one selfie, and our proprietary FAISS vector
+                search instantly scans the entire event to deliver a custom private gallery of just their photos. Zero
+                waiting.</p>
+            <div
+                style="position: absolute; right: -40px; bottom: -40px; width: 45%; height: 75%; background: url('https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=800&auto=format&fit=crop') center/cover; border-radius: 24px; box-shadow: var(--shadow-2xl); border: 4px solid white;">
+            </div>
         </div>
 
         <!-- Small Card 1 -->
         <div class="bento-card bento-small">
             <div class="bento-icon" style="color: #ec4899;">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
             </div>
             <h3 class="bento-title">Seamless Live Uploads</h3>
-            <p class="bento-desc">Drag & drop raw batches, ZIP files, or link a live Google Drive folder. We process everything in the background while you work.</p>
+            <p class="bento-desc">Drag & drop raw batches, ZIP files, or link a live Google Drive folder. We process
+                everything in the background while you work.</p>
         </div>
 
         <!-- Small Card 2 -->
         <div class="bento-card bento-small">
             <div class="bento-icon" style="color: #10b981;">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                </svg>
             </div>
             <h3 class="bento-title">Smart Auto-Albums</h3>
-            <p class="bento-desc">Every unique face at your event is automatically clustered into "Sorted People", ready to be named or shared with a click.</p>
+            <p class="bento-desc">Every unique face at your event is automatically clustered into "Sorted People", ready
+                to be named or shared with a click.</p>
         </div>
 
         <!-- Wide Card -->
         <div class="bento-card bento-wide">
             <div style="flex: 1;">
                 <div class="bento-icon" style="color: #f59e0b;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
                 </div>
                 <h3 class="bento-title">Bank-Grade Privacy</h3>
-                <p class="bento-desc">Full control over who sees what. Set event-level passwords or restrict access so users only ever see photos they appear in. Perfect for weddings, corporate galas, and VIP events.</p>
+                <p class="bento-desc">Full control over who sees what. Set event-level passwords or restrict access so
+                    users only ever see photos they appear in. Perfect for weddings, corporate galas, and VIP events.
+                </p>
             </div>
-            <div style="flex: 1.2; position: relative; height: 100%; min-height: 300px; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
-                <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=1200&auto=format&fit=crop" style="position: absolute; width: 100%; height: 100%; object-fit: cover;">
+            <div
+                style="flex: 1.2; position: relative; height: 100%; min-height: 300px; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+                <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=1200&auto=format&fit=crop"
+                    style="position: absolute; width: 100%; height: 100%; object-fit: cover;">
             </div>
         </div>
     </div>
@@ -507,35 +863,45 @@
     <div class="pricing-bg-glow"></div>
     <span class="section-tag">Simple Pricing</span>
     <h2 class="pricing-header">Plans tailored to your scale.</h2>
-    
+
     <div class="pricing-grid">
         {% for plan in plans %}
-            <div class="pricing-card {% if forloop.counter == 2 %}popular{% endif %}">
-                {% if forloop.counter == 2 %}
-                    <div class="pricing-badge">Most Popular</div>
-                {% endif %}
-                <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 800;">{{ plan.name }}</h3>
-                <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 2rem;">Perfect for event professionals.</p>
-                
-                <div class="pricing-price">{{ plan.storage_limit_mb }}<span> MB</span></div>
-                
-                <ul class="pricing-list">
-                    <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Unlimited Event Galleries</li>
-                    <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Ultra-Fast FAISS AI Search</li>
-                    <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Automated Face Clustering</li>
-                    <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Live Drive Import</li>
-                </ul>
-                
-                <a href="{% url 'gallery:user_login' %}" style="display: block; text-align: center; text-decoration: none; padding: 1.1rem; border-radius: 16px; font-weight: 700; transition: all 0.3s; {% if forloop.counter == 2 %}background: linear-gradient(135deg, #4f46e5, #ec4899); color: white; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);{% else %}background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;{% endif %}">
-                    Start Free Trial
-                </a>
-            </div>
+        <div class="pricing-card {% if forloop.counter == 2 %}popular{% endif %}">
+            {% if forloop.counter == 2 %}
+            <div class="pricing-badge">Most Popular</div>
+            {% endif %}
+            <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 800;">{{ plan.name }}</h3>
+            <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 2rem;">Perfect for event professionals.</p>
+
+            <div class="pricing-price">{{ plan.storage_limit_mb }}<span> MB</span></div>
+
+            <ul class="pricing-list">
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg> Unlimited Event Galleries</li>
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg> Ultra-Fast FAISS AI Search</li>
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg> Automated Face Clustering</li>
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg> Live Drive Import</li>
+            </ul>
+
+            <a href="{% url 'gallery:user_login' %}"
+                style="display: block; text-align: center; text-decoration: none; padding: 1.1rem; border-radius: 16px; font-weight: 700; transition: all 0.3s; {% if forloop.counter == 2 %}background: linear-gradient(135deg, #4f46e5, #ec4899); color: white; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);{% else %}background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;{% endif %}">
+                Start Free Trial
+            </a>
+        </div>
         {% empty %}
-            <div class="pricing-card" style="text-align: center; grid-column: 1 / -1; background: transparent; border: none; box-shadow: none;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
-                <h3 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">No plans configured yet</h3>
-                <p style="color: #64748b;">Plans created by the administrator will appear here.</p>
-            </div>
+        <div class="pricing-card"
+            style="text-align: center; grid-column: 1 / -1; background: transparent; border: none; box-shadow: none;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
+            <h3 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">No plans configured yet</h3>
+            <p style="color: #64748b;">Plans created by the administrator will appear here.</p>
+        </div>
         {% endfor %}
     </div>
 </section>
@@ -545,28 +911,53 @@
     <h2 class="faq-header">Frequently Asked Questions</h2>
     <div class="faq-grid">
         <div class="faq-item" onclick="this.classList.toggle('active')">
-            <div class="faq-question">What makes Photona's AI different? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-            <div class="faq-answer">Unlike basic tagging systems, Photona uses an advanced FAISS vector engine that matches faces instantly across tens of thousands of photos in milliseconds with near-perfect accuracy.</div>
+            <div class="faq-question">What makes Photona's AI different? <svg width="20" height="20" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9" />
+                </svg></div>
+            <div class="faq-answer">Unlike basic tagging systems, Photona uses an advanced FAISS vector engine that
+                matches faces instantly across tens of thousands of photos in milliseconds with near-perfect accuracy.
+            </div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('active')">
-            <div class="faq-question">Can I bulk import photos via Google Drive? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-            <div class="faq-answer">Yes! Simply paste a public Google Drive folder link, and Photona will securely download, extract, and index all your event media entirely in the background.</div>
+            <div class="faq-question">Can I bulk import photos via Google Drive? <svg width="20" height="20"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9" />
+                </svg></div>
+            <div class="faq-answer">Yes! Simply paste a public Google Drive folder link, and Photona will securely
+                download, extract, and index all your event media entirely in the background.</div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('active')">
-            <div class="faq-question">How does attendee privacy work? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-            <div class="faq-answer">You have full control. You can lock entire events behind a PIN, or enforce a strict privacy mode where guests only receive photos their face was positively identified in.</div>
+            <div class="faq-question">How does attendee privacy work? <svg width="20" height="20" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9" />
+                </svg></div>
+            <div class="faq-answer">You have full control. You can lock entire events behind a PIN, or enforce a strict
+                privacy mode where guests only receive photos their face was positively identified in.</div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('active')">
-            <div class="faq-question">Do I need to pay to test it out? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-            <div class="faq-answer">Not at all. You can start completely free to explore the platform, upload photos, and see the AI in action before deciding to upgrade your storage plan.</div>
+            <div class="faq-question">Do I need to pay to test it out? <svg width="20" height="20" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9" />
+                </svg></div>
+            <div class="faq-answer">Not at all. You can start completely free to explore the platform, upload photos,
+                and see the AI in action before deciding to upgrade your storage plan.</div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('active')">
-            <div class="faq-question">Can I download the processed photos? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-            <div class="faq-answer">Absolutely. Both you and your guests (if permitted) can download individual photos or download their entire personalized gallery as a ZIP file.</div>
+            <div class="faq-question">Can I download the processed photos? <svg width="20" height="20"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9" />
+                </svg></div>
+            <div class="faq-answer">Absolutely. Both you and your guests (if permitted) can download individual photos
+                or download their entire personalized gallery as a ZIP file.</div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('active')">
-            <div class="faq-question">Is it optimized for mobile users? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-            <div class="faq-answer">Yes! The guest experience is designed entirely mobile-first, allowing them to snap a quick selfie on their phone and instantly view their matched photos without downloading any app.</div>
+            <div class="faq-question">Is it optimized for mobile users? <svg width="20" height="20" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9" />
+                </svg></div>
+            <div class="faq-answer">Yes! The guest experience is designed entirely mobile-first, allowing them to snap a
+                quick selfie on their phone and instantly view their matched photos without downloading any app.</div>
         </div>
     </div>
 </section>
@@ -575,14 +966,201 @@
 <section class="bottom-cta">
     <h2>Join Photona</h2>
     <p>Turn every event into a smooth, stress-free experience. Elevate your photography workflow with AI.</p>
-    <a href="{% url 'gallery:user_login' %}" class="btn-premium" style="display: inline-block;">Start Free Trial &rarr;</a>
+    <a href="{% url 'gallery:user_login' %}" class="btn-premium" style="display: inline-block;">Start Free Trial
+        &rarr;</a>
     <div class="cta-features">
-        <span class="cta-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> AI Face Recognition</span>
-        <span class="cta-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> QR Code Sharing</span>
-        <span class="cta-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> 99.9% Accuracy</span>
+        <span class="cta-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+            </svg> AI Face Recognition</span>
+        <span class="cta-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+            </svg> QR Code Sharing</span>
+        <span class="cta-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+            </svg> 99.9% Accuracy</span>
     </div>
 </section>
 
 
 
 {% endblock %}
+const testimonials = [
+{
+quote: `"Photona has completely changed how we deliver event photos to our clients. It's fast, reliable and our clients
+love it."`,
+name: "Arjun Nair",
+role: "Wedding Photographer, Stories Photography",
+img: "{% static 'images/wedding-couple.jpg' %}"
+},
+{
+quote: `"Our wedding guests were blown away when their selfies matched 80+ photos in literally two seconds. Total game
+changer."`,
+name: "Pooja Sharma",
+role: "Lead Creative, Lens & Light",
+img: "{% static 'images/wedding-bride.jpg' %}"
+},
+{
+quote: `"The automated face clustering saves our studio 15 hours of post-event sorting every single weekend."`,
+name: "Rohan Varma",
+role: "Founder, Camera Crew Studios",
+img: "{% static 'images/candid_guests.jpg' %}"
+}
+];
+
+let currentTestimonialIndex = 0;
+
+function updateTestimonial(index) {
+currentTestimonialIndex = index;
+const t = testimonials[index];
+const quoteEl = document.getElementById('testimonialQuoteText');
+quoteEl.style.opacity = '0';
+setTimeout(() => {
+quoteEl.innerText = t.quote;
+document.getElementById('testimonialAuthorName').innerText = t.name;
+document.getElementById('testimonialAuthorRole').innerText = t.role;
+document.getElementById('testimonialAuthorImg').src = t.img;
+quoteEl.style.opacity = '1';
+}, 200);
+
+for (let i = 0; i < 3; i++) { const dot=document.getElementById('dot' + i); if (dot) { if (i===index) {
+    dot.classList.add('active'); } else { dot.classList.remove('active'); } } } } function prevTestimonial() { let
+    nextIdx=(currentTestimonialIndex - 1 + testimonials.length) % testimonials.length; updateTestimonial(nextIdx); }
+    function nextTestimonial() { let nextIdx=(currentTestimonialIndex + 1) % testimonials.length;
+    updateTestimonial(nextIdx); } // Auto-cycle testimonials every 7 seconds setInterval(()=> {
+    nextTestimonial();
+    }, 7000);
+
+    // 3. Pricing Toggle Logic
+    function setBilling(freq) {
+    const btnMonthly = document.getElementById('btnMonthly');
+    const btnYearly = document.getElementById('btnYearly');
+
+    const priceStarter = document.getElementById('priceStarter');
+    const periodStarter = document.getElementById('periodStarter');
+
+    const pricePro = document.getElementById('pricePro');
+    const periodPro = document.getElementById('periodPro');
+
+    const priceStudio = document.getElementById('priceStudio');
+    const periodStudio = document.getElementById('periodStudio');
+
+    if (freq === 'yearly') {
+    btnYearly.classList.add('active');
+    btnMonthly.classList.remove('active');
+
+    priceStarter.innerText = '₹1,599';
+    periodStarter.innerText = '/ month (billed yearly)';
+
+    pricePro.innerText = '₹3,999';
+    periodPro.innerText = '/ month (billed yearly)';
+
+    priceStudio.innerText = '₹7,999';
+    periodStudio.innerText = '/ month (billed yearly)';
+    } else {
+    btnMonthly.classList.add('active');
+    btnYearly.classList.remove('active');
+
+    priceStarter.innerText = '₹1,999';
+    periodStarter.innerText = '/ event';
+
+    pricePro.innerText = '₹4,999';
+    periodPro.innerText = '/ event';
+
+    priceStudio.innerText = '₹9,999';
+    periodStudio.innerText = '/ event';
+    }
+    }
+
+    // 4. FAQ Accordion Toggle
+    function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+
+    // Close all items in accordion
+    document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('open'));
+
+    if (!isOpen) {
+    item.classList.add('open');
+    }
+    }
+
+    // 5. FAQ Category Tabs Switcher
+    const faqData = {
+    general: [
+    { num: "01", q: "What is Photona?", a: "Photona is an AI-powered event photography platform that helps photographers
+    organize, deliver, and share event photos with guests in real-time." },
+    { num: "02", q: "Who is Photona built for?", a: "Photona is built for wedding photographers, corporate event
+    photographers, commercial studios, and event organizers who want a seamless, premium photo delivery experience." },
+    { num: "03", q: "How does Photona help photographers?", a: "Instead of spending days sorting images or uploading
+    heavy ZIP archives to cloud folders, our deep learning engine groups faces automatically and allows guests to find
+    their photos in seconds." },
+    { num: "04", q: "How do guests find their photos?", a: "Guests simply scan the event QR code, snap a selfie or
+    select a face photo, and our FAISS index matches all photos containing their face instantaneously." },
+    { num: "05", q: "Do guests need to install an app?", a: "No app installation is required! Photona works entirely
+    through mobile and desktop web browsers with blazing-fast progressive web performance." }
+    ],
+    features: [
+    { num: "01", q: "How fast is the face matching?", a: "Our FAISS vector similarity engine searches tens of thousands
+    of high-resolution embeddings in under 200 milliseconds." },
+    { num: "02", q: "Can I customize the share links and QR codes?", a: "Yes, you can create branded event links, set
+    optional password protection, set link expiration dates, or activate guest selfie-only mode." },
+    { num: "03", q: "Does Photona compress my original photos?", a: "You have complete control: Photona allows
+    adjustable compression (from 100% full-resolution lossless to light web compression) per event." },
+    { num: "04", q: "Can guests download all their matched photos in one click?", a: "Yes! Guests get a 'Download All
+    Photos' option that bundles their high-resolution images instantly." }
+    ],
+    storage: [
+    { num: "01", q: "Where are photos stored?", a: "Photona supports ultra-fast local NVMe storage or direct integration
+    with AWS S3 encrypted cloud storage buckets." },
+    { num: "02", q: "How does the AI face embedding work?", a: "InsightFace detects faces and converts them into compact
+    512-dimensional vector representations. Only mathematical coordinates are queried during searches." },
+    { num: "03", q: "What image formats are supported?", a: "JPG, JPEG, PNG, WEBP, and BMP formats are fully supported,
+    with automated background WebP thumbnail generation." }
+    ],
+    billing: [
+    { num: "01", q: "Is there a free trial?", a: "Yes! Every new photographer and studio gets a 7-day full-featured free
+    trial with no credit card required." },
+    { num: "02", q: "Can I upgrade or change my plan anytime?", a: "Yes, you can upgrade your plan or request custom
+    storage quotas directly from your studio dashboard." },
+    { num: "03", q: "What payment methods are supported?", a: "We support major credit/debit cards, UPI, Net Banking,
+    and direct invoicing for annual studio accounts." }
+    ]
+    };
+
+    function switchFaqTab(category, btn) {
+    document.querySelectorAll('.faq-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const container = document.querySelector('.faq-accordion-box');
+    const items = faqData[category] || faqData.general;
+
+    container.innerHTML = items.map((item, idx) => `
+    <div class="faq-item ${idx === 0 ? 'open' : ''}">
+        <button class="faq-question-btn" onclick="toggleFaq(this)">
+            <div style="display: flex; align-items: center;">
+                <span class="faq-num-pill">${item.num}</span>
+                <span>${item.q}</span>
+            </div>
+            <span class="faq-toggle-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+            </span>
+        </button>
+        <div class="faq-answer">
+            ${item.a}
+        </div>
+    </div>
+    `).join('');
+    }
+    </script>
+    </body>
+
+    </html>

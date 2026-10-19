@@ -37,6 +37,8 @@ urlpatterns = [
     # Event CRUD (Tenant)
     path('event/create/', views.create_event, name='create_event'),
     path('event/update/<slug:slug>/', views.update_event, name='update_event'),
+    path('event/compression/<slug:slug>/', views.update_event_compression, name='update_event_compression'),
+    path('event/watermark/<slug:slug>/', views.update_event_watermark, name='update_event_watermark'),
     path('event/delete/<slug:slug>/', views.delete_event, name='delete_event'),
     path('event/<slug:slug>/', views.event_detail, name='event_detail'),
     path('event/<slug:slug>/group/rename/', views.rename_face_group, name='rename_face_group'),
@@ -72,4 +74,5 @@ urlpatterns = [
     path('event/<slug:slug>/download/', views.download_event_zip, name='download_event_zip'),
     path('download-zip/', views.download_images_zip, name='download_images_zip'),
     path('download/image/<int:image_id>/', views.download_single_image, name='download_single_image'),
+    path('api/apply-preset/', views.apply_preset_api, name='apply_preset_api'),
 ]

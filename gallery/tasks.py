@@ -28,21 +28,34 @@ def compress_image_if_needed(image_path, compression_percentage):
         return
     try:
         from PIL import Image, ImageOps
-        import os
+        import os, uuid, shutil
         with Image.open(image_path) as img:
             img = ImageOps.exif_transpose(img)
+            icc_profile = img.info.get('icc_profile')
+            
+            # Downscale dimensions to compress file size while maintaining pixel quality
+            scale_factor = float(compression_percentage) / 100.0
+            new_width = max(1, int(img.width * scale_factor))
+            new_height = max(1, int(img.height * scale_factor))
+            
+            if new_width < img.width and new_height < img.height:
+                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
             if img.mode in ('RGBA', 'P'): 
                 img = img.convert('RGB')
+                
             ext = os.path.splitext(image_path)[1].lower()
             fmt = 'JPEG'
             if ext == '.webp': fmt = 'WEBP'
-            # Force convert PNG to JPEG if compression is requested
-            if ext == '.png': 
-                fmt = 'JPEG'
+            if ext == '.png': fmt = 'JPEG'
             
-            import uuid, shutil
             temp_save_path = f"{image_path}.{uuid.uuid4().hex}.tmp"
-            img.save(temp_save_path, format=fmt, quality=int(compression_percentage), optimize=True)
+            
+            save_kwargs = {'format': fmt, 'quality': 92, 'optimize': True}
+            if icc_profile:
+                save_kwargs['icc_profile'] = icc_profile
+                
+            img.save(temp_save_path, **save_kwargs)
             
         shutil.move(temp_save_path, image_path)
     except Exception as e:

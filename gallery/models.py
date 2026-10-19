@@ -64,6 +64,10 @@ def event_cover_upload_path(instance, filename):
     organizer = instance.owner.username if instance.owner else 'unassigned'
     return f'covers/{organizer}/{instance.slug}/{filename}'
 
+def event_watermark_upload_path(instance, filename):
+    organizer = instance.owner.username if instance.owner else 'unassigned'
+    return f'watermarks/{organizer}/{instance.slug}/{filename}'
+
 class Event(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -72,7 +76,32 @@ class Event(models.Model):
     cover_image = models.ImageField(upload_to=event_cover_upload_path, null=True, blank=True)
     event_date = models.DateField(null=True, blank=True)
     compression_percentage = models.IntegerField(default=100, help_text="Image compression percentage (1-100). 100 means no extra compression.")
+    default_preset = models.CharField(max_length=100, default='original', blank=True, help_text="Default non-destructive preset overlay applied across event photos")
+    default_preset_settings = models.JSONField(default=dict, blank=True, help_text="Fine-tune adjustments settings dictionary for default preset")
+    
+    # Watermark Settings
+    watermark_enabled = models.BooleanField(default=False)
+    watermark_type = models.CharField(max_length=20, default='text')  # 'text' | 'image'
+    watermark_text = models.CharField(max_length=120, blank=True, default='')
+    watermark_image = models.ImageField(upload_to=event_watermark_upload_path, null=True, blank=True)
+    watermark_position = models.CharField(max_length=30, default='bottom-right')  # 9 positions: top-left, top-center, top-right, center-left, center, center-right, bottom-left, bottom-center, bottom-right
+    watermark_opacity = models.IntegerField(default=75)  # 10 to 100
+    watermark_size = models.IntegerField(default=25)  # 10 to 60 (font/logo scale %)
+    
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def get_watermark_config(self):
+        if not self.watermark_enabled:
+            return None
+        return {
+            'enabled': True,
+            'type': self.watermark_type or 'text',
+            'text': self.watermark_text or self.name,
+            'image_url': self.watermark_image.url if self.watermark_image else None,
+            'position': self.watermark_position or 'bottom-right',
+            'opacity': self.watermark_opacity or 75,
+            'size': self.watermark_size or 25,
+        }
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -99,6 +128,8 @@ class GalleryImage(models.Model):
     filename = models.CharField(max_length=255)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='images', null=True, blank=True)
     total_faces = models.IntegerField(default=0)
+    preset_name = models.CharField(max_length=100, default='original', blank=True, help_text="Active non-destructive preset overlay ('bw', 'warm', 'editorial', 'original', etc.)")
+    preset_settings = models.JSONField(default=dict, blank=True, help_text="Fine-tune adjustments settings dictionary (exposure, contrast, saturation, grain, etc.)")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

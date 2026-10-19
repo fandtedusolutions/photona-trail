@@ -619,19 +619,11 @@
             <h3 style="font-size: 1.1rem; font-weight: 700; color: #111827; margin-bottom: 1rem;">Studio Insights</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem;">
                 
-                <!-- Gross -->
-                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.25rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <span style="font-size: 0.9rem; font-weight: 600; color: #111827;">Gross</span>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    </div>
-                    <div style="font-size: 1.5rem; font-weight: 800; color: #111827; margin-bottom: 0.5rem;">
-                        {{ total_images|default:"50971" }} <span style="font-size: 1rem; color: #64748b; font-weight: 500;">/ {{ allowed_uploads|default:"100000" }}</span>
-                    </div>
-                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">Photos Uploaded / Allowed</div>
-                    <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
-                        <div style="width: {{ upload_percentage|default:'50' }}%; height: 100%; background: #3b82f6;"></div>
-                    </div>
+                <!-- Photos -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 2rem 1.25rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <div style="font-size: 1.75rem; font-weight: 800; color: #111827; margin-bottom: 0.25rem;">{{ total_images|default_if_none:0 }}</div>
+                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 500;">Photos</div>
                 </div>
                 
                 <!-- Storage Usage -->
@@ -654,14 +646,14 @@
                 <!-- Users -->
                 <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 2rem 1.25rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    <div style="font-size: 1.75rem; font-weight: 800; color: #111827; margin-bottom: 0.25rem;">{{ total_users|default:"133" }}</div>
+                    <div style="font-size: 1.75rem; font-weight: 800; color: #111827; margin-bottom: 0.25rem;">{{ total_users|default_if_none:0 }}</div>
                     <div style="font-size: 0.85rem; color: #64748b; font-weight: 500;">Users</div>
                 </div>
                 
                 <!-- Events -->
                 <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 2rem 1.25rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    <div style="font-size: 1.75rem; font-weight: 800; color: #111827; margin-bottom: 0.25rem;">{{ total_events|default:"5" }}</div>
+                    <div style="font-size: 1.75rem; font-weight: 800; color: #111827; margin-bottom: 0.25rem;">{{ total_events|default_if_none:0 }}</div>
                     <div style="font-size: 0.85rem; color: #64748b; font-weight: 500;">Events</div>
                 </div>
             </div>
@@ -714,11 +706,11 @@
                 <!-- Events Count -->
                 <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
                     <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 600; color: #64748b;">Events Count</h4>
-                    <div style="font-size: 3.5rem; font-weight: 800; color: #111827; line-height: 1; margin-bottom: 1.5rem;">{{ total_events|default:"5" }}</div>
+                    <div style="font-size: 3.5rem; font-weight: 800; color: #111827; line-height: 1; margin-bottom: 1.5rem;">{{ total_events|default_if_none:0 }}</div>
                     <button onclick="openModal('eventModal')" style="width: 100%; background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 0.6rem; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; cursor: pointer;">
                         Create Event +
                     </button>
-                    <button onclick="document.getElementById('events-section').scrollIntoView({behavior:'smooth'});" style="width: 100%; background: #111827; color: white; border: none; border-radius: 8px; padding: 0.6rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <button onclick="window.location.href='{% url 'gallery:events_list' %}';" style="width: 100%; background: #111827; color: white; border: none; border-radius: 8px; padding: 0.6rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                         Go to Events <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </button>
                 </div>

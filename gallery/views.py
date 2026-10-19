@@ -472,8 +472,198 @@ def update_event(request, slug):
         event.compression_percentage = compression_percentage
         if cover_image:
             event.cover_image = cover_image
+
+        # Watermark settings
+        watermark_enabled = request.POST.get('watermark_enabled')
+        if watermark_enabled is not None:
+            event.watermark_enabled = (watermark_enabled in ['true', 'True', '1', 'on'])
+            event.watermark_type = request.POST.get('watermark_type', event.watermark_type)
+            event.watermark_text = request.POST.get('watermark_text', event.watermark_text)
+            event.watermark_position = request.POST.get('watermark_position', event.watermark_position)
+            if request.POST.get('watermark_opacity'):
+                try: event.watermark_opacity = max(10, min(100, int(request.POST.get('watermark_opacity'))))
+                except (TypeError, ValueError): pass
+            if request.POST.get('watermark_size'):
+                try: event.watermark_size = max(10, min(60, int(request.POST.get('watermark_size'))))
+                except (TypeError, ValueError): pass
+            if 'watermark_image' in request.FILES:
+                event.watermark_image = request.FILES['watermark_image']
+
         event.save()
     return redirect('gallery:event_detail', slug=event.slug)
+
+@login_required
+@require_POST
+def update_event_compression(request, slug):
+    from django.http import JsonResponse
+    event = get_object_or_404(Event, slug=slug, owner=request.user)
+    try:
+        value = int(request.POST.get('compression_percentage', ''))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Enter a number between 1 and 100.'}, status=400)
+    if not 1 <= value <= 100:
+        return JsonResponse({'success': False, 'error': 'Value must be between 1 and 100.'}, status=400)
+    event.compression_percentage = value
+    event.save(update_fields=['compression_percentage'])
+    return JsonResponse({'success': True, 'compression_percentage': value})
+
+def _calc_wm_coords(W, H, w, h, margin, pos):
+    if pos == 'top-left': return (margin, margin)
+    elif pos == 'top-center': return ((W - w) // 2, margin)
+    elif pos == 'top-right': return (W - w - margin, margin)
+    elif pos == 'center-left': return (margin, (H - h) // 2)
+    elif pos == 'center': return ((W - w) // 2, (H - h) // 2)
+    elif pos == 'center-right': return (W - w - margin, (H - h) // 2)
+    elif pos == 'bottom-left': return (margin, H - h - margin)
+    elif pos == 'bottom-center': return ((W - w) // 2, H - h - margin)
+    else: return (W - w - margin, H - h - margin) # default bottom-right
+
+def apply_watermark_to_image(image_bytes, event):
+    """
+    Dynamically burns the event watermark into image bytes for guest downloads.
+    Original disk files remain completely untouched and pristine.
+    """
+    if not event or not event.watermark_enabled:
+        return image_bytes
+    try:
+        import os
+        from io import BytesIO
+        from PIL import Image, ImageDraw, ImageFont
+
+        base_img = Image.open(BytesIO(image_bytes))
+        is_rgba = (base_img.mode == 'RGBA')
+        base_rgba = base_img.convert('RGBA')
+        W, H = base_rgba.size
+
+        overlay = Image.new('RGBA', (W, H), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(overlay)
+        margin = max(16, int(min(W, H) * 0.035))
+
+        pos = event.watermark_position or 'bottom-right'
+        opacity_ratio = max(0.1, min(1.0, (event.watermark_opacity or 75) / 100.0))
+        size_ratio = max(0.1, min(0.6, (event.watermark_size or 25) / 100.0))
+
+        if event.watermark_type == 'image' and event.watermark_image:
+            try:
+                logo = Image.open(event.watermark_image.path).convert('RGBA')
+                target_w = max(40, int(W * size_ratio))
+                target_h = max(20, int(logo.height * (target_w / max(1, logo.width))))
+                if target_h > int(H * 0.45):
+                    target_h = int(H * 0.45)
+                    target_w = max(20, int(logo.width * (target_h / max(1, logo.height))))
+
+                logo = logo.resize((target_w, target_h), Image.Resampling.LANCZOS)
+
+                # Apply opacity to alpha channel
+                r, g, b, a = logo.split()
+                a = a.point(lambda p: int(p * opacity_ratio))
+                logo.putalpha(a)
+
+                x, y = _calc_wm_coords(W, H, target_w, target_h, margin, pos)
+                overlay.paste(logo, (x, y), logo)
+            except Exception as e:
+                print(f"Error rendering logo watermark: {e}")
+        else:
+            # Text Watermark
+            text = (event.watermark_text or event.name or 'PHOTONA').strip()
+            font_size = max(18, int(min(W, H) * 0.045 * (event.watermark_size / 25.0)))
+            font = None
+            try:
+                font_paths = [
+                    "/System/Library/Fonts/Supplemental/Arial.ttf",
+                    "/System/Library/Fonts/Helvetica.ttc",
+                    "/Library/Fonts/Arial.ttf",
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+                ]
+                for fp in font_paths:
+                    if os.path.exists(fp):
+                        font = ImageFont.truetype(fp, font_size)
+                        break
+            except Exception:
+                pass
+            if not font:
+                font = ImageFont.load_default()
+
+            bbox = draw.textbbox((0, 0), text, font=font)
+            tw = bbox[2] - bbox[0]
+            th = bbox[3] - bbox[1]
+
+            x, y = _calc_wm_coords(W, H, tw, th, margin, pos)
+
+            # Elegant pill background for legibility on all photo backgrounds
+            pad_x = max(12, int(font_size * 0.35))
+            pad_y = max(6, int(font_size * 0.2))
+            badge_rect = [x - pad_x, y - pad_y, x + tw + pad_x, y + th + pad_y]
+            badge_alpha = int(130 * opacity_ratio)
+            draw.rounded_rectangle(badge_rect, radius=max(6, int(font_size * 0.25)), fill=(15, 23, 42, badge_alpha))
+
+            # Drop shadow & crisp text
+            text_alpha = int(255 * opacity_ratio)
+            draw.text((x + 1, y + 1), text, font=font, fill=(0, 0, 0, int(text_alpha * 0.5)))
+            draw.text((x, y), text, font=font, fill=(255, 255, 255, text_alpha))
+
+        composited = Image.alpha_composite(base_rgba, overlay)
+        out = BytesIO()
+        if is_rgba:
+            composited.save(out, format='PNG')
+        else:
+            composited.convert('RGB').save(out, format='JPEG', quality=92, optimize=True)
+        return out.getvalue()
+    except Exception as e:
+        print(f"Error applying watermark: {e}")
+        return image_bytes
+
+@login_required
+@require_POST
+def update_event_watermark(request, slug):
+    from django.http import JsonResponse
+    event = get_object_or_404(Event, slug=slug, owner=request.user)
+
+    enabled_val = request.POST.get('watermark_enabled')
+    event.watermark_enabled = (enabled_val in ['true', 'True', '1', 'on'])
+
+    wm_type = request.POST.get('watermark_type', 'text').strip()
+    if wm_type in ['text', 'image']:
+        event.watermark_type = wm_type
+
+    wm_text = request.POST.get('watermark_text', '').strip()
+    event.watermark_text = wm_text
+
+    wm_pos = request.POST.get('watermark_position', 'bottom-right').strip()
+    valid_positions = ['top-left', 'top-center', 'top-right', 'center-left', 'center', 'center-right', 'bottom-left', 'bottom-center', 'bottom-right']
+    if wm_pos in valid_positions:
+        event.watermark_position = wm_pos
+
+    try:
+        event.watermark_opacity = max(10, min(100, int(request.POST.get('watermark_opacity', 75))))
+    except (TypeError, ValueError):
+        pass
+
+    try:
+        event.watermark_size = max(10, min(60, int(request.POST.get('watermark_size', 25))))
+    except (TypeError, ValueError):
+        pass
+
+    if 'watermark_image' in request.FILES:
+        event.watermark_image = request.FILES['watermark_image']
+
+    event.save()
+
+    cfg = event.get_watermark_config() or {
+        'enabled': False,
+        'type': event.watermark_type,
+        'text': event.watermark_text,
+        'position': event.watermark_position,
+        'opacity': event.watermark_opacity,
+        'size': event.watermark_size,
+        'image_url': event.watermark_image.url if event.watermark_image else None,
+    }
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Watermark settings saved successfully!',
+        'watermark': cfg,
+    })
 
 @login_required
 @require_POST
@@ -542,20 +732,25 @@ def photos_api(request):
     from django.urls import reverse
     data = []
     for img in page:
-        token = img.get_secure_thumbnail_token() if img.thumbnail else img.get_secure_file_token()
+        file_token = img.get_secure_file_token()
+        thumb_token = img.get_secure_thumbnail_token() if img.thumbnail else file_token
         data.append({
             'id': img.id,
             'filename': img.filename,
             'event_name': img.event.name if img.event else "Event",
             'organiser_name': img.event.owner.username.title() if (img.event and img.event.owner) else "Studio",
-            'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[token])),
+            'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[thumb_token])),
+            'full_url': request.build_absolute_uri(reverse('gallery:secure_image', args=[file_token])),
             'total_faces': img.total_faces,
-            'uploaded_at': img.uploaded_at.strftime("%b %d, %H:%M")
+            'uploaded_at': img.uploaded_at.strftime("%b %d, %H:%M"),
+            'preset_name': img.preset_name or 'original',
+            'preset_settings': img.preset_settings or {},
         })
         
     return JsonResponse({
         'images': data,
-        'has_next': page.has_next()
+        'has_next': page.has_next(),
+        'watermark': event.get_watermark_config()
     })
 
 
@@ -675,6 +870,15 @@ def upload_single_photo(request):
             try:
                 with Image.open(file) as img:
                     img = ImageOps.exif_transpose(img)
+                    icc_profile = img.info.get('icc_profile')
+
+                    scale_factor = float(compression_percentage) / 100.0
+                    new_width = max(1, int(img.width * scale_factor))
+                    new_height = max(1, int(img.height * scale_factor))
+
+                    if new_width < img.width and new_height < img.height:
+                        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
                     if img.mode in ('RGBA', 'P'): 
                         img = img.convert('RGB')
                     
@@ -684,7 +888,11 @@ def upload_single_photo(request):
                     if ext == '.png': fmt = 'JPEG'
                     
                     compressed_io = BytesIO()
-                    img.save(compressed_io, format=fmt, quality=int(compression_percentage), optimize=True)
+                    save_kwargs = {'format': fmt, 'quality': 92, 'optimize': True}
+                    if icc_profile:
+                        save_kwargs['icc_profile'] = icc_profile
+
+                    img.save(compressed_io, **save_kwargs)
                     compressed_io.seek(0)
                     
                     file = File(compressed_io, name=safe_filename)
@@ -1222,6 +1430,8 @@ def download_event_zip(request, slug):
                     print(f"Error reading image from storage: {e}")
                         
                 if content:
+                    if event.watermark_enabled:
+                        content = apply_watermark_to_image(content, event)
                     zip_file.writestr(zip_filename, content)
                 
     zip_buffer.seek(0)
@@ -1270,6 +1480,10 @@ def download_single_image(request, image_id):
             
     if content is None:
         return HttpResponse("Failed to download image", status=500)
+
+    # Apply watermark non-destructively if watermark is enabled on the event
+    if img.event and img.event.watermark_enabled:
+        content = apply_watermark_to_image(content, img.event)
         
     response = HttpResponse(content, content_type='application/octet-stream')
     response['Content-Disposition'] = f'attachment; filename="{download_name}"'
@@ -1342,6 +1556,8 @@ def download_images_zip(request):
                         print(f"Error fetching zip image file: {e}")
 
                     if content:
+                        if img.event and img.event.watermark_enabled:
+                            content = apply_watermark_to_image(content, img.event)
                         zip_file.writestr(zip_filename, content)
                         file_added = True
                         if img.event:
@@ -1679,14 +1895,118 @@ def public_photos_api(request):
 
         data = []
         for img in page_obj.object_list:
+            file_token = img.get_secure_file_token()
+            thumb_token = img.get_secure_thumbnail_token() if img.thumbnail else file_token
             data.append({
                 'id': img.id,
-                'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[img.get_secure_thumbnail_token()])),
+                'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[thumb_token])),
+                'full_url': request.build_absolute_uri(reverse('gallery:secure_image', args=[file_token])),
                 'filename': img.filename,
+                'preset_name': img.preset_name or 'original',
+                'preset_settings': img.preset_settings or {},
                 'uploaded_at': img.uploaded_at.strftime('%b %d, %H:%M') if img.uploaded_at else '',
             })
-        return JsonResponse({'images': data, 'has_next': page_obj.has_next()})
+        return JsonResponse({
+            'images': data,
+            'has_next': page_obj.has_next(),
+            'watermark': link.event.get_watermark_config(),
+        })
     except Exception as e:
         import traceback
         return JsonResponse({'error': str(e), 'traceback': traceback.format_exc()}, status=500)
+
+
+@login_required
+@require_POST
+def apply_preset_api(request):
+    """
+    Non-Destructive Preset & Fine-Tune Settings API.
+    Does NOT modify the physical original photo file on disk.
+    Instead, saves the preset name and fine-tuning adjustment settings as metadata.
+    This guarantees that the original camera photo remains 100% untouched and pristine.
+    Users can revert back to 'original' at any time with zero loss of quality or data.
+    """
+    import json
+    try:
+        photo_id = request.POST.get('photo_id')
+        event_slug = request.POST.get('event_slug')
+        preset_name = request.POST.get('preset_name', 'original').strip()
+        preset_settings_raw = request.POST.get('preset_settings', '{}')
+        apply_all = request.POST.get('apply_all') == 'true'
+
+        try:
+            preset_settings = json.loads(preset_settings_raw) if isinstance(preset_settings_raw, str) else (preset_settings_raw or {})
+        except Exception:
+            preset_settings = {}
+
+        event = None
+        if event_slug:
+            event = Event.objects.filter(slug=event_slug).first()
+
+        # Normalise original
+        is_original = preset_name.lower() in ['original', 'none', 'default', '']
+        if is_original:
+            preset_name = 'original'
+            if not isinstance(preset_settings, dict):
+                preset_settings = {}
+
+        if apply_all and event:
+            if not request.user.is_superuser and event.owner != request.user:
+                return HttpResponseForbidden("Unauthorized")
+
+            # Save default preset to the event settings
+            event.default_preset = preset_name
+            event.default_preset_settings = preset_settings
+            event.save(update_fields=['default_preset', 'default_preset_settings'])
+
+            # Update all images in event (non-destructive)
+            count = event.images.all().update(preset_name=preset_name, preset_settings=preset_settings)
+
+            msg = f'All {count} photos reverted to original camera files.' if (is_original and not preset_settings) else f'Preset "{preset_name}" saved across all {count} photos (Non-destructive: original files preserved).'
+
+            return JsonResponse({
+                'success': True,
+                'count': count,
+                'preset_name': preset_name,
+                'preset_settings': preset_settings,
+                'message': msg,
+            })
+
+        elif photo_id:
+            img = get_object_or_404(GalleryImage, id=photo_id)
+            if not request.user.is_superuser and (img.event and img.event.owner != request.user):
+                return HttpResponseForbidden("Unauthorized")
+
+            # Save preset settings onto the image (non-destructive)
+            img.preset_name = preset_name
+            img.preset_settings = preset_settings
+            img.save(update_fields=['preset_name', 'preset_settings'])
+
+            file_tok = img.get_secure_file_token()
+            thumb_tok = img.get_secure_thumbnail_token()
+
+            has_crop = bool(preset_settings and preset_settings.get('crop', {}).get('cropRect'))
+            if is_original and not preset_settings:
+                msg = "Restored to original camera photo (untouched)."
+            elif has_crop and is_original:
+                msg = "Crop & framing saved successfully!"
+            else:
+                msg = f'Preset "{preset_name}" saved! (Original camera file preserved).'
+
+            return JsonResponse({
+                'success': True,
+                'count': 1,
+                'photo_id': img.id,
+                'preset_name': preset_name,
+                'preset_settings': preset_settings,
+                'new_url': request.build_absolute_uri(reverse('gallery:secure_image', args=[thumb_tok])),
+                'new_full_url': request.build_absolute_uri(reverse('gallery:secure_image', args=[file_tok])),
+                'message': msg
+            })
+        else:
+            return JsonResponse({'success': False, 'message': 'Missing photo_id or event_slug.'}, status=400)
+
+    except Exception as ex:
+        import traceback
+        return JsonResponse({'success': False, 'error': str(ex), 'traceback': traceback.format_exc()}, status=500)
 
