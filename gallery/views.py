@@ -1093,10 +1093,11 @@ def upload_single_photo(request):
             raw_bytes = file.read()
             file.seek(0)
             gallery_image.file.save(safe_filename, file, save=False)
-            
+        gallery_image.total_faces = -1
         gallery_image.save()
         
-        num_faces = process_gallery_image(gallery_image, raw_bytes=raw_bytes)
+        from .utils import enqueue_image_for_ai
+        enqueue_image_for_ai(gallery_image.id, event.id)
         
         from django.urls import reverse
         file_token = gallery_image.get_secure_file_token()

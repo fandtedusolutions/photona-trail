@@ -9,10 +9,60 @@ from .models import GalleryImage, FaceEmbedding, Event
 # Singleton-like lazy loaded InsightFace model
 _face_app = None
 
+import queue
+import threading
+
+_face_app = None
+_ai_queue = queue.Queue()
+_ai_worker_started = False
+_ai_lock = threading.Lock()
+
+def _ai_background_worker():
+    """Background worker daemon for face detection and embeddings without blocking requests."""
+    from django.db import connection
+    while True:
+        try:
+            item = _ai_queue.get()
+            if item is None:
+                break
+            image_id, event_id = item
+            from .models import GalleryImage
+            g_img = GalleryImage.objects.filter(id=image_id).first()
+            if g_img and g_img.total_faces == -1:
+                num_f = process_gallery_image(g_img)
+                g_img.total_faces = num_f
+                g_img.save(update_fields=['total_faces'])
+        except Exception as ex:
+            print(f"[AI_WORKER] Error processing image {item}: {ex}")
+        finally:
+            try:
+                connection.close()
+            except Exception:
+                pass
+            _ai_queue.task_done()
+
+def enqueue_image_for_ai(image_id, event_id=None):
+    """Enqueue an image for background AI face detection and indexing."""
+    try:
+        from .tasks import process_single_image_task
+        process_single_image_task.delay(image_id, None)
+        return
+    except Exception:
+        pass
+
+    global _ai_worker_started
+    with _ai_lock:
+        if not _ai_worker_started:
+            t = threading.Thread(target=_ai_background_worker, daemon=True, name="Photona_AI_Worker")
+            t.start()
+            _ai_worker_started = True
+    _ai_queue.put((image_id, event_id))
+
 def get_face_model():
     global _face_app
     if _face_app is None:
-        _face_app = FaceAnalysis(name=MODEL_NAME)
+        # Only load detection and recognition — skip landmark_3d and genderage for 2x faster inference and low RAM
+        _face_app = FaceAnalysis(name=MODEL_NAME, allowed_modules=['detection', 'recognition'])
         _face_app.prepare(ctx_id=0, det_size=DETECTION_SIZE)
     return _face_app
 
@@ -61,9 +111,9 @@ def process_gallery_image(gallery_image, local_path=None, raw_bytes=None):
     elif img.shape[2] == 3:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # Downscale large DSLR images for lightning-fast, accurate face detection
+    # Downscale large DSLR images to 800px for lightning-fast, accurate face detection
     h, w = img.shape[:2]
-    max_dim = 1280
+    max_dim = 800
     if max(h, w) > max_dim:
         scale = max_dim / float(max(h, w))
         img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_LINEAR)
@@ -244,54 +294,67 @@ def download_gdrive_file(file_id, output_path, api_key=None):
             
     return False
 
-def _process_and_save_single_image(img_path, file_name, event_id):
-    import cv2
-    event = Event.objects.filter(id=event_id).first() if event_id else None
-    img = cv2.imread(img_path)
-    if img is None:
-        return None
+from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor
 
+def _process_and_save_single_image(img_path, file_name, event_id):
+    from PIL import Image, ImageOps
+    event = Event.objects.filter(id=event_id).first() if event_id else None
+
+    # Check file size & user storage
+    file_size_mb = os.path.getsize(img_path) / (1024 * 1024)
     if event and event.owner and hasattr(event.owner, 'profile'):
         profile = event.owner.profile
-        file_size_mb = os.path.getsize(img_path) / (1024 * 1024)
         limit_mb = profile.effective_storage_limit_mb if hasattr(profile, 'effective_storage_limit_mb') else (profile.subscription_plan.storage_limit_mb if profile.subscription_plan else 0)
         if limit_mb > 0 and (profile.used_storage_mb + file_size_mb) > limit_mb:
             raise Exception("Storage limit exceeded. Upgrade your plan to import more photos.")
         profile.used_storage_mb += file_size_mb
         profile.save(update_fields=['used_storage_mb'])
 
-    compression = event.compression_percentage if event else 100
-    from .tasks import compress_image_if_needed
-    compress_image_if_needed(img_path, compression)
-
     clean_file_name = file_name
     if clean_file_name.endswith('.tmp'):
         clean_event_name = event.name if event else "Imported"
         clean_file_name = f"{clean_event_name}_Photo_{uuid.uuid4().hex[:6]}.jpg"
 
-    with open(img_path, 'rb') as img_f:
-        gallery_image = GalleryImage(filename=clean_file_name, event=event, total_faces=-1)
-        gallery_image.file.save(clean_file_name, File(img_f), save=False)
+    gallery_image = GalleryImage(filename=clean_file_name, event=event, total_faces=-1)
 
-        from .tasks import create_thumbnail
-        thumb_io, ext = create_thumbnail(img_path)
-        if thumb_io:
-            thumb_name = os.path.splitext(clean_file_name)[0] + "_thumb" + ext
+    # High-Speed single-pass processing: generate WEBP thumbnail & compress
+    try:
+        with Image.open(img_path) as img:
+            img = ImageOps.exif_transpose(img)
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+
+            # 1. Fast in-memory WEBP thumbnail
+            thumb_img = img.copy()
+            thumb_img.thumbnail((600, 600), Image.Resampling.BILINEAR)
+            thumb_io = BytesIO()
+            thumb_img.save(thumb_io, format='WEBP', quality=80)
+            thumb_io.seek(0)
+            thumb_name = os.path.splitext(clean_file_name)[0] + "_thumb.webp"
             gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
 
-        gallery_image.save()
+            # 2. Compression if configured
+            compression_percentage = event.compression_percentage if event else 100
+            if compression_percentage and compression_percentage < 100:
+                scale_factor = float(compression_percentage) / 100.0
+                new_width = max(1, int(img.width * scale_factor))
+                new_height = max(1, int(img.height * scale_factor))
+                if new_width < img.width and new_height < img.height:
+                    img = img.resize((new_width, new_height), Image.Resampling.BILINEAR)
+                comp_io = BytesIO()
+                img.save(comp_io, format='JPEG', quality=88)
+                comp_io.seek(0)
+                gallery_image.file.save(clean_file_name, File(comp_io), save=False)
+            else:
+                with open(img_path, 'rb') as f:
+                    gallery_image.file.save(clean_file_name, File(f), save=False)
+    except Exception as e:
+        print(f"[DEBUG] Fast image process fallback: {e}")
+        with open(img_path, 'rb') as f:
+            gallery_image.file.save(clean_file_name, File(f), save=False)
 
-    try:
-        from .tasks import process_single_image_task
-        process_single_image_task.delay(gallery_image.id, None)
-    except Exception:
-        try:
-            num_f = process_gallery_image(gallery_image)
-            gallery_image.total_faces = num_f
-            gallery_image.save(update_fields=['total_faces'])
-        except Exception as pe:
-            print(f"[DEBUG] Direct processing fallback error: {pe}")
-
+    gallery_image.save()
     return gallery_image
 
 def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=None):
@@ -305,7 +368,6 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
     temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp', f"gdrive_{uuid.uuid4().hex[:8]}")
     os.makedirs(temp_dir, exist_ok=True)
     
-    total_indexed = 0
     total_faces = 0
     api_key = getattr(settings, 'GDRIVE_API_KEY', None)
     
@@ -364,10 +426,10 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                 raise ValueError("Could not extract Google Drive file ID from URL.")
             items_to_process.append({'id': file_id, 'name': f"{file_id}.jpg"})
 
-        # If items were discovered, perform streaming per-file import
+        # High-Speed Multi-Threaded Parallel Download & Live Ingestion
         if items_to_process:
             total_files = len(items_to_process)
-            print(f"[GDrive] Discovered {total_files} photo candidates. Starting streaming live import...")
+            print(f"[GDrive] Discovered {total_files} photo candidates. Starting parallel live stream import...")
             if job_id:
                 update_job(job_id, {
                     'total': total_files,
@@ -376,91 +438,114 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                     'message': f"Found {total_files} photos. Importing in real-time..."
                 })
 
-            for idx, item in enumerate(items_to_process):
-                # Check cancellation
-                if job_id and get_job(job_id).get('cancelled'):
-                    print(f"[GDrive] Import job {job_id} was cancelled by user.")
-                    break
+            total_indexed = [0]
+            processed_counter = [0]
+            counter_lock = threading.Lock()
 
-                fid = item['id']
-                fname = item.get('name') or f"{fid}.jpg"
-                tmp_file_path = os.path.join(temp_dir, f"{fid}.tmp")
+            def process_one_item(item_tuple):
+                from django.db import connection
+                try:
+                    idx, item = item_tuple
+                    if job_id and get_job(job_id).get('cancelled'):
+                        return None
 
-                success = download_gdrive_file(fid, tmp_file_path, api_key=api_key)
-                if not success or not os.path.exists(tmp_file_path):
-                    if job_id:
-                        pct = int(((idx + 1) / total_files) * 100)
-                        update_job(job_id, {
-                            'current': total_indexed,
-                            'percent': min(99, pct),
-                            'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)"
-                        })
-                    continue
+                    fid = item['id']
+                    fname = item.get('name') or f"{fid}.jpg"
+                    tmp_file_path = os.path.join(temp_dir, f"{fid}_{uuid.uuid4().hex[:4]}.tmp")
 
-                # Process ZIP archive or single image
-                if zipfile.is_zipfile(tmp_file_path):
-                    try:
-                        zip_extract_dir = os.path.join(temp_dir, f"zip_{fid}")
-                        with zipfile.ZipFile(tmp_file_path, 'r') as zip_ref:
-                            zip_ref.extractall(zip_extract_dir)
-                        for zroot, zdirs, zfiles in os.walk(zip_extract_dir):
-                            for zf_name in sorted(zfiles):
-                                if zf_name.startswith('.'):
-                                    continue
-                                zext = os.path.splitext(zf_name)[1].lower()
-                                if zext in VALID_IMAGE_EXTENSIONS:
-                                    zimg_path = os.path.join(zroot, zf_name)
-                                    g_img = _process_and_save_single_image(zimg_path, zf_name, event_id)
-                                    if g_img:
-                                        total_indexed += 1
-                                        if job_id:
-                                            pct = int(((idx + 1) / total_files) * 100)
-                                            update_job(job_id, {
-                                                'current': total_indexed,
-                                                'percent': min(99, pct),
-                                                'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
-                                                'new_photo': {
-                                                    'id': g_img.id,
-                                                    'url': f"/secure-media/{g_img.get_secure_thumbnail_token()}/",
-                                                    'full_url': f"/secure-media/{g_img.get_secure_file_token()}/",
-                                                    'filename': g_img.filename,
-                                                    'total_faces': g_img.total_faces,
-                                                    'preset_name': g_img.preset_name or 'original',
-                                                    'preset_settings': g_img.preset_settings or {},
-                                                }
-                                            })
-                    except Exception as ze:
-                        print(f"[DEBUG] Error extracting ZIP {fid}: {ze}")
-                    finally:
-                        if os.path.exists(tmp_file_path):
-                            try: os.remove(tmp_file_path)
-                            except: pass
-                else:
-                    try:
-                        g_img = _process_and_save_single_image(tmp_file_path, fname, event_id)
-                        if g_img:
-                            total_indexed += 1
+                    success = download_gdrive_file(fid, tmp_file_path, api_key=api_key)
+                    if not success or not os.path.exists(tmp_file_path):
+                        with counter_lock:
+                            processed_counter[0] += 1
+                            pct = int((processed_counter[0] / total_files) * 100)
                             if job_id:
-                                pct = int(((idx + 1) / total_files) * 100)
                                 update_job(job_id, {
-                                    'current': total_indexed,
+                                    'current': total_indexed[0],
                                     'percent': min(99, pct),
-                                    'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
-                                    'new_photo': {
-                                        'id': g_img.id,
-                                        'url': f"/secure-media/{g_img.get_secure_thumbnail_token()}/",
-                                        'full_url': f"/secure-media/{g_img.get_secure_file_token()}/",
-                                        'filename': g_img.filename,
-                                        'total_faces': g_img.total_faces,
-                                        'preset_name': g_img.preset_name or 'original',
-                                        'preset_settings': g_img.preset_settings or {},
-                                    }
+                                    'message': f"Imported {total_indexed[0]} of {total_files} photos ({pct}%)"
                                 })
-                    finally:
-                        if os.path.exists(tmp_file_path):
-                            try: os.remove(tmp_file_path)
-                            except: pass
+                        return None
 
+                    # Process ZIP archive or single image
+                    if zipfile.is_zipfile(tmp_file_path):
+                        try:
+                            zip_extract_dir = os.path.join(temp_dir, f"zip_{fid}_{uuid.uuid4().hex[:4]}")
+                            with zipfile.ZipFile(tmp_file_path, 'r') as zip_ref:
+                                zip_ref.extractall(zip_extract_dir)
+                            for zroot, zdirs, zfiles in os.walk(zip_extract_dir):
+                                for zf_name in sorted(zfiles):
+                                    if zf_name.startswith('.'):
+                                        continue
+                                    zext = os.path.splitext(zf_name)[1].lower()
+                                    if zext in VALID_IMAGE_EXTENSIONS:
+                                        zimg_path = os.path.join(zroot, zf_name)
+                                        g_img = _process_and_save_single_image(zimg_path, zf_name, event_id)
+                                        if g_img:
+                                            enqueue_image_for_ai(g_img.id, event_id)
+                                            with counter_lock:
+                                                total_indexed[0] += 1
+                                                processed_counter[0] += 1
+                                                pct = int((processed_counter[0] / total_files) * 100)
+                                                if job_id:
+                                                    update_job(job_id, {
+                                                        'current': total_indexed[0],
+                                                        'percent': min(99, pct),
+                                                        'message': f"Imported {total_indexed[0]} of {total_files} photos ({pct}%)",
+                                                        'new_photo': {
+                                                            'id': g_img.id,
+                                                            'url': f"/secure-media/{g_img.get_secure_thumbnail_token()}/",
+                                                            'full_url': f"/secure-media/{g_img.get_secure_file_token()}/",
+                                                            'filename': g_img.filename,
+                                                            'total_faces': g_img.total_faces,
+                                                            'preset_name': g_img.preset_name or 'original',
+                                                            'preset_settings': g_img.preset_settings or {},
+                                                        }
+                                                    })
+                        except Exception as ze:
+                            print(f"[DEBUG] Error extracting ZIP {fid}: {ze}")
+                        finally:
+                            if os.path.exists(tmp_file_path):
+                                try: os.remove(tmp_file_path)
+                                except: pass
+                    else:
+                        try:
+                            g_img = _process_and_save_single_image(tmp_file_path, fname, event_id)
+                            if g_img:
+                                enqueue_image_for_ai(g_img.id, event_id)
+                                with counter_lock:
+                                    total_indexed[0] += 1
+                                    processed_counter[0] += 1
+                                    pct = int((processed_counter[0] / total_files) * 100)
+                                    if job_id:
+                                        update_job(job_id, {
+                                            'current': total_indexed[0],
+                                            'percent': min(99, pct),
+                                            'message': f"Imported {total_indexed[0]} of {total_files} photos ({pct}%)",
+                                            'new_photo': {
+                                                'id': g_img.id,
+                                                'url': f"/secure-media/{g_img.get_secure_thumbnail_token()}/",
+                                                'full_url': f"/secure-media/{g_img.get_secure_file_token()}/",
+                                                'filename': g_img.filename,
+                                                'total_faces': g_img.total_faces,
+                                                'preset_name': g_img.preset_name or 'original',
+                                                'preset_settings': g_img.preset_settings or {},
+                                            }
+                                        })
+                        finally:
+                            if os.path.exists(tmp_file_path):
+                                try: os.remove(tmp_file_path)
+                                except: pass
+                finally:
+                    try:
+                        connection.close()
+                    except Exception:
+                        pass
+
+            # 4 parallel download workers for 4x speedup
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                list(executor.map(process_one_item, enumerate(items_to_process)))
+
+            final_total = total_indexed[0]
         else:
             # Fallback: full folder download via gdown when listing was not possible
             print("[GDrive] Falling back to gdown full folder download...")
@@ -507,18 +592,20 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                     'message': f"Found {total_files} photos. Importing..."
                 })
 
+            final_total = 0
             for idx, (img_path, orig_fname) in enumerate(candidate_images):
                 if job_id and get_job(job_id).get('cancelled'):
                     break
                 g_img = _process_and_save_single_image(img_path, orig_fname, event_id)
                 if g_img:
-                    total_indexed += 1
+                    enqueue_image_for_ai(g_img.id, event_id)
+                    final_total += 1
                     if job_id:
                         pct = int(((idx + 1) / total_files) * 100)
                         update_job(job_id, {
-                            'current': total_indexed,
+                            'current': final_total,
                             'percent': min(99, pct),
-                            'message': f"Imported {total_indexed} of {total_files} photos ({pct}%)",
+                            'message': f"Imported {final_total} of {total_files} photos ({pct}%)",
                             'new_photo': {
                                 'id': g_img.id,
                                 'url': f"/secure-media/{g_img.get_secure_thumbnail_token()}/",
@@ -538,4 +625,4 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)
             
-    return total_indexed, total_faces
+    return final_total, total_faces

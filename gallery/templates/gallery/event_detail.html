@@ -3784,8 +3784,8 @@
         const csrfToken = document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value;
         const eventId = '{{ event.id }}';
 
-        // 2. High-Speed Stable Upload Queue (Sequential processing to protect server memory & avoid Gunicorn timeouts)
-        const CONCURRENCY = 1;
+        // 2. High-Speed Stable Upload Queue (Concurrent processing for fast uploads)
+        const CONCURRENCY = 3;
         let currentIndex = 0;
 
         async function processUploadTask(idx) {
@@ -3796,7 +3796,7 @@
 
             if (statusBadge) {
                 statusBadge.className = 'badge badge-purple';
-                statusBadge.innerText = '🔄 Uploading & AI...';
+                statusBadge.innerText = '🔄 Uploading...';
             }
 
             try {
@@ -3826,7 +3826,7 @@
                         const img = data.image;
                         if (statusBadge) {
                             statusBadge.className = 'badge badge-emerald';
-                            statusBadge.innerText = `✅ Finished (👤 ${img.total_faces} faces)`;
+                            statusBadge.innerText = `✅ Uploaded`;
                         }
 
                         // Stream & Add photo to Event Photos section in real-time!
