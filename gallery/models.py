@@ -47,12 +47,35 @@ class UserProfile(models.Model):
         return min(100, int((self.used_storage_mb / limit) * 100))
 
     @property
+    def trial_expire_date(self):
+        import datetime
+        if not self.trial_start_date:
+            return None
+        days = self.trial_duration_days if self.trial_duration_days is not None else 7
+        return self.trial_start_date + datetime.timedelta(days=days)
+
+    @property
     def is_active_trial(self):
         from django.utils import timezone
-        import datetime
         if self.is_paid:
             return True
-        return timezone.now() < (self.trial_start_date + datetime.timedelta(days=self.trial_duration_days))
+        expire_dt = self.trial_expire_date
+        if not expire_dt:
+            return True
+        return timezone.now() < expire_dt
+
+    @property
+    def trial_days_remaining(self):
+        from django.utils import timezone
+        if self.is_paid:
+            return None
+        expire_dt = self.trial_expire_date
+        if not expire_dt:
+            return None
+        diff = expire_dt - timezone.now()
+        if diff.total_seconds() <= 0:
+            return 0
+        return max(0, diff.days + (1 if diff.seconds > 0 else 0))
 
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()})"

@@ -537,26 +537,40 @@
                                 <td>
                                     {% if admin.profile.is_paid %}
                                         <span class="badge badge-emerald" style="padding: 6px 14px; font-size: 0.78rem;">Paid</span>
+                                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px; font-weight: 500;">Unlimited</div>
                                     {% elif admin.profile.is_active_trial %}
                                         <span class="badge badge-purple" style="padding: 6px 14px; font-size: 0.78rem;">Trial Active</span>
+                                        <div style="font-size: 0.72rem; color: #4338ca; margin-top: 4px; font-weight: 600;">
+                                            Expires: {{ admin.profile.trial_expire_date|date:"d M Y" }}
+                                            {% if admin.profile.trial_days_remaining is not None %}
+                                                ({{ admin.profile.trial_days_remaining }}d left)
+                                            {% endif %}
+                                        </div>
                                     {% else %}
                                         <span class="badge badge-rose" style="padding: 6px 14px; font-size: 0.78rem;">Expired</span>
+                                        <div style="font-size: 0.72rem; color: #b91c1c; margin-top: 4px; font-weight: 600;">
+                                            {% if admin.profile.trial_expire_date %}
+                                                Ended: {{ admin.profile.trial_expire_date|date:"d M Y" }}
+                                            {% else %}
+                                                Expired
+                                            {% endif %}
+                                        </div>
                                     {% endif %}
                                 </td>
                                 <td style="text-align: right;">
                                     <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
-                                        <form method="POST" action="{% url 'gallery:extend_trial' admin.id %}" style="margin:0;">
+                                        <form method="POST" action="{% url 'gallery:extend_trial' admin.id %}" style="margin:0;" onsubmit="handleExtendTrial(event, this)">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm" style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; border: 1px solid #c7d2fe;">+7 Days</button>
+                                            <button type="submit" class="btn btn-sm" style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; border: 1px solid #c7d2fe; cursor: pointer; transition: all 0.2s;" title="Extend trial by 7 days">+7 Days</button>
                                         </form>
-                                        <form method="POST" action="{% url 'gallery:toggle_paid_status' admin.id %}" style="margin:0;">
+                                        <form method="POST" action="{% url 'gallery:toggle_paid_status' admin.id %}" style="margin:0;" onsubmit="handleTogglePaid(event, this)">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm" style="background: {% if admin.profile.is_paid %}#fef2f2; color: #991b1b; border: 1px solid #fecaca;{% else %}#ecfdf5; color: #065f46; border: 1px solid #a7f3d0;{% endif %} padding: 4px 10px; font-size: 0.7rem; border-radius: 6px;">
+                                            <button type="submit" class="btn btn-sm" style="background: {% if admin.profile.is_paid %}#fef2f2; color: #991b1b; border: 1px solid #fecaca;{% else %}#ecfdf5; color: #065f46; border: 1px solid #a7f3d0;{% endif %} padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; cursor: pointer;">
                                                 {% if admin.profile.is_paid %}Mark Unpaid{% else %}Mark Paid{% endif %}
                                             </button>
                                         </form>
-                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}', '{{ admin.profile.raw_password|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
-                                        <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username|escapejs }}', '{{ admin.email|escapejs }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}', '{{ admin.profile.raw_password|escapejs|default:'' }}', '{{ admin.profile.trial_expire_date|date:"Y-m-d"|default:'' }}', {{ admin.profile.trial_duration_days|default:7 }})" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
+                                        <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username|escapejs }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
                                     </div>
                                 </td>
                             </tr>
@@ -638,26 +652,40 @@
                                 <td>
                                     {% if admin.profile.is_paid %}
                                         <span class="badge badge-emerald" style="padding: 6px 14px; font-size: 0.78rem;">Paid</span>
+                                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px; font-weight: 500;">Unlimited</div>
                                     {% elif admin.profile.is_active_trial %}
                                         <span class="badge badge-purple" style="padding: 6px 14px; font-size: 0.78rem;">Trial Active</span>
+                                        <div style="font-size: 0.72rem; color: #4338ca; margin-top: 4px; font-weight: 600;">
+                                            Expires: {{ admin.profile.trial_expire_date|date:"d M Y" }}
+                                            {% if admin.profile.trial_days_remaining is not None %}
+                                                ({{ admin.profile.trial_days_remaining }}d left)
+                                            {% endif %}
+                                        </div>
                                     {% else %}
                                         <span class="badge badge-rose" style="padding: 6px 14px; font-size: 0.78rem;">Expired</span>
+                                        <div style="font-size: 0.72rem; color: #b91c1c; margin-top: 4px; font-weight: 600;">
+                                            {% if admin.profile.trial_expire_date %}
+                                                Ended: {{ admin.profile.trial_expire_date|date:"d M Y" }}
+                                            {% else %}
+                                                Expired
+                                            {% endif %}
+                                        </div>
                                     {% endif %}
                                 </td>
                                 <td style="text-align: right;">
                                     <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
-                                        <form method="POST" action="{% url 'gallery:extend_trial' admin.id %}" style="margin:0;">
+                                        <form method="POST" action="{% url 'gallery:extend_trial' admin.id %}" style="margin:0;" onsubmit="handleExtendTrial(event, this)">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm" style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; border: 1px solid #c7d2fe;">+7 Days</button>
+                                            <button type="submit" class="btn btn-sm" style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; border: 1px solid #c7d2fe; cursor: pointer; transition: all 0.2s;" title="Extend trial by 7 days">+7 Days</button>
                                         </form>
-                                        <form method="POST" action="{% url 'gallery:toggle_paid_status' admin.id %}" style="margin:0;">
+                                        <form method="POST" action="{% url 'gallery:toggle_paid_status' admin.id %}" style="margin:0;" onsubmit="handleTogglePaid(event, this)">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm" style="background: {% if admin.profile.is_paid %}#fef2f2; color: #991b1b; border: 1px solid #fecaca;{% else %}#ecfdf5; color: #065f46; border: 1px solid #a7f3d0;{% endif %} padding: 4px 10px; font-size: 0.7rem; border-radius: 6px;">
+                                            <button type="submit" class="btn btn-sm" style="background: {% if admin.profile.is_paid %}#fef2f2; color: #991b1b; border: 1px solid #fecaca;{% else %}#ecfdf5; color: #065f46; border: 1px solid #a7f3d0;{% endif %} padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; cursor: pointer;">
                                                 {% if admin.profile.is_paid %}Mark Unpaid{% else %}Mark Paid{% endif %}
                                             </button>
                                         </form>
-                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username }}', '{{ admin.email }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}', '{{ admin.profile.raw_password|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
-                                        <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username|escapejs }}', '{{ admin.email|escapejs }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}', '{{ admin.profile.raw_password|escapejs|default:'' }}', '{{ admin.profile.trial_expire_date|date:"Y-m-d"|default:'' }}', {{ admin.profile.trial_duration_days|default:7 }})" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
+                                        <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username|escapejs }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
                                     </div>
                                 </td>
                             </tr>
@@ -891,6 +919,18 @@
                     </select>
                 </div>
             </div>
+            <div class="form-row" style="margin-top: 1rem;">
+                <div class="form-field">
+                    <label class="form-label">Trial Expiry Date</label>
+                    <input type="date" name="expire_date" id="createExpireDate" class="form-input">
+                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Default is 7 days from today</div>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Trial Duration (Days)</label>
+                    <input type="number" name="trial_duration_days" id="createTrialDays" class="form-input" min="1" value="7" placeholder="7">
+                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Number of days (default: 7)</div>
+                </div>
+            </div>
             <div id="variableStorageContainer" style="display: none; margin-top: 1rem; padding: 1.25rem; background: rgba(16, 185, 129, 0.05); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 6px;">
                 <label class="form-label" style="color: #0f172a; font-weight: 700;">Additional Storage (GB) <span style="color:#10b981;">*Optional</span></label>
                 <input type="number" name="custom_storage_gb" id="customStorageGb" class="form-input" placeholder="Enter amount of GB" oninput="calculateVariableCharge()" min="1">
@@ -995,6 +1035,18 @@
                             <option value="{{ plan.id }}">{{ plan.name }}</option>
                         {% endfor %}
                     </select>
+                </div>
+            </div>
+            <div class="form-row" style="margin-top: 1rem;">
+                <div class="form-field">
+                    <label class="form-label">Trial Expiry Date</label>
+                    <input type="date" id="editTenantExpireDate" class="form-input">
+                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Choose exact date when access expires</div>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Trial Duration (Days)</label>
+                    <input type="number" id="editTenantTrialDays" class="form-input" min="1" placeholder="7">
+                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Number of days (default: 7)</div>
                 </div>
             </div>
             
@@ -1149,6 +1201,15 @@ function switchPanel(panelId, btn) {
 }
 
 function openCreateTenantModal() {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const dateEl = document.getElementById('createExpireDate');
+    if (dateEl) dateEl.value = `${yyyy}-${mm}-${dd}`;
+    const daysEl = document.getElementById('createTrialDays');
+    if (daysEl) daysEl.value = 7;
     document.getElementById('createTenantModal').style.display = 'flex';
 }
 
@@ -1163,6 +1224,42 @@ function openCreatePlanModal() {
 function closeCreatePlanModal() {
     document.getElementById('createPlanModal').style.display = 'none';
 }
+
+// ── TWO-WAY DATE & DAYS SYNCHRONIZER ──
+function syncDateAndDays(dateInputId, daysInputId) {
+    const dateInput = document.getElementById(dateInputId);
+    const daysInput = document.getElementById(daysInputId);
+    if (!dateInput || !daysInput) return;
+
+    dateInput.addEventListener('change', () => {
+        if (!dateInput.value) return;
+        const parts = dateInput.value.split('-');
+        if (parts.length !== 3) return;
+        const target = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        target.setHours(0, 0, 0, 0);
+        const diffMs = target - today;
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        daysInput.value = Math.max(1, diffDays);
+    });
+
+    daysInput.addEventListener('input', () => {
+        const days = parseInt(daysInput.value);
+        if (isNaN(days) || days < 1) return;
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    syncDateAndDays('createExpireDate', 'createTrialDays');
+    syncDateAndDays('editTenantExpireDate', 'editTenantTrialDays');
+});
 
 // ── CREATE TENANT FORM ──
 const modalCreateAdminForm = document.getElementById('modalCreateAdminForm');
@@ -1185,7 +1282,7 @@ if (modalCreateAdminForm) {
 }
 
 // ── EDIT TENANT ──
-function openEditTenant(id, username, email, role, planId, customStorageMB, rawPassword) {
+function openEditTenant(id, username, email, role, planId, customStorageMB, rawPassword, expireDate, trialDays) {
     document.getElementById('editTenantId').value = id;
     document.getElementById('editTenantUsername').value = username;
     document.getElementById('editTenantEmail').value = email;
@@ -1199,6 +1296,9 @@ function openEditTenant(id, username, email, role, planId, customStorageMB, rawP
     } else {
         document.getElementById('customStorageGbEdit').value = '';
     }
+
+    document.getElementById('editTenantExpireDate').value = expireDate || '';
+    document.getElementById('editTenantTrialDays').value = trialDays || 7;
     
     const container = document.getElementById('variableStorageContainerEdit');
     if(container) container.style.display = 'block';
@@ -1224,6 +1324,8 @@ if (editTenantForm) {
         formData.append('role', document.getElementById('editTenantRole').value);
         formData.append('plan_id', document.getElementById('editTenantPlan').value);
         formData.append('custom_storage_gb', document.getElementById('customStorageGbEdit').value);
+        formData.append('expire_date', document.getElementById('editTenantExpireDate').value);
+        formData.append('trial_duration_days', document.getElementById('editTenantTrialDays').value);
         fetch(`/super-admin/update-admin/${id}/`, { method: 'POST', body: formData })
         .then(res => res.json())
         .then(data => {
@@ -1231,6 +1333,56 @@ if (editTenantForm) {
             else { customAlert('Error', data.message); }
         });
     });
+}
+
+// ── EXTEND TRIAL & TOGGLE PAID HANDLERS ──
+async function handleExtendTrial(e, form) {
+    e.preventDefault();
+    const btn = form.querySelector('button');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Extending...';
+    try {
+        const res = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast(data.message || 'Error extending trial', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch(err) {
+        form.submit();
+    }
+}
+
+async function handleTogglePaid(e, form) {
+    e.preventDefault();
+    const btn = form.querySelector('button');
+    btn.disabled = true;
+    try {
+        const res = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast(data.message || 'Error updating status', 'error');
+            btn.disabled = false;
+        }
+    } catch(err) {
+        form.submit();
+    }
 }
 
 // ── DELETE TENANT ──
@@ -1338,5 +1490,13 @@ function deletePlan(id, name) {
         });
     }
 });
+
+{% if messages %}
+document.addEventListener('DOMContentLoaded', () => {
+    {% for message in messages %}
+        showToast("{{ message|escapejs }}", "{% if message.tags == 'error' %}error{% else %}success{% endif %}");
+    {% endfor %}
+});
+{% endif %}
 </script>
 {% endblock %}

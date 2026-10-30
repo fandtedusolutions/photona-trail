@@ -14,6 +14,9 @@ from django.core.paginator import Paginator
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
+from django.contrib import messages
+from django.utils import timezone
+import datetime
 
 from django.utils.text import slugify
 from config import VALID_IMAGE_EXTENSIONS
@@ -298,10 +301,43 @@ def create_admin(request):
             custom_mb = int(float(custom_storage_gb) * 1024)
         except ValueError:
             pass
-            
-    UserProfile.objects.create(user=user, role=role, subscription_plan=plan, custom_storage_limit_mb=custom_mb, raw_password=password)
+
+    expire_date_str = request.POST.get('expire_date', '').strip()
+    trial_days_str = request.POST.get('trial_duration_days', '').strip()
     
-    return JsonResponse({'success': True, 'message': f'Admin {username} created successfully.'})
+    now = timezone.now()
+    trial_start = now
+    trial_days = 7
+    
+    if expire_date_str:
+        try:
+            chosen_date = datetime.datetime.strptime(expire_date_str, '%Y-%m-%d').date()
+            end_of_day = timezone.make_aware(datetime.datetime.combine(chosen_date, datetime.time(23, 59, 59)))
+            if end_of_day >= now:
+                trial_days = max(1, (chosen_date - now.date()).days)
+                trial_start = now
+            else:
+                trial_days = 7
+                trial_start = end_of_day - datetime.timedelta(days=7)
+        except Exception:
+            trial_days = 7
+    elif trial_days_str:
+        try:
+            trial_days = max(1, int(trial_days_str))
+        except (ValueError, TypeError):
+            trial_days = 7
+            
+    UserProfile.objects.create(
+        user=user,
+        role=role,
+        subscription_plan=plan,
+        custom_storage_limit_mb=custom_mb,
+        raw_password=password,
+        trial_duration_days=trial_days,
+        trial_start_date=trial_start
+    )
+    
+    return JsonResponse({'success': True, 'message': f'Admin {username} created successfully with {trial_days}-day trial.'})
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
@@ -340,16 +376,43 @@ def update_admin(request, user_id):
             custom_mb = int(float(custom_storage_gb) * 1024)
         except ValueError:
             pass
-    if hasattr(user, 'profile'):
-        user.profile.custom_storage_limit_mb = custom_mb
-        user.profile.save()
 
-    profile = user.profile
+    profile = getattr(user, 'profile', None)
+    if not profile:
+        profile = UserProfile.objects.create(user=user, role=role or 'studio_man')
+
+    profile.custom_storage_limit_mb = custom_mb
     if role:
         profile.role = role
     if plan_id:
         plan = SubscriptionPlan.objects.filter(id=plan_id).first()
         profile.subscription_plan = plan
+
+    expire_date_str = request.POST.get('expire_date', '').strip()
+    trial_days_str = request.POST.get('trial_duration_days', '').strip()
+    
+    now = timezone.now()
+    if expire_date_str:
+        try:
+            chosen_date = datetime.datetime.strptime(expire_date_str, '%Y-%m-%d').date()
+            end_of_day = timezone.make_aware(datetime.datetime.combine(chosen_date, datetime.time(23, 59, 59)))
+            if end_of_day >= now:
+                days_diff = max(1, (chosen_date - now.date()).days)
+                profile.trial_start_date = now
+                profile.trial_duration_days = days_diff
+            else:
+                profile.trial_start_date = end_of_day - datetime.timedelta(days=7)
+                profile.trial_duration_days = 7
+        except Exception:
+            pass
+    elif trial_days_str:
+        try:
+            days = max(1, int(trial_days_str))
+            profile.trial_start_date = now
+            profile.trial_duration_days = days
+        except (ValueError, TypeError):
+            pass
+
     profile.save()
 
     return JsonResponse({'success': True, 'message': f'Tenant {user.username} updated successfully.'})
@@ -1520,24 +1583,66 @@ def trial_expired(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def extend_trial(request, user_id):
-    if request.method == 'POST':
-        user = get_object_or_404(User, id=user_id)
-        if hasattr(user, 'profile'):
-            user.profile.trial_duration_days += 7
-            user.profile.save()
-            messages.success(request, f"Extended trial by 7 days for {user.username}.")
-    return redirect('gallery:super_admin_dashboard')
+    user = get_object_or_404(User, id=user_id)
+    profile = getattr(user, 'profile', None)
+    now = timezone.now()
+    if not profile:
+        profile = UserProfile.objects.create(
+            user=user,
+            role='studio_man',
+            trial_duration_days=7,
+            trial_start_date=now
+        )
+    
+    days = profile.trial_duration_days if profile.trial_duration_days is not None else 7
+    if not profile.trial_start_date:
+        profile.trial_start_date = now
+        profile.trial_duration_days = 7
+    else:
+        current_expiry = profile.trial_start_date + datetime.timedelta(days=days)
+        if current_expiry < now:
+            # If already expired, grant 7 days starting from now
+            profile.trial_start_date = now
+            profile.trial_duration_days = 7
+        else:
+            # If still active, add 7 more days to current duration
+            profile.trial_duration_days = days + 7
+            
+    profile.save()
+    messages.success(request, f"Extended trial by 7 days for {user.username}.")
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        new_expiry_str = profile.trial_expire_date.strftime('%d %b %Y') if profile.trial_expire_date else ''
+        return JsonResponse({
+            'success': True,
+            'message': f"Extended trial by 7 days for {user.username}.",
+            'new_expiry': new_expiry_str
+        })
+        
+    redirect_url = request.META.get('HTTP_REFERER') or reverse('gallery:super_admin_dashboard')
+    return redirect(redirect_url)
 
 @user_passes_test(lambda u: u.is_superuser)
 def toggle_paid_status(request, user_id):
-    if request.method == 'POST':
-        user = get_object_or_404(User, id=user_id)
-        if hasattr(user, 'profile'):
-            user.profile.is_paid = not user.profile.is_paid
-            user.profile.save()
-            status = "Paid" if user.profile.is_paid else "Unpaid (Trial limit applies)"
-            messages.success(request, f"Updated {user.username} payment status to: {status}.")
-    return redirect('gallery:super_admin_dashboard')
+    user = get_object_or_404(User, id=user_id)
+    profile = getattr(user, 'profile', None)
+    if not profile:
+        profile = UserProfile.objects.create(user=user, role='studio_man')
+        
+    profile.is_paid = not profile.is_paid
+    profile.save()
+    status = "Paid" if profile.is_paid else "Unpaid (Trial limit applies)"
+    messages.success(request, f"Updated {user.username} payment status to: {status}.")
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'is_paid': profile.is_paid,
+            'message': f"Updated {user.username} payment status to: {status}."
+        })
+        
+    redirect_url = request.META.get('HTTP_REFERER') or reverse('gallery:super_admin_dashboard')
+    return redirect(redirect_url)
 
 @login_required
 def active_imports_api(request):
