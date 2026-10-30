@@ -5,13 +5,15 @@ import numpy as np
 class SubscriptionPlan(models.Model):
     name = models.CharField(max_length=255)
     storage_limit_mb = models.IntegerField(help_text="Storage limit in Megabytes (MB)")
+    album_limit = models.IntegerField(default=0, help_text="Maximum number of albums/events allowed (0 for unlimited)")
     is_active = models.BooleanField(default=True, help_text="Set to False to hide this plan from users.")
 
     def __block__(self):
         return self.name
 
     def __str__(self):
-        return f"{self.name} ({self.storage_limit_mb} MB)"
+        limit_str = f"{self.album_limit} albums" if self.album_limit > 0 else "unlimited albums"
+        return f"{self.name} ({self.storage_limit_mb} MB, {limit_str})"
 
 class UserProfile(models.Model):
     ROLE_CHOICES = (
@@ -24,6 +26,7 @@ class UserProfile(models.Model):
     subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True, blank=True)
     used_storage_mb = models.FloatField(default=0.0)
     custom_storage_limit_mb = models.IntegerField(null=True, blank=True, help_text="Override plan storage limit (in MB)")
+    custom_album_limit = models.IntegerField(null=True, blank=True, help_text="Override plan album limit (0 for unlimited, null to use plan default)")
     raw_password = models.CharField(max_length=255, blank=True, null=True, help_text="Store plain text password for admin reference")
 
     # Trial & Payment Fields
@@ -37,6 +40,34 @@ class UserProfile(models.Model):
         base_limit = self.subscription_plan.storage_limit_mb if self.subscription_plan else 0
         extra = self.custom_storage_limit_mb if self.custom_storage_limit_mb is not None else 0
         return base_limit + extra
+
+    @property
+    def effective_album_limit(self):
+        if self.custom_album_limit is not None:
+            return self.custom_album_limit
+        if self.subscription_plan:
+            return self.subscription_plan.album_limit
+        return 0
+
+    @property
+    def total_albums_count(self):
+        return self.user.events.count()
+
+    @property
+    def has_reached_album_limit(self):
+        if self.user.is_superuser:
+            return False
+        limit = self.effective_album_limit
+        if not limit or limit <= 0:
+            return False
+        return self.total_albums_count >= limit
+
+    @property
+    def albums_remaining(self):
+        limit = self.effective_album_limit
+        if not limit or limit <= 0:
+            return None
+        return max(0, limit - self.total_albums_count)
 
     @property
     def storage_percentage(self):

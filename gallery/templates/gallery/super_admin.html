@@ -525,7 +525,12 @@
                                     </div>
                                 </td>
                                 <td><span class="badge badge-emerald" style="padding: 6px 14px; font-size: 0.78rem;">{{ admin.profile.get_role_display }}</span></td>
-                                <td><span class="badge badge-purple" style="padding: 6px 14px; font-size: 0.78rem;">{{ admin.profile.subscription_plan.name|default:"None" }}</span></td>
+                                <td>
+                                    <span class="badge badge-purple" style="padding: 6px 14px; font-size: 0.78rem;">{{ admin.profile.subscription_plan.name|default:"None" }}</span>
+                                    <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px; font-weight: 500;">
+                                        📁 {{ admin.events.count }} / {% if admin.profile.effective_album_limit > 0 %}{{ admin.profile.effective_album_limit }}{% else %}∞{% endif %} albums
+                                    </div>
+                                </td>
                                 <td>
                                     <div style="display: flex; align-items: center; gap: 12px;">
                                         <div class="progress-bar" style="width: 100px; margin-top: 0; height: 8px; background: #e2e8f0;">
@@ -569,7 +574,7 @@
                                                 {% if admin.profile.is_paid %}Mark Unpaid{% else %}Mark Paid{% endif %}
                                             </button>
                                         </form>
-                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username|escapejs }}', '{{ admin.email|escapejs }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}', '{{ admin.profile.raw_password|escapejs|default:'' }}', '{{ admin.profile.trial_expire_date|date:"Y-m-d"|default:'' }}', {{ admin.profile.trial_duration_days|default:7 }})" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username|escapejs }}', '{{ admin.email|escapejs }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}', '{{ admin.profile.raw_password|escapejs|default:'' }}', '{{ admin.profile.trial_expire_date|date:"Y-m-d"|default:'' }}', {{ admin.profile.trial_duration_days|default:7 }}, '{{ admin.profile.custom_album_limit|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
                                         <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username|escapejs }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
                                     </div>
                                 </td>
@@ -640,7 +645,12 @@
                                     </div>
                                 </td>
                                 <td><span class="badge badge-emerald" style="padding: 6px 14px; font-size: 0.78rem;">{{ admin.profile.get_role_display }}</span></td>
-                                <td><span class="badge badge-purple" style="padding: 6px 14px; font-size: 0.78rem;">{{ admin.profile.subscription_plan.name|default:"None Assigned" }}</span></td>
+                                <td>
+                                    <span class="badge badge-purple" style="padding: 6px 14px; font-size: 0.78rem;">{{ admin.profile.subscription_plan.name|default:"None Assigned" }}</span>
+                                    <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px; font-weight: 500;">
+                                        📁 {{ admin.events.count }} / {% if admin.profile.effective_album_limit > 0 %}{{ admin.profile.effective_album_limit }}{% else %}∞{% endif %} albums
+                                    </div>
+                                </td>
                                 <td>
                                     <div style="display: flex; align-items: center; gap: 12px;">
                                         <div class="progress-bar" style="width: 100px; margin-top: 0; height: 8px; background: #e2e8f0;">
@@ -684,7 +694,7 @@
                                                 {% if admin.profile.is_paid %}Mark Unpaid{% else %}Mark Paid{% endif %}
                                             </button>
                                         </form>
-                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username|escapejs }}', '{{ admin.email|escapejs }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}', '{{ admin.profile.raw_password|escapejs|default:'' }}', '{{ admin.profile.trial_expire_date|date:"Y-m-d"|default:'' }}', {{ admin.profile.trial_duration_days|default:7 }})" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
+                                        <button onclick="openEditTenant({{ admin.id }}, '{{ admin.username|escapejs }}', '{{ admin.email|escapejs }}', '{{ admin.profile.role }}', '{{ admin.profile.subscription_plan.id|default:'' }}', '{{ admin.profile.custom_storage_limit_mb|default:'' }}', '{{ admin.profile.raw_password|escapejs|default:'' }}', '{{ admin.profile.trial_expire_date|date:"Y-m-d"|default:'' }}', {{ admin.profile.trial_duration_days|default:7 }}, '{{ admin.profile.custom_album_limit|default:'' }}')" class="action-edit" style="padding: 4px 10px; font-size: 0.7rem;">✎ Edit</button>
                                         <button onclick="deleteAdmin({{ admin.id }}, '{{ admin.username|escapejs }}')" class="action-delete" style="padding: 4px 10px; font-size: 0.7rem;">✕ Remove</button>
                                     </div>
                                 </td>
@@ -850,19 +860,31 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <span style="font-size: 0.75rem; background: var(--vz-warning-bg); color: var(--vz-warning); padding: 4px 8px; border-radius: 4px; font-weight: 600;">Tier #{{ forloop.counter }}</span>
                             <div style="display: flex; gap: 8px;">
-                                <button onclick="openEditPlan({{ plan.id }}, '{{ plan.name|escapejs }}', {{ plan.storage_limit_mb }}, '{{ plan.is_active }}')" style="background: none; border: none; font-size: 0.85rem; color: var(--vz-primary); cursor: pointer;">Edit</button>
+                                <button onclick="openEditPlan({{ plan.id }}, '{{ plan.name|escapejs }}', {{ plan.storage_limit_mb }}, {{ plan.album_limit|default:0 }}, '{{ plan.is_active }}')" style="background: none; border: none; font-size: 0.85rem; color: var(--vz-primary); cursor: pointer;">Edit</button>
                                 <button onclick="togglePlanStatus({{ plan.id }})" style="background: none; border: none; font-size: 0.85rem; color: {% if plan.is_active %}#f59e0b{% else %}#10b981{% endif %}; cursor: pointer;">{% if plan.is_active %}Disable{% else %}Enable{% endif %}</button>
                                 <button onclick="deletePlan({{ plan.id }}, '{{ plan.name|escapejs }}')" style="background: none; border: none; font-size: 0.85rem; color: var(--vz-danger); cursor: pointer;">Delete</button>
                             </div>
                         </div>
                         <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--vz-text-dark); margin-bottom: 0.2rem;">{{ plan.name }}</h3>
-                        <div style="font-size: 1.75rem; font-weight: 600; color: var(--vz-text-main); margin-bottom: 1rem;">
+                        <div style="font-size: 1.75rem; font-weight: 600; color: var(--vz-text-main); margin-bottom: 0.4rem;">
                             {{ plan.storage_limit_mb }} <span style="font-size: 0.9rem; font-weight: 500; color: var(--vz-text-muted);">MB Storage</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 600; color: var(--vz-text-main); margin-bottom: 1rem;">
+                            <span style="font-size: 1.15rem;">📁</span>
+                            {% if plan.album_limit and plan.album_limit > 0 %}
+                                <span>{{ plan.album_limit }} <span style="font-size: 0.85rem; font-weight: 500; color: var(--vz-text-muted);">Albums Limit</span></span>
+                            {% else %}
+                                <span style="color: #10b981;">Unlimited <span style="font-size: 0.85rem; font-weight: 500; color: var(--vz-text-muted);">Albums</span></span>
+                            {% endif %}
                         </div>
                     </div>
                     <div style="padding-top: 1rem; border-top: 1px solid var(--vz-border); display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--vz-text-muted);">
                         <span>Status</span>
+                        {% if plan.is_active %}
                         <span style="color: var(--vz-success); font-weight: 600;">Active Tier</span>
+                        {% else %}
+                        <span style="color: #f59e0b; font-weight: 600;">Disabled</span>
+                        {% endif %}
                     </div>
                 </div>
                 {% empty %}
@@ -914,10 +936,14 @@
                     <label class="form-label">Subscription Plan</label>
                     <select name="plan_id" required class="form-input" id="planSelect" onchange="toggleVariableStorage()">
                         {% for plan in plans %}
-                            <option value="{{ plan.id }}" data-name="{{ plan.name }}">{{ plan.name }} ({{ plan.storage_limit_mb }} MB) {% if not plan.is_active %}(Disabled){% endif %}</option>
+                            <option value="{{ plan.id }}" data-name="{{ plan.name }}">{{ plan.name }} ({{ plan.storage_limit_mb }} MB{% if plan.album_limit > 0 %}, {{ plan.album_limit }} Albums{% else %}, Unlimited Albums{% endif %}) {% if not plan.is_active %}(Disabled){% endif %}</option>
                         {% endfor %}
                     </select>
                 </div>
+            </div>
+            <div class="form-field" style="margin-top: 1rem;">
+                <label class="form-label">Custom Album Limit <span style="color:#64748b; font-weight: normal;">(Optional override, 0 for unlimited)</span></label>
+                <input type="number" name="custom_album_limit" min="0" class="form-input" placeholder="Leave empty to use plan's album limit">
             </div>
             <div class="form-row" style="margin-top: 1rem;">
                 <div class="form-field">
@@ -976,7 +1002,7 @@
     <div style="background: var(--vz-card-bg); border-radius: 4px; padding: 2rem; width: 520px; max-width: 95vw; box-shadow: var(--vz-shadow); position: relative;">
         <button onclick="closeCreatePlanModal()" style="position: absolute; top: 1.5rem; right: 1.5rem; background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
         <div style="font-family: 'Outfit', sans-serif; font-size: 1.45rem; font-weight: 850; color: #0f172a; margin-bottom: 0.3rem;">Create Subscription Plan</div>
-        <div style="font-size: 0.88rem; color: #64748b; margin-bottom: 2rem;">Define a new tier with custom megabyte storage capacity.</div>
+        <div style="font-size: 0.88rem; color: #64748b; margin-bottom: 2rem;">Define a new tier with custom megabyte storage capacity and album limit.</div>
         <form id="modalCreatePlanForm" method="post">
             {% csrf_token %}
             <div class="form-field">
@@ -986,6 +1012,11 @@
             <div class="form-field">
                 <label class="form-label">Storage Capacity (MB)</label>
                 <input type="number" name="storage_limit_mb" required placeholder="e.g. 5120" class="form-input">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Album Limit</label>
+                <input type="number" name="album_limit" min="0" value="0" placeholder="e.g. 10 (0 for unlimited)" class="form-input">
+                <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Max albums/events a studio can create. Set 0 for unlimited albums.</div>
             </div>
             
 
@@ -1032,10 +1063,14 @@
                     <label class="form-label">Subscription Plan</label>
                     <select id="editTenantPlan" class="form-input">
                         {% for plan in plans %}
-                            <option value="{{ plan.id }}">{{ plan.name }}</option>
+                            <option value="{{ plan.id }}">{{ plan.name }} ({{ plan.storage_limit_mb }} MB{% if plan.album_limit > 0 %}, {{ plan.album_limit }} Albums{% else %}, Unlimited Albums{% endif %})</option>
                         {% endfor %}
                     </select>
                 </div>
+            </div>
+            <div class="form-field" style="margin-top: 1rem;">
+                <label class="form-label">Custom Album Limit <span style="color:#64748b; font-weight: normal;">(Optional override, 0 for unlimited)</span></label>
+                <input type="number" id="editTenantAlbumLimit" name="custom_album_limit" min="0" class="form-input" placeholder="Leave empty to use plan's album limit">
             </div>
             <div class="form-row" style="margin-top: 1rem;">
                 <div class="form-field">
@@ -1071,7 +1106,7 @@
     <div style="background: var(--vz-card-bg); border-radius: 4px; padding: 2rem; width: 480px; max-width: 95vw; box-shadow: var(--vz-shadow); position: relative;">
         <button onclick="closeEditPlan()" style="position: absolute; top: 1.5rem; right: 1.5rem; background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
         <div style="font-family: 'Outfit', sans-serif; font-size: 1.45rem; font-weight: 850; color: #0f172a; margin-bottom: 0.3rem;">Edit Subscription Plan</div>
-        <div style="font-size: 0.88rem; color: #64748b; margin-bottom: 2rem;">Update plan title or adjust total MB storage quota.</div>
+        <div style="font-size: 0.88rem; color: #64748b; margin-bottom: 2rem;">Update plan title, MB storage quota, or album limits.</div>
         <form id="editPlanForm">
             <input type="hidden" id="editPlanId">
             <div class="form-field">
@@ -1081,6 +1116,11 @@
             <div class="form-field">
                 <label class="form-label">Storage Limit (MB)</label>
                 <input type="number" id="editPlanStorage" name="storage_limit_mb" class="form-input" placeholder="e.g. 2048">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Album Limit</label>
+                <input type="number" id="editPlanAlbumLimit" name="album_limit" min="0" class="form-input" placeholder="e.g. 10 (0 for unlimited)">
+                <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Max albums allowed. Set 0 for unlimited albums.</div>
             </div>
             <div class="form-field" style="display: flex; align-items: center; gap: 8px; margin-top: 1rem;">
                 <input type="checkbox" id="editPlanIsActive" name="is_active" style="width:16px; height:16px; accent-color: var(--accent-indigo);">
@@ -1282,7 +1322,7 @@ if (modalCreateAdminForm) {
 }
 
 // ── EDIT TENANT ──
-function openEditTenant(id, username, email, role, planId, customStorageMB, rawPassword, expireDate, trialDays) {
+function openEditTenant(id, username, email, role, planId, customStorageMB, rawPassword, expireDate, trialDays, customAlbumLimit) {
     document.getElementById('editTenantId').value = id;
     document.getElementById('editTenantUsername').value = username;
     document.getElementById('editTenantEmail').value = email;
@@ -1295,6 +1335,11 @@ function openEditTenant(id, username, email, role, planId, customStorageMB, rawP
         document.getElementById('customStorageGbEdit').value = gb.endsWith('.00') ? parseInt(gb) : gb;
     } else {
         document.getElementById('customStorageGbEdit').value = '';
+    }
+
+    const albumLimitInput = document.getElementById('editTenantAlbumLimit');
+    if (albumLimitInput) {
+        albumLimitInput.value = (customAlbumLimit && customAlbumLimit !== 'None') ? customAlbumLimit : '';
     }
 
     document.getElementById('editTenantExpireDate').value = expireDate || '';
@@ -1324,6 +1369,7 @@ if (editTenantForm) {
         formData.append('role', document.getElementById('editTenantRole').value);
         formData.append('plan_id', document.getElementById('editTenantPlan').value);
         formData.append('custom_storage_gb', document.getElementById('customStorageGbEdit').value);
+        formData.append('custom_album_limit', document.getElementById('editTenantAlbumLimit') ? document.getElementById('editTenantAlbumLimit').value : '');
         formData.append('expire_date', document.getElementById('editTenantExpireDate').value);
         formData.append('trial_duration_days', document.getElementById('editTenantTrialDays').value);
         fetch(`/super-admin/update-admin/${id}/`, { method: 'POST', body: formData })
@@ -1421,12 +1467,13 @@ if (modalCreatePlanForm) {
 }
 
 // ── EDIT PLAN ──
-function openEditPlan(id, name, storage, isActive) {
+function openEditPlan(id, name, storage, albumLimit, isActive) {
     document.getElementById('editPlanId').value = id;
     document.getElementById('editPlanName').value = name;
     document.getElementById('editPlanStorage').value = storage;
+    document.getElementById('editPlanAlbumLimit').value = albumLimit !== undefined ? albumLimit : 0;
     const activeBox = document.getElementById('editPlanIsActive');
-    if(activeBox) activeBox.checked = (isActive === 'True');
+    if(activeBox) activeBox.checked = (isActive === 'True' || isActive === true);
     document.getElementById('editPlanModal').style.display = 'flex';
 }
 
@@ -1443,6 +1490,11 @@ if (editPlanForm) {
         formData.append('csrfmiddlewaretoken', CSRF);
         formData.append('name', document.getElementById('editPlanName').value);
         formData.append('storage_limit_mb', document.getElementById('editPlanStorage').value);
+        formData.append('album_limit', document.getElementById('editPlanAlbumLimit').value);
+        const activeBox = document.getElementById('editPlanIsActive');
+        if (activeBox && activeBox.checked) {
+            formData.append('is_active', 'on');
+        }
         fetch(`/super-admin/update-plan/${id}/`, { method: 'POST', body: formData })
         .then(res => res.json())
         .then(data => {

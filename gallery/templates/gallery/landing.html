@@ -1084,7 +1084,7 @@
             <ul class="pricing-list">
                 <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                         <polyline points="20 6 9 17 4 12" />
-                    </svg> Unlimited Event Galleries</li>
+                    </svg> {% if plan.album_limit and plan.album_limit > 0 %}Up to {{ plan.album_limit }} Event Albums{% else %}Unlimited Event Albums{% endif %}</li>
                 <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                         <polyline points="20 6 9 17 4 12" />
                     </svg> Ultra-Fast FAISS AI Search</li>

@@ -199,9 +199,11 @@ def plans_view(request):
         upload_percentage = profile.storage_percentage
         
     context = {
+        'profile': profile,
         'plan': plan,
         'used_storage': used_storage,
         'upload_percentage': upload_percentage,
+        'total_events': request.user.events.count(),
     }
     return render(request, 'gallery/plans.html', context)
 
@@ -210,7 +212,7 @@ def plans_view(request):
 # -------------------------------------------------------------
 def _get_super_admin_context(request):
     admins = User.objects.filter(is_superuser=False).select_related('profile')
-    plans = SubscriptionPlan.objects.filter(is_active=True)
+    plans = SubscriptionPlan.objects.all().order_by('id')
     roles = UserProfile.ROLE_CHOICES
     
     total_tenants = admins.count()
@@ -302,6 +304,14 @@ def create_admin(request):
         except ValueError:
             pass
 
+    custom_album_limit = request.POST.get('custom_album_limit')
+    custom_albums = None
+    if custom_album_limit and custom_album_limit.strip():
+        try:
+            custom_albums = max(0, int(custom_album_limit.strip()))
+        except ValueError:
+            pass
+
     expire_date_str = request.POST.get('expire_date', '').strip()
     trial_days_str = request.POST.get('trial_duration_days', '').strip()
     
@@ -332,6 +342,7 @@ def create_admin(request):
         role=role,
         subscription_plan=plan,
         custom_storage_limit_mb=custom_mb,
+        custom_album_limit=custom_albums,
         raw_password=password,
         trial_duration_days=trial_days,
         trial_start_date=trial_start
@@ -377,11 +388,22 @@ def update_admin(request, user_id):
         except ValueError:
             pass
 
+    custom_album_limit = request.POST.get('custom_album_limit')
+    
     profile = getattr(user, 'profile', None)
     if not profile:
         profile = UserProfile.objects.create(user=user, role=role or 'studio_man')
 
     profile.custom_storage_limit_mb = custom_mb
+    if custom_album_limit is not None:
+        if custom_album_limit.strip():
+            try:
+                profile.custom_album_limit = max(0, int(custom_album_limit.strip()))
+            except ValueError:
+                pass
+        else:
+            profile.custom_album_limit = None
+
     if role:
         profile.role = role
     if plan_id:
@@ -420,12 +442,24 @@ def update_admin(request, user_id):
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
 def create_plan(request):
-    name = request.POST.get('name')
-    limit = request.POST.get('storage_limit_mb')
-    is_active = request.POST.get('is_active') == 'on'
+    name = request.POST.get('name', '').strip()
+    limit = request.POST.get('storage_limit_mb', '').strip()
+    album_limit = request.POST.get('album_limit', 0)
+    is_active = request.POST.get('is_active') == 'on' or request.POST.get('is_active') == 'true' or 'is_active' not in request.POST
+    
+    try:
+        album_limit_val = max(0, int(album_limit)) if album_limit is not None and str(album_limit).strip() != '' else 0
+    except (ValueError, TypeError):
+        album_limit_val = 0
+
     if name and limit:
-        SubscriptionPlan.objects.create(name=name, storage_limit_mb=int(limit), is_active=is_active)
-        return JsonResponse({'success': True, 'message': f'Subscription Plan {name} created successfully.'})
+        SubscriptionPlan.objects.create(
+            name=name,
+            storage_limit_mb=int(limit),
+            album_limit=album_limit_val,
+            is_active=is_active
+        )
+        return JsonResponse({'success': True, 'message': f'Subscription Plan "{name}" created successfully.'})
     return JsonResponse({'success': False, 'message': 'Invalid plan details.'})
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -434,17 +468,22 @@ def update_plan(request, plan_id):
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
     name = request.POST.get('name', '').strip()
     limit = request.POST.get('storage_limit_mb', '').strip()
-    is_active = request.POST.get('is_active') == 'on'
+    album_limit = request.POST.get('album_limit')
+    is_active = request.POST.get('is_active') == 'on' or request.POST.get('is_active') == 'true'
+    
     if name:
         plan.name = name
     if limit:
         plan.storage_limit_mb = int(limit)
-    plan.is_active = is_active
+    if album_limit is not None and str(album_limit).strip() != '':
+        try:
+            plan.album_limit = max(0, int(album_limit))
+        except (ValueError, TypeError):
+            pass
+    if 'is_active' in request.POST:
+        plan.is_active = is_active
     plan.save()
     return JsonResponse({'success': True, 'message': f'Plan "{plan.name}" updated successfully.'})
-
-@user_passes_test(lambda u: u.is_superuser)
-@require_POST
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_POST
@@ -496,6 +535,16 @@ def delete_lead(request, lead_id):
 @login_required
 @require_POST
 def create_event(request):
+    if not request.user.is_superuser:
+        profile = getattr(request.user, 'profile', None)
+        if profile and profile.has_reached_album_limit:
+            messages.error(
+                request,
+                f"Album limit reached ({profile.total_albums_count}/{profile.effective_album_limit}). "
+                f"Please upgrade your subscription plan to create more albums."
+            )
+            return redirect('gallery:dashboard')
+
     name = request.POST.get('name')
     description = request.POST.get('description')
     cover_image = request.FILES.get('cover_image')
@@ -510,6 +559,7 @@ def create_event(request):
         event_date = None
     if name:
         Event.objects.create(name=name, description=description, owner=request.user, cover_image=cover_image, event_date=event_date, compression_percentage=compression_percentage)
+        messages.success(request, f"Album '{name}' created successfully.")
     return redirect('gallery:dashboard')
 
 @login_required

@@ -9,6 +9,20 @@
             <h3 style="font-size: 1.35rem; font-weight: 850; letter-spacing: -0.02em; color: #0f172a;">Create New Event</h3>
             <button onclick="closeModal('eventModal')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s ease;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">✕</button>
         </div>
+        {% if request.user.profile.has_reached_album_limit %}
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; display: flex; gap: 12px; align-items: flex-start;">
+            <span style="font-size: 1.35rem; line-height: 1;">⚠️</span>
+            <div>
+                <div style="font-weight: 700; color: #991b1b; font-size: 0.95rem; margin-bottom: 0.25rem;">Album Limit Reached</div>
+                <div style="color: #b91c1c; font-size: 0.85rem; line-height: 1.4;">
+                    Your account has reached the maximum quota of <strong>{{ request.user.profile.effective_album_limit }} albums</strong> allowed on your plan. Contact your administrator or upgrade your subscription plan to create additional albums.
+                </div>
+            </div>
+        </div>
+        <button type="button" onclick="closeModal('eventModal'); window.location.href='{% url 'gallery:plans' %}';" style="width: 100%; background: #4f46e5; color: white; border: none; border-radius: 10px; padding: 0.9rem; font-size: 1.05rem; font-weight: 600; cursor: pointer; transition: background 0.2s ease;">
+            View Plans & Upgrade →
+        </button>
+        {% else %}
         <form method="post" action="{% url 'gallery:create_event' %}" enctype="multipart/form-data">
             {% csrf_token %}
             <div style="margin-bottom: 1.35rem;">
@@ -37,6 +51,7 @@
                 Create Event
             </button>
         </form>
+        {% endif %}
     </div>
 </div>
 

@@ -729,9 +729,18 @@
                 
                 <!-- Events Count -->
                 <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-                    <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 600; color: #64748b;">Events Count</h4>
-                    <div style="font-size: 3.5rem; font-weight: 800; color: #111827; line-height: 1; margin-bottom: 1.5rem;">{{ total_events|default_if_none:0 }}</div>
-                    <button onclick="openModal('eventModal')" style="width: 100%; background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 0.6rem; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; cursor: pointer;">
+                    <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600; color: #64748b;">Events Count</h4>
+                    <div style="font-size: 3.5rem; font-weight: 800; color: #111827; line-height: 1; margin-bottom: 0.5rem;">{{ total_events|default_if_none:0 }}</div>
+                    {% if request.user.profile.effective_album_limit > 0 %}
+                        <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 1rem; color: {% if request.user.profile.has_reached_album_limit %}#ef4444{% else %}#64748b{% endif %};">
+                            Limit: {{ request.user.profile.effective_album_limit }} Albums {% if request.user.profile.has_reached_album_limit %}(Quota Full){% else %}({{ request.user.profile.albums_remaining }} left){% endif %}
+                        </div>
+                    {% else %}
+                        <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 1rem; color: #10b981;">
+                            Unlimited Albums
+                        </div>
+                    {% endif %}
+                    <button onclick="{% if request.user.profile.has_reached_album_limit %}showToast('Album limit reached ({{ request.user.profile.effective_album_limit }} max). Please upgrade your plan.', 'error'){% else %}openModal('eventModal'){% endif %}" style="width: 100%; background: {% if request.user.profile.has_reached_album_limit %}#94a3b8{% else %}#3b82f6{% endif %}; color: white; border: none; border-radius: 8px; padding: 0.6rem; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; cursor: pointer;">
                         Create Event +
                     </button>
                     <button onclick="window.location.href='{% url 'gallery:events_list' %}';" style="width: 100%; background: #111827; color: white; border: none; border-radius: 8px; padding: 0.6rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">

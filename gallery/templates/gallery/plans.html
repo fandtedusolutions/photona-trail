@@ -74,10 +74,22 @@
                         </div>
                     </div>
                     
-                    <div>
-                        <div style="font-size: 0.9rem; color: #94a3b8; font-weight: 500; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Current Limit</div>
-                        <div style="font-size: 1.5rem; font-weight: 700; color: #ffffff; font-family: 'Outfit', sans-serif; display: flex; align-items: baseline; gap: 8px;">
-                            {{ plan.storage_limit_mb }} <span style="font-size: 1rem; color: #94a3b8; font-weight: 500;">MB Total</span>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div>
+                            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 500; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em;">Storage Quota</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #ffffff; font-family: 'Outfit', sans-serif; display: flex; align-items: baseline; gap: 8px;">
+                                {{ plan.storage_limit_mb }} <span style="font-size: 0.95rem; color: #94a3b8; font-weight: 500;">MB Total</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 500; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em;">Album Quota</div>
+                            <div style="font-size: 1.35rem; font-weight: 700; color: #ffffff; font-family: 'Outfit', sans-serif; display: flex; align-items: baseline; gap: 8px;">
+                                {% if profile.effective_album_limit > 0 %}
+                                    {{ profile.effective_album_limit }} <span style="font-size: 0.95rem; color: #94a3b8; font-weight: 500;">Albums Max</span>
+                                {% else %}
+                                    <span style="color: #34d399;">Unlimited <span style="font-size: 0.95rem; color: #94a3b8; font-weight: 500;">Albums</span></span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -113,9 +125,17 @@
                     }
                 </style>
                 
-                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600; color: #cbd5e1; margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #f1f5f9;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600; color: #cbd5e1; margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
                     <span>{{ used_storage|floatformat:1 }} MB used</span>
                     <span>{{ plan.storage_limit_mb }} MB total</span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; font-weight: 600; color: #cbd5e1; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>📁</span>
+                        <span>Albums Created</span>
+                    </div>
+                    <span style="color: #f3e5ab; font-weight: 750;">{{ total_events }} / {% if profile.effective_album_limit > 0 %}{{ profile.effective_album_limit }}{% else %}∞{% endif %}</span>
                 </div>
                 
                 <div style="display: flex; gap: 1rem;">

@@ -531,5 +531,14 @@
         checkGlobalImportStatus();
         {% endif %}
     </script>
+    {% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+            showToast("{{ message|escapejs }}", "{% if message.tags == 'error' %}error{% else %}success{% endif %}");
+            {% endfor %}
+        });
+    </script>
+    {% endif %}
 </body>
 </html>
