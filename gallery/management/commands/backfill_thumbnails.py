@@ -5,12 +5,14 @@ import os
 from io import BytesIO
 from PIL import Image, ImageOps
 
+from django.db.models import Q
+
 class Command(BaseCommand):
-    help = 'Backfill missing thumbnails for images imported via Google Drive.'
+    help = 'Backfill missing thumbnails for images.'
 
     def handle(self, *args, **kwargs):
-        # Find images that have a file but NO thumbnail
-        images = GalleryImage.objects.filter(thumbnail='').exclude(file='')
+        # Find images that have a file but NO thumbnail (null or empty string)
+        images = GalleryImage.objects.filter(Q(thumbnail='') | Q(thumbnail__isnull=True)).exclude(file='')
         total = images.count()
         self.stdout.write(self.style.WARNING(f"Found {total} images missing thumbnails."))
         

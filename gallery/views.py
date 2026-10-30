@@ -948,7 +948,7 @@ def photos_api(request):
     
     photo_id = request.GET.get('photo_id')
     
-    event = get_object_or_404(Event, slug=event_slug)
+    event = get_object_or_404(Event.objects.select_related('owner'), slug=event_slug)
     if not request.user.is_superuser and event.owner != request.user:
         return HttpResponseForbidden("Unauthorized")
         
@@ -962,21 +962,24 @@ def photos_api(request):
     else:
         images = GalleryImage.objects.filter(event=event).order_by('-uploaded_at')
         
-    paginator = Paginator(images, 60)
+    images = images.only('id', 'filename', 'thumbnail', 'file', 'total_faces', 'uploaded_at', 'preset_name', 'preset_settings')
+    paginator = Paginator(images, 36)
     page = paginator.get_page(page_num)
     
-    from django.urls import reverse
     data = []
+    evt_name = event.name or "Event"
+    org_name = event.owner.username.title() if (event and event.owner) else "Studio"
+    
     for img in page:
         file_token = img.get_secure_file_token()
         thumb_token = img.get_secure_thumbnail_token() if img.thumbnail else file_token
         data.append({
             'id': img.id,
             'filename': img.filename,
-            'event_name': img.event.name if img.event else "Event",
-            'organiser_name': img.event.owner.username.title() if (img.event and img.event.owner) else "Studio",
-            'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[thumb_token])),
-            'full_url': request.build_absolute_uri(reverse('gallery:secure_image', args=[file_token])),
+            'event_name': evt_name,
+            'organiser_name': org_name,
+            'url': reverse('gallery:secure_image', args=[thumb_token]),
+            'full_url': reverse('gallery:secure_image', args=[file_token]),
             'total_faces': img.total_faces,
             'uploaded_at': img.uploaded_at.strftime("%b %d, %H:%M"),
             'preset_name': img.preset_name or 'original',
@@ -1525,6 +1528,7 @@ def secure_image_serve(request, token):
                     content = apply_watermark_to_image(content, img.event)
 
             response = HttpResponse(content, content_type='image/jpeg')
+            response['Cache-Control'] = 'public, max-age=2592000, immutable'
             if request.GET.get('download'):
                 name_only, ext = os.path.splitext(img.filename)
                 evt_tag = slugify(img.event.name) if (img.event and img.event.name) else (img.event.slug if img.event else 'photo')
@@ -1538,12 +1542,37 @@ def secure_image_serve(request, token):
     # Standard / raw serve (used by Preset Studio editor & raw asset endpoints)
     target_field = img.thumbnail if img_type == 'thumbnail' and img.thumbnail else img.file
     
+    # On-demand thumbnail generation for images missing a pre-generated thumbnail
+    if img_type in ('thumbnail', 'processed_thumbnail') and not img.thumbnail and img.file:
+        try:
+            from io import BytesIO
+            from PIL import Image, ImageOps
+            from django.core.files.base import ContentFile
+            with img.file.open('rb') as src_file:
+                with Image.open(src_file) as pil_img:
+                    pil_img = ImageOps.exif_transpose(pil_img)
+                    pil_img.thumbnail((600, 600), Image.Resampling.LANCZOS)
+                    if pil_img.mode in ('RGBA', 'P'):
+                        pil_img = pil_img.convert('RGB')
+                    buf = BytesIO()
+                    pil_img.save(buf, format='JPEG', quality=82)
+                    buf.seek(0)
+                    thumb_name = os.path.splitext(img.filename)[0] + "_thumb.jpg"
+                    img.thumbnail.save(thumb_name, ContentFile(buf.read()), save=True)
+                    target_field = img.thumbnail
+        except Exception as e:
+            target_field = img.file
+
     if not target_field or not target_field.name:
         return HttpResponse('Image not found', status=404)
         
     try:
         f = target_field.open('rb')
         response = FileResponse(f, content_type='image/jpeg')
+        if img_type in ('thumbnail', 'processed_thumbnail'):
+            response['Cache-Control'] = 'public, max-age=2592000, immutable'
+        else:
+            response['Cache-Control'] = 'public, max-age=86400'
         if request.GET.get('download'):
             response['Content-Disposition'] = f'attachment; filename="{img.filename}"'
         return response
@@ -1735,6 +1764,8 @@ def rename_face_group(request, slug):
                 
         # Update database records
         FaceEmbedding.objects.filter(image__event=event, person_label=old_label).update(person_label=new_label)
+        from django.core.cache import cache
+        cache.delete(f"event_clusters_v2_{event.id}")
         
         return JsonResponse({'success': True, 'message': f'Group renamed to {new_label}'})
     return JsonResponse({'success': False, 'message': 'Missing parameters.'})
@@ -1754,6 +1785,8 @@ def delete_face_group(request, slug):
             
         # Delete matching face records
         FaceEmbedding.objects.filter(image__event=event, person_label=group_label).delete()
+        from django.core.cache import cache
+        cache.delete(f"event_clusters_v2_{event.id}")
         
         return JsonResponse({'success': True, 'message': 'Group deleted successfully.'})
     return JsonResponse({'success': False, 'message': 'Missing parameters.'})

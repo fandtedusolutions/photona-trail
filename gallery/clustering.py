@@ -70,26 +70,64 @@ def run_clustering_on_upload(event):
             face_rec.person_label = person_name
             face_rec.save(update_fields=['person_label'])
 
+from django.core.cache import cache
+from django.db.models import Count, Min
+
 def get_cached_clusters_for_event(event):
     """
-    Extremely fast DB query to retrieve pre-clustered face groups for event page detail loads.
-    Does not copy files or perform vector calculations.
+    Extremely fast DB aggregation and caching to retrieve pre-clustered face groups for event page detail loads.
+    Runs in 1-2 fast queries instead of dozens of loops, cached for instant page rendering.
     """
-    labels = FaceEmbedding.objects.filter(image__event=event).exclude(person_label__isnull=True).values_list('person_label', flat=True).distinct()
-    
-    clusters = []
+    cache_key = f"event_clusters_v2_{event.id}"
+    try:
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+    except Exception:
+        pass
+
+    # 1. Single aggregated DB query to get all person labels, counts, and a sample cover image ID
+    cluster_stats = FaceEmbedding.objects.filter(
+        image__event=event
+    ).exclude(
+        person_label__isnull=True
+    ).exclude(
+        person_label=''
+    ).values('person_label').annotate(
+        img_count=Count('image_id', distinct=True),
+        cover_image_id=Min('image_id')
+    ).order_by('-img_count')
+
+    if not cluster_stats:
+        try:
+            cache.set(cache_key, [], 180)
+        except Exception:
+            pass
+        return []
+
+    # 2. Bulk fetch only the sample cover images (1 query)
+    cover_ids = [c['cover_image_id'] for c in cluster_stats if c['cover_image_id']]
+    images_by_id = {img.id: img for img in GalleryImage.objects.filter(id__in=cover_ids).only('id', 'filename', 'thumbnail', 'file')}
+
     safe_event_name = "".join([c if c.isalnum() else "_" for c in event.name])
-    
-    for label in labels:
-        images = GalleryImage.objects.filter(event=event, embeddings__person_label=label).distinct()
+    clusters = []
+    for c in cluster_stats:
+        label = c['person_label']
+        cover_img = images_by_id.get(c['cover_image_id'])
         person_dir = os.path.join(settings.MEDIA_ROOT, 'sorted', f"{safe_event_name}_{event.id}", label)
-        
         clusters.append({
             'name': label,
-            'image_count': len(images),
-            'images': images,
-            'folder_path': os.path.relpath(person_dir, settings.BASE_DIR)
+            'image_count': c['img_count'],
+            'cover_image': cover_img,
+            'first_img': cover_img,
+            'images': [cover_img] if cover_img else [],
+            'folder_path': os.path.relpath(person_dir, settings.BASE_DIR) if os.path.exists(person_dir) else ""
         })
-        
-    clusters.sort(key=lambda c: c['image_count'], reverse=True)
+
+    # Cache for 5 minutes (300 seconds)
+    try:
+        cache.set(cache_key, clusters, 300)
+    except Exception:
+        pass
     return clusters
+
