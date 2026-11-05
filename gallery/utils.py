@@ -318,25 +318,29 @@ def _process_and_save_single_image(img_path, file_name, event_id):
 
     gallery_image = GalleryImage(filename=clean_file_name, event=event, total_faces=-1)
 
-    # High-Speed single-pass processing: generate WEBP thumbnail & compress
+    # Memory-efficient single-pass processing: generate WEBP thumbnail & compress.
+    # Full-res DSLR photos can take 70-200 MB each when fully decoded, which (with
+    # parallel imports) previously OOM-killed the gunicorn workers.
+    thumb_name = os.path.splitext(clean_file_name)[0] + "_thumb.webp"
+    compression_percentage = event.compression_percentage if event else 100
+    needs_compression = bool(compression_percentage and compression_percentage < 100)
+
+    def _save_thumbnail(src_img):
+        src_img.thumbnail((600, 600), Image.Resampling.BILINEAR)  # in place, no extra copy
+        if src_img.mode not in ('RGB', 'L'):
+            src_img = src_img.convert('RGB')
+        thumb_io = BytesIO()
+        src_img.save(thumb_io, format='WEBP', quality=80)
+        thumb_io.seek(0)
+        gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+
     try:
         with Image.open(img_path) as img:
-            img = ImageOps.exif_transpose(img)
-            if img.mode in ('RGBA', 'P'):
-                img = img.convert('RGB')
-
-            # 1. Fast in-memory WEBP thumbnail
-            thumb_img = img.copy()
-            thumb_img.thumbnail((600, 600), Image.Resampling.BILINEAR)
-            thumb_io = BytesIO()
-            thumb_img.save(thumb_io, format='WEBP', quality=80)
-            thumb_io.seek(0)
-            thumb_name = os.path.splitext(clean_file_name)[0] + "_thumb.webp"
-            gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
-
-            # 2. Compression if configured
-            compression_percentage = event.compression_percentage if event else 100
-            if compression_percentage and compression_percentage < 100:
+            if needs_compression:
+                # Full decode is required to produce the compressed copy
+                ImageOps.exif_transpose(img, in_place=True)
+                if img.mode not in ('RGB', 'L'):
+                    img = img.convert('RGB')
                 scale_factor = float(compression_percentage) / 100.0
                 new_width = max(1, int(img.width * scale_factor))
                 new_height = max(1, int(img.height * scale_factor))
@@ -346,7 +350,15 @@ def _process_and_save_single_image(img_path, file_name, event_id):
                 img.save(comp_io, format='JPEG', quality=88)
                 comp_io.seek(0)
                 gallery_image.file.save(clean_file_name, File(comp_io), save=False)
+                del comp_io
+                # Reuse the already-downscaled image for the thumbnail
+                _save_thumbnail(img)
             else:
+                # Thumbnail only: let the JPEG decoder downscale while decoding
+                # (draft mode), using a fraction of the memory of a full decode.
+                img.draft('RGB', (1200, 1200))
+                ImageOps.exif_transpose(img, in_place=True)
+                _save_thumbnail(img)
                 with open(img_path, 'rb') as f:
                     gallery_image.file.save(clean_file_name, File(f), save=False)
     except Exception as e:
@@ -541,8 +553,9 @@ def download_and_index_gdrive_link(url, event_id=None, job_id=None, jobs_dict=No
                     except Exception:
                         pass
 
-            # 4 parallel download workers for 4x speedup
-            with ThreadPoolExecutor(max_workers=4) as executor:
+            # 2 parallel download workers: downloads are network-bound, and more
+            # threads multiply peak RAM inside the gunicorn worker (caused OOM kills)
+            with ThreadPoolExecutor(max_workers=2) as executor:
                 list(executor.map(process_one_item, enumerate(items_to_process)))
 
             final_total = total_indexed[0]
