@@ -2767,6 +2767,7 @@
         </a>
         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 0.3rem;">
             <div class="event-hero-title" style="margin-bottom: 0;">{{ event.name }}</div>
+            <span style="font-size: 0.75rem; font-weight: 800; color: #b45309; background: rgba(245,158,11,0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(245,158,11,0.2);">🖼️ <span id="heroPhotoCount">{{ total_images }}</span> <span id="heroPhotoLabel">Photo{{ total_images|pluralize }}</span></span>
             {% if clusters %}
             <span style="font-size: 0.75rem; font-weight: 800; color: var(--accent-indigo); background: rgba(79,70,229,0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(79,70,229,0.15);">👥 {{ clusters|length }} People</span>
             {% endif %}
@@ -2979,6 +2980,7 @@
                 <div class="photos-panel-title">
                     <span style="width: 26px; height: 26px; background: rgba(245,158,11,0.08); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">🖼️</span>
                     <span id="photosSectionTitle">Event Photos</span>
+                    <span id="photosSectionCount" style="font-size: 0.75rem; font-weight: 800; color: var(--accent-indigo); background: rgba(79,70,229,0.1); padding: 2px 10px; border-radius: 20px;">{{ total_images }}</span>
                 </div>
                 <button type="button" id="clearFilterBtn" onclick="clearPersonFilter()" style="display: none; align-items: center; gap: 5px; background: rgba(79, 70, 229, 0.1); color: var(--accent-indigo); border: 1px solid rgba(79, 70, 229, 0.25); border-radius: 20px; padding: 4px 14px; font-size: 0.78rem; font-weight: 750; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(79, 70, 229, 0.18)'" onmouseout="this.style.background='rgba(79, 70, 229, 0.1)'">
                     ← Show All Photos
@@ -3400,6 +3402,7 @@
                         const el = document.getElementById(`image-card-${id}`);
                         if (el) el.remove();
                     });
+                    adjustPhotoCount(-data.deleted_ids.length);
                     allPhotosList = allPhotosList.filter(p => !data.deleted_ids.includes(p.id));
                     showToast(data.message, "success");
                     clearPhotoSelection();
@@ -3841,6 +3844,7 @@
                             if (gallery) {
                                 gallery.insertBefore(card, gallery.firstChild);
                             }
+                            adjustPhotoCount(1);
                         }
                     } else {
                         const errMsg = data.message || 'Upload failed';
@@ -3946,6 +3950,7 @@
                             if (gallery) {
                                 gallery.insertBefore(photoCard, gallery.firstChild);
                             }
+                            adjustPhotoCount(1);
                         }
                     });
 
@@ -4149,6 +4154,29 @@
     const sentinel = document.getElementById('sentinel');
     const noPhotosMessage = document.getElementById('noPhotosMessage');
 
+    // ── Total photo counters (hero badge = whole event, section badge = current view)
+    let eventPhotoTotal = {{ total_images|default:0 }};
+    function renderEventPhotoTotal() {
+        const countEl = document.getElementById('heroPhotoCount');
+        const labelEl = document.getElementById('heroPhotoLabel');
+        if (countEl) countEl.innerText = eventPhotoTotal.toLocaleString();
+        if (labelEl) labelEl.innerText = eventPhotoTotal === 1 ? 'Photo' : 'Photos';
+    }
+    function setSectionPhotoCount(n) {
+        const el = document.getElementById('photosSectionCount');
+        if (el) el.innerText = Number(n || 0).toLocaleString();
+    }
+    function adjustPhotoCount(delta) {
+        eventPhotoTotal = Math.max(0, eventPhotoTotal + delta);
+        renderEventPhotoTotal();
+        const el = document.getElementById('photosSectionCount');
+        if (el) {
+            const current = parseInt(el.innerText.replace(/[^0-9]/g, ''), 10) || 0;
+            setSectionPhotoCount(Math.max(0, current + delta));
+        }
+    }
+    renderEventPhotoTotal();
+
     function loadMorePhotos() {
         if (loading || !hasNext) return;
         loading = true;
@@ -4163,6 +4191,13 @@
             hasNext = data.has_next;
             if (data.watermark !== undefined && data.watermark !== null) {
                 eventWatermark = data.watermark;
+            }
+            if (page === 1 && typeof data.total_count === 'number') {
+                setSectionPhotoCount(data.total_count);
+                if (!activePersonFilter) {
+                    eventPhotoTotal = data.total_count;
+                    renderEventPhotoTotal();
+                }
             }
             if (!hasNext && typeof observer !== 'undefined' && observer && sentinel) {
                 observer.unobserve(sentinel);
@@ -4276,6 +4311,7 @@
                 if (data.success) {
                     const cardEl = document.getElementById(`image-card-${id}`);
                     if (cardEl) cardEl.remove();
+                    adjustPhotoCount(-1);
                     allPhotosList = allPhotosList.filter(p => p.id !== id);
                     
                     const pvModal = document.getElementById('photoViewerModal');

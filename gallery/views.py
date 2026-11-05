@@ -984,10 +984,12 @@ def event_detail(request, slug):
         
     from .clustering import get_cached_clusters_for_event
     clusters = get_cached_clusters_for_event(event)
+    total_images = GalleryImage.objects.filter(event=event).count()
         
     return render(request, 'gallery/event_detail.html', {
         'event': event,
-        'clusters': clusters
+        'clusters': clusters,
+        'total_images': total_images,
     })
 
 @login_required
@@ -1039,6 +1041,7 @@ def photos_api(request):
     return JsonResponse({
         'images': data,
         'has_next': page.has_next(),
+        'total_count': paginator.count,
         'watermark': event.get_watermark_config()
     })
 
