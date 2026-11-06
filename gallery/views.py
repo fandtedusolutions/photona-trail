@@ -1,4 +1,5 @@
 import os
+import uuid
 import zipfile
 import shutil
 import threading
@@ -21,7 +22,7 @@ import datetime
 from django.utils.text import slugify
 from config import VALID_IMAGE_EXTENSIONS
 from .models import GalleryImage, FaceEmbedding, Event, UserProfile, SubscriptionPlan, EventShareLink, GuestLead
-from .utils import process_gallery_image, search_person_by_selfie
+from .utils import process_gallery_image, search_person_by_selfie, normalize_selfie_file
 from .tasks import process_image_upload_task, process_zip_upload_task, process_gdrive_import_task
 # -------------------------------------------------------------
 # Authentication Views
@@ -630,6 +631,23 @@ def _calc_wm_coords(W, H, w, h, margin, pos):
     elif pos == 'bottom-left': return (margin, H - h - margin)
     elif pos == 'bottom-center': return ((W - w) // 2, H - h - margin)
     else: return (W - w - margin, H - h - margin) # default bottom-right
+
+def preset_has_edits(preset_name, preset_settings):
+    """True if apply_preset_and_crop_to_image would actually modify the image."""
+    if not preset_name and not preset_settings:
+        return False
+    is_original = (not preset_name or preset_name.lower() in ('original', 'none', 'default', ''))
+    crop = preset_settings.get('crop') if isinstance(preset_settings, dict) else None
+    has_crop = bool(crop and (
+        crop.get('cropRect') or crop.get('normCrop') or
+        crop.get('rotation') or crop.get('straightenAngle') or
+        crop.get('flipH') or crop.get('flipV') or
+        (crop.get('aspectRatio') and crop.get('aspectRatio') != 'original') or
+        (crop.get('zoom') and float(crop.get('zoom')) > 1.01)
+    ))
+    fine_tune = preset_settings if isinstance(preset_settings, dict) else {}
+    has_fine_tune = any(fine_tune.get(k) for k in ('exposure', 'contrast', 'saturation', 'temp', 'tint', 'highlights', 'shadows', 'bw'))
+    return not (is_original and not has_crop and not has_fine_tune)
 
 def apply_preset_and_crop_to_image(image_bytes, preset_name, preset_settings):
     """
@@ -1287,12 +1305,13 @@ def search_person(request):
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
         os.makedirs(temp_dir, exist_ok=True)
         safe_name = selfie.name.replace(' ', '_')
-        full_temp_path = os.path.join(temp_dir, f"search_{int(time.time()*1000)}_{safe_name}")
+        full_temp_path = os.path.join(temp_dir, f"search_{uuid.uuid4().hex}.jpg")
         with open(full_temp_path, 'wb') as f:
             for chunk in selfie.chunks():
                 f.write(chunk)
         
         try:
+            normalize_selfie_file(full_temp_path)
             results = search_person_by_selfie(full_temp_path, event_id=selected_event.id, tenant_user=request.user)
             if not request.user.is_superuser:
                 results = [res for res in results if res['image'].event and res['image'].event.owner == request.user]
@@ -1511,6 +1530,7 @@ def cancel_gdrive_import(request):
 # ------------------------------------------------------------------
 from django.core.signing import Signer, BadSignature
 from django.http import FileResponse
+from .media_cache import rendered_cache_path, write_atomic, serve_local_file, local_path_of, serve_storage_field
 
 def secure_image_serve(request, token):
     try:
@@ -1520,9 +1540,10 @@ def secure_image_serve(request, token):
     except (BadSignature, ValueError):
         return HttpResponse('Invalid token', status=403)
         
-    img = get_object_or_404(GalleryImage, id=image_id)
+    img = get_object_or_404(GalleryImage.objects.select_related('event'), id=image_id)
     
     is_processed = (img_type in ('processed', 'processed_thumbnail')) or (request.GET.get('processed') == '1')
+    is_download = bool(request.GET.get('download'))
     
     if is_processed:
         # Determine source field
@@ -1539,6 +1560,30 @@ def secure_image_serve(request, token):
 
         if not target_field or not target_field.name:
             return HttpResponse('Image not found', status=404)
+
+        # Watermark is burned on processed full view and downloads
+        apply_wm = (img_type == 'processed' or is_download) and bool(img.event and img.event.watermark_enabled)
+        wm_config = img.event.get_watermark_config() if apply_wm else None
+        variant = img_type if img_type in ('processed', 'processed_thumbnail') else f"{img_type}_processed"
+
+        download_name = None
+        if is_download:
+            name_only, ext = os.path.splitext(img.filename)
+            evt_tag = slugify(img.event.name) if (img.event and img.event.name) else (img.event.slug if img.event else 'photo')
+            download_name = f"{name_only}_{evt_tag}{ext}"
+
+        cache_control = 'public, max-age=2592000, immutable'
+
+        # Fast path: unedited photo without watermark → the stored file IS the output.
+        # Serve it directly via S3 direct redirect or local nginx (no PIL, no duplicate copy in the render cache).
+        if not apply_wm and not preset_has_edits(img.preset_name, img.preset_settings):
+            if img_type != 'processed_thumbnail' or target_field == img.thumbnail:
+                return serve_storage_field(target_field, cache_control, download_name)
+
+        # Serve the cached render when available (no PIL work, no full read in Python)
+        cached_path = rendered_cache_path(img, variant, wm_config)
+        if os.path.exists(cached_path):
+            return serve_local_file(cached_path, cache_control, 'image/jpeg', download_name)
 
         try:
             content = None
@@ -1568,6 +1613,8 @@ def secure_image_serve(request, token):
                     t_img = Image.open(BytesIO(content))
                     if max(t_img.size) > 600:
                         t_img.thumbnail((600, 600), Image.Resampling.LANCZOS)
+                        if t_img.mode not in ('RGB', 'L'):
+                            t_img = t_img.convert('RGB')
                         buf = BytesIO()
                         t_img.save(buf, format='JPEG', quality=88)
                         content = buf.getvalue()
@@ -1575,22 +1622,24 @@ def secure_image_serve(request, token):
                     print(f"Error downscaling thumbnail: {te}")
 
             # 2. Non-destructively apply watermark (on processed full view and downloads)
-            # If processed full image or download is requested, burn watermark if enabled on event
-            if img_type == 'processed' or request.GET.get('download'):
-                if img.event and img.event.watermark_enabled:
-                    content = apply_watermark_to_image(content, img.event)
+            if apply_wm:
+                content = apply_watermark_to_image(content, img.event)
+
+            # 3. Store the render so subsequent requests are served from disk / nginx
+            try:
+                write_atomic(cached_path, content)
+                return serve_local_file(cached_path, cache_control, 'image/jpeg', download_name)
+            except Exception as ce:
+                print(f"Render cache write failed for image {img.id}: {ce}")
 
             response = HttpResponse(content, content_type='image/jpeg')
-            response['Cache-Control'] = 'public, max-age=2592000, immutable'
-            if request.GET.get('download'):
-                name_only, ext = os.path.splitext(img.filename)
-                evt_tag = slugify(img.event.name) if (img.event and img.event.name) else (img.event.slug if img.event else 'photo')
-                download_name = f"{name_only}_{evt_tag}{ext}"
+            response['Cache-Control'] = cache_control
+            if download_name:
                 response['Content-Disposition'] = f'attachment; filename="{download_name}"'
             return response
         except Exception as e:
             print(f"Error serving processed image: {e}")
-            return HttpResponse(f'Error processing image: {str(e)}', status=500)
+            return HttpResponse('Error processing image', status=500)
 
     # Standard / raw serve (used by Preset Studio editor & raw asset endpoints)
     target_field = img.thumbnail if img_type == 'thumbnail' and img.thumbnail else img.file
@@ -1618,19 +1667,17 @@ def secure_image_serve(request, token):
 
     if not target_field or not target_field.name:
         return HttpResponse('Image not found', status=404)
-        
+
+    if img_type in ('thumbnail', 'processed_thumbnail'):
+        cache_control = 'public, max-age=2592000, immutable'
+    else:
+        cache_control = 'public, max-age=86400'
+    download_name = img.filename if is_download else None
+
     try:
-        f = target_field.open('rb')
-        response = FileResponse(f, content_type='image/jpeg')
-        if img_type in ('thumbnail', 'processed_thumbnail'):
-            response['Cache-Control'] = 'public, max-age=2592000, immutable'
-        else:
-            response['Cache-Control'] = 'public, max-age=86400'
-        if request.GET.get('download'):
-            response['Content-Disposition'] = f'attachment; filename="{img.filename}"'
-        return response
+        return serve_storage_field(target_field, cache_control, download_name)
     except Exception as e:
-        return HttpResponse(f'Error accessing file: {str(e)}', status=500)
+        return HttpResponse('Error accessing file', status=500)
 
 def secure_selfie_serve(request, token):
     try:
@@ -1772,12 +1819,13 @@ def group_by_face(request):
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
         os.makedirs(temp_dir, exist_ok=True)
         safe_name = selfie.name.replace(' ', '_')
-        full_temp_path = os.path.join(temp_dir, f"group_{int(time.time()*1000)}_{safe_name}")
+        full_temp_path = os.path.join(temp_dir, f"group_{uuid.uuid4().hex}.jpg")
         with open(full_temp_path, 'wb') as f:
             for chunk in selfie.chunks():
                 f.write(chunk)
         
         try:
+            normalize_selfie_file(full_temp_path)
             results = search_person_by_selfie(full_temp_path, event_id=selected_event.id, tenant_user=request.user)
             if not request.user.is_superuser:
                 results = [res for res in results if res['image'].event and res['image'].event.owner == request.user]
@@ -2287,22 +2335,27 @@ def public_search_person(request, token):
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
         os.makedirs(temp_dir, exist_ok=True)
         safe_name = selfie.name.replace(' ', '_')
-        full_temp_path = os.path.join(temp_dir, f"public_search_{int(time.time()*1000)}_{safe_name}")
+        full_temp_path = os.path.join(temp_dir, f"public_search_{uuid.uuid4().hex}.jpg")
 
         with open(full_temp_path, 'wb') as f:
             for chunk in selfie.chunks():
                 f.write(chunk)
 
         try:
+            normalize_selfie_file(full_temp_path)
             with open(full_temp_path, 'rb') as img_f:
                 search_image_b64 = base64.b64encode(img_f.read()).decode('utf-8')
 
             results = search_person_by_selfie(full_temp_path, event_id=event.id)
             if link.person_label:
-                results = [
-                    res for res in results
-                    if res['image'].embeddings.filter(person_label=link.person_label).exists()
-                ]
+                # One query instead of one query per result
+                allowed_ids = set(
+                    FaceEmbedding.objects.filter(
+                        image_id__in=[res['image'].id for res in results],
+                        person_label=link.person_label,
+                    ).values_list('image_id', flat=True)
+                )
+                results = [res for res in results if res['image'].id in allowed_ids]
             for res in results:
                 name_only, ext = os.path.splitext(res['image'].filename)
                 res['download_filename'] = f"{name_only}_{event.slug}{ext}"

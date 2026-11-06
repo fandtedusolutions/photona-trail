@@ -78,14 +78,41 @@ WSGI_APPLICATION = 'photona_project.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
+# Supports discrete DB_* env variables (handles special chars like '@' in passwords),
+# standard DATABASE_URL, or falls back to local SQLite.
+if os.environ.get('DB_NAME'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+            'CONN_MAX_AGE': int(os.environ.get('CONN_MAX_AGE', '600')),
+        }
+    }
+elif os.environ.get('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.config(
+            conn_max_age=600
+        )
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600
-    )
-}
+# If SQLite db exists alongside PostgreSQL, register it as 'sqlite' alias
+# to enable direct data migration via 'python manage.py migrate_from_sqlite'
+if (BASE_DIR / 'db.sqlite3').exists() and DATABASES['default'].get('ENGINE') != 'django.db.backends.sqlite3':
+    DATABASES['sqlite'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 
 
 # Password validation
@@ -208,10 +235,19 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_WORKER_CONCURRENCY = 1  # limit concurrent uploads to save memory
 
-# Use Database cache for cross-worker state syncing in production
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'django_cache_table',
+# Cache configuration: In production (or when USE_REDIS_CACHE=True), use Redis
+# which is already running for Celery. In local development, use LocMemCache.
+if not DEBUG or os.environ.get('USE_REDIS_CACHE', 'False').lower() in ('true', '1', 't'):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.environ.get('REDIS_CACHE_URL', 'redis://127.0.0.1:6379/1'),
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'photona-local-cache',
+        }
+    }

@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 import faiss
@@ -58,13 +59,28 @@ def enqueue_image_for_ai(image_id, event_id=None):
             _ai_worker_started = True
     _ai_queue.put((image_id, event_id))
 
+_model_lock = threading.Lock()
+
+# Cap concurrent InsightFace inferences per process. With threaded gunicorn
+# workers, unbounded parallel inference thrashes the CPU and spikes RAM.
+_inference_slots = threading.BoundedSemaphore(int(os.environ.get('FACE_INFERENCE_CONCURRENCY', '2')))
+
 def get_face_model():
     global _face_app
     if _face_app is None:
-        # Only load detection and recognition — skip landmark_3d and genderage for 2x faster inference and low RAM
-        _face_app = FaceAnalysis(name=MODEL_NAME, allowed_modules=['detection', 'recognition'])
-        _face_app.prepare(ctx_id=0, det_size=DETECTION_SIZE)
+        with _model_lock:  # thread-safe lazy init (gthread workers)
+            if _face_app is None:
+                # Only load detection and recognition — skip landmark_3d and genderage for 2x faster inference and low RAM
+                app = FaceAnalysis(name=MODEL_NAME, allowed_modules=['detection', 'recognition'])
+                app.prepare(ctx_id=0, det_size=DETECTION_SIZE)
+                _face_app = app
     return _face_app
+
+def detect_faces(img):
+    """Run face detection/recognition with a per-process concurrency cap."""
+    app = get_face_model()
+    with _inference_slots:
+        return app.get(img)
 
 def process_gallery_image(gallery_image, local_path=None, raw_bytes=None):
     """
@@ -119,7 +135,7 @@ def process_gallery_image(gallery_image, local_path=None, raw_bytes=None):
         img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_LINEAR)
     
     # Detect faces
-    faces = app.get(img)
+    faces = detect_faces(img)
     
     # Save face embeddings
     embeddings = []
@@ -137,19 +153,89 @@ def process_gallery_image(gallery_image, local_path=None, raw_bytes=None):
     gallery_image.save()
     return len(faces)
 
+from collections import OrderedDict
+
+# Per-process LRU cache of normalized embedding matrices per event.
+# Rebuilt only when the event's embeddings change (see _event_embeddings_version).
+_EMBED_CACHE_MAX_EVENTS = int(os.environ.get('EMBED_CACHE_MAX_EVENTS', '8'))
+_embed_cache = OrderedDict()
+_embed_cache_lock = threading.Lock()
+
+SELFIE_MAX_DIM = 1024
+
+
+def _downscale_rgb(img, max_dim=SELFIE_MAX_DIM):
+    h, w = img.shape[:2]
+    if max(h, w) > max_dim:
+        scale = max_dim / float(max(h, w))
+        img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+    return img
+
+
+def normalize_selfie_file(path, max_dim=SELFIE_MAX_DIM):
+    """
+    Shrink an uploaded selfie in place (respecting EXIF orientation) so that
+    detection is fast and the base64 preview embedded in the page stays small.
+    """
+    try:
+        from PIL import Image, ImageOps
+        with Image.open(path) as im:
+            im.draft('RGB', (max_dim, max_dim))
+            im = ImageOps.exif_transpose(im)
+            if im.mode != 'RGB':
+                im = im.convert('RGB')
+            im.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+            im.save(path, format='JPEG', quality=88)
+    except Exception as e:
+        print(f"[Search] Could not normalize selfie {path}: {e}")
+
+
+def _build_embedding_matrix(queryset):
+    rows = list(queryset.values_list('image_id', 'embedding_data'))
+    if not rows:
+        return np.empty((0,), dtype=np.int64), np.empty((0, 512), dtype=np.float32)
+    image_ids = np.fromiter((r[0] for r in rows), dtype=np.int64, count=len(rows))
+    matrix = np.asarray([r[1] for r in rows], dtype=np.float32)
+    faiss.normalize_L2(matrix)
+    return image_ids, matrix
+
+
+def _event_embeddings_version(queryset):
+    from django.db.models import Count, Max, Sum
+    agg = queryset.aggregate(c=Count('id'), mx=Max('id'), s=Sum('id'))
+    return (agg['c'], agg['mx'], agg['s'])
+
+
+def get_event_embedding_matrix(event_id):
+    """Return (image_ids, normalized_matrix) for an event, cached per process."""
+    queryset = FaceEmbedding.objects.filter(image__event_id=event_id)
+    version = _event_embeddings_version(queryset)
+    with _embed_cache_lock:
+        cached = _embed_cache.get(event_id)
+        if cached and cached[0] == version:
+            _embed_cache.move_to_end(event_id)
+            return cached[1], cached[2]
+    image_ids, matrix = _build_embedding_matrix(queryset)
+    with _embed_cache_lock:
+        _embed_cache[event_id] = (version, image_ids, matrix)
+        _embed_cache.move_to_end(event_id)
+        while len(_embed_cache) > _EMBED_CACHE_MAX_EVENTS:
+            _embed_cache.popitem(last=False)
+    return image_ids, matrix
+
+
 def search_person_by_selfie(selfie_path, event_id=None, tenant_user=None):
     """
     Query the database of face embeddings using a query selfie.
     """
-    app = get_face_model()
-    
     # Read query selfie
     img = cv2.imread(selfie_path)
     if img is None:
         raise ValueError("Could not read query selfie image.")
         
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    faces = app.get(img)
+    img = _downscale_rgb(img)
+    faces = detect_faces(img)
     
     if len(faces) == 0:
         raise ValueError("No face detected in the uploaded selfie.")
@@ -160,52 +246,41 @@ def search_person_by_selfie(selfie_path, event_id=None, tenant_user=None):
     query_embedding = np.expand_dims(query_embedding, axis=0)
     faiss.normalize_L2(query_embedding)
     
-    # Load face embeddings from DB matching filters
-    query = FaceEmbedding.objects.all()
+    # Load (cached) face embeddings matching filters
     if event_id:
-        query = query.filter(image__event_id=event_id)
-    elif tenant_user and not tenant_user.is_superuser:
-        query = query.filter(image__event__owner=tenant_user)
-        
-    face_records = list(query)
-    if not face_records:
+        image_ids, matrix = get_event_embedding_matrix(event_id)
+    else:
+        query = FaceEmbedding.objects.all()
+        if tenant_user and not tenant_user.is_superuser:
+            query = query.filter(image__event__owner=tenant_user)
+        image_ids, matrix = _build_embedding_matrix(query)
+
+    if matrix.shape[0] == 0:
         return []
-        
-    embeddings_list = [record.get_numpy_embedding() for record in face_records]
-    embeddings_matrix = np.array(embeddings_list, dtype=np.float32)
-    faiss.normalize_L2(embeddings_matrix)
-    
-    # Create FAISS Index
-    dimension = embeddings_matrix.shape[1]
-    index = faiss.IndexFlatIP(dimension)
-    index.add(embeddings_matrix)
-    
-    # Search index
-    distances, indices = index.search(query_embedding, index.ntotal)
-    
-    # Collect matching images
-    matching_images = []
-    seen_images = set()
-    
-    for distance, row_index in zip(distances[0], indices[0]):
-        if row_index == -1:
-            continue
-        if distance < SIMILARITY_THRESHOLD:
-            continue
-            
-        record = face_records[row_index]
-        image = record.image
-        
-        if image.id in seen_images:
-            continue
-            
-        seen_images.add(image.id)
-        matching_images.append({
-            "image": image,
-            "score": float(distance)
-        })
-        
-    return matching_images
+
+    # Cosine similarity (vectors are L2-normalized) — same result as FAISS IndexFlatIP
+    scores = matrix @ query_embedding[0]
+    order = np.argsort(-scores)
+
+    # Best score per image, highest first
+    best = OrderedDict()
+    for row_index in order:
+        score = float(scores[row_index])
+        if score < SIMILARITY_THRESHOLD:
+            break
+        image_id = int(image_ids[row_index])
+        if image_id not in best:
+            best[image_id] = score
+
+    if not best:
+        return []
+
+    images = GalleryImage.objects.select_related('event__owner').in_bulk(list(best.keys()))
+    return [
+        {"image": images[image_id], "score": score}
+        for image_id, score in best.items()
+        if image_id in images
+    ]
 
 
 import re
