@@ -142,7 +142,15 @@ class Event(models.Model):
     watermark_opacity = models.IntegerField(default=75)  # 10 to 100
     watermark_size = models.IntegerField(default=25)  # 10 to 60 (font/logo scale %)
     
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="Optional event expiry. Leave blank for no expiry.")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_expired(self):
+        if not self.expires_at:
+            return False
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
 
     def get_watermark_config(self):
         if not self.watermark_enabled:
@@ -261,4 +269,73 @@ class GuestLead(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.event.name}"
+
+
+def personal_link_selfie_upload_path(instance, filename):
+    event_slug = instance.event.slug if instance.event else 'unassigned'
+    return f'personal_links/{event_slug}/{instance.token}_{filename}'
+
+
+class PersonalGalleryLink(models.Model):
+    """
+    A persistent personal gallery link generated when a user or guest searches
+    via AI selfie search. It allows them to access their matched photos anytime
+    until the event (or share link) expires.
+    """
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='personal_gallery_links')
+    share_link = models.ForeignKey(EventShareLink, on_delete=models.SET_NULL, null=True, blank=True, related_name='personal_links')
+    guest_lead = models.ForeignKey(GuestLead, on_delete=models.SET_NULL, null=True, blank=True, related_name='personal_links')
+
+    searcher_name = models.CharField(max_length=255, blank=True, default='')
+    selfie_image = models.ImageField(upload_to=personal_link_selfie_upload_path, null=True, blank=True)
+    selfie_thumbnail_b64 = models.TextField(blank=True, default='')
+
+    # Matched images & scores
+    images = models.ManyToManyField(GalleryImage, related_name='personal_links', blank=True)
+    match_scores = models.JSONField(default=dict, blank=True)  # {str(image_id): float(score)}
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="Expiry date inherited from event or share link.")
+
+    view_count = models.IntegerField(default=0)
+    last_viewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        name = self.searcher_name or (self.guest_lead.name if self.guest_lead else 'Guest')
+        return f"Personal Gallery: {name} - {self.event.name} ({self.token})"
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        now = timezone.now()
+        # 1. Direct expiry on this personal link
+        if self.expires_at and now > self.expires_at:
+            return True
+        # 2. Event expiry
+        if self.event and self.event.expires_at and now > self.event.expires_at:
+            return True
+        # 3. Share link expiry (if searched through a share link)
+        if self.share_link and self.share_link.is_expired:
+            return True
+        return False
+
+    @property
+    def is_accessible(self):
+        return not self.is_expired
+
+    def get_effective_expires_at(self):
+        """Return the nearest expiry datetime among link, event, and share_link."""
+        candidates = []
+        if self.expires_at:
+            candidates.append(self.expires_at)
+        if self.event and self.event.expires_at:
+            candidates.append(self.event.expires_at)
+        if self.share_link and self.share_link.expires_at:
+            candidates.append(self.share_link.expires_at)
+        return min(candidates) if candidates else None
+
 

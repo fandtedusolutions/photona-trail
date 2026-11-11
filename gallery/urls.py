@@ -57,6 +57,11 @@ urlpatterns = [
     path('share/<uuid:token>/auth/', views.public_event_auth, name='public_event_auth'),
     path('api/public-photos/', views.public_photos_api, name='public_photos_api'),
 
+    # Personal Gallery Links (from AI Search)
+    path('my-photos/<uuid:token>/', views.personal_gallery, name='personal_gallery'),
+    path('my-photos/<uuid:token>/download/', views.download_personal_gallery_zip, name='download_personal_gallery_zip'),
+    path('my-photos/<uuid:token>/scan-new/', views.scan_new_personal_photos, name='scan_new_personal_photos'),
+
     # Core Upload & Search actions
     path('upload/', views.upload_photos, name='upload'),
     path('upload-single/', views.upload_single_photo, name='upload_single'),

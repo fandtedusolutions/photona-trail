@@ -143,6 +143,43 @@
     </div>
     
     {% if results %}
+        {% if personal_gallery_url %}
+            <!-- ═══ SHAREABLE PERSONAL LINK BANNER ═══ -->
+            <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%); border: 1.5px solid rgba(99, 102, 241, 0.25); border-radius: 16px; padding: 1.1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);">
+                <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 260px;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+                        🔗
+                    </div>
+                    <div>
+                        <div style="font-weight: 750; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span>Your Personal Photos Link is Ready!</span>
+                            {% if personal_link.expires_at %}
+                                <span style="font-size: 0.7rem; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 10px;">Valid until {{ personal_link.expires_at|date:"M d, Y" }}</span>
+                            {% else %}
+                                <span style="font-size: 0.7rem; font-weight: 700; background: #10b981; color: white; padding: 2px 8px; border-radius: 10px;">Active Link</span>
+                            {% endif %}
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">
+                            Access your {{ results|length }} photos anytime{% if personal_link.expires_at %} until <strong>{{ personal_link.expires_at|date:"M d, Y" }}</strong>{% endif %}. Bookmark or share this link directly!
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <a href="{{ personal_gallery_url }}" target="_blank" class="btn btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-light); border-radius: 20px; font-weight: 650; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                        👁️ Open Link
+                    </a>
+                    <button type="button" class="btn btn-sm" onclick="copyPersonalLink('{{ personal_gallery_url }}')" style="background: var(--accent-indigo); color: white; border: none; border-radius: 20px; font-weight: 700; padding: 6px 16px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);">
+                        📋 <span id="copyLinkBtnText">Copy Link</span>
+                    </button>
+                    {% if whatsapp_share_text %}
+                        <a href="https://api.whatsapp.com/send?text={{ whatsapp_share_text }}" target="_blank" class="btn btn-sm" style="background: #25D366; color: white; border-radius: 20px; font-weight: 700; padding: 6px 16px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);">
+                            💬 WhatsApp
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
         <style>
             .rich-gallery-grid {
                 display: grid;
@@ -605,6 +642,24 @@
         document.getElementById('leadFormContainer').style.display = 'none';
         document.getElementById('selfiePreview').src = '';
         mainInput.value = '';
+    }
+
+    function copyPersonalLink(url) {
+        navigator.clipboard.writeText(url).then(() => {
+            const btnText = document.getElementById('copyLinkBtnText');
+            if (btnText) {
+                const old = btnText.innerText;
+                btnText.innerText = "Copied! ✓";
+                setTimeout(() => { btnText.innerText = old; }, 2500);
+            }
+            if (typeof showToast === 'function') {
+                showToast("Personal photos link copied to clipboard!", "success");
+            } else {
+                alert("Personal photos link copied to clipboard!");
+            }
+        }).catch(() => {
+            prompt("Copy your personal link:", url);
+        });
     }
 
     searchForm.addEventListener('submit', (e) => {

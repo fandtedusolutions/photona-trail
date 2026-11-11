@@ -17,6 +17,7 @@ from gallery.models import (
     GalleryImage,
     FaceEmbedding,
     GuestLead,
+    PersonalGalleryLink,
 )
 
 
@@ -68,6 +69,8 @@ class Command(BaseCommand):
             (GalleryImage, 'Gallery Images'),
             (FaceEmbedding, 'Face Embeddings'),
             (GuestLead, 'Guest Leads'),
+            (PersonalGalleryLink, 'Personal Gallery Links'),
+            (PersonalGalleryLink.images.through, 'Personal Gallery Image Links'),
         ]
 
         total_migrated = 0

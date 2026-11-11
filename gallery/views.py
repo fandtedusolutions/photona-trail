@@ -21,7 +21,7 @@ import datetime
 
 from django.utils.text import slugify
 from config import VALID_IMAGE_EXTENSIONS
-from .models import GalleryImage, FaceEmbedding, Event, UserProfile, SubscriptionPlan, EventShareLink, GuestLead
+from .models import GalleryImage, FaceEmbedding, Event, UserProfile, SubscriptionPlan, EventShareLink, GuestLead, PersonalGalleryLink
 from .utils import process_gallery_image, search_person_by_selfie, normalize_selfie_file
 from .tasks import process_image_upload_task, process_zip_upload_task, process_gdrive_import_task
 # -------------------------------------------------------------
@@ -1290,6 +1290,10 @@ def search_person(request):
     results = None
     error_message = None
     selected_event_slug = request.GET.get('event') or request.POST.get('event_slug')
+    personal_link = None
+    personal_gallery_url = None
+    search_image_b64 = None
+    whatsapp_share_text = None
     
     if not selected_event_slug:
         return redirect('gallery:dashboard')
@@ -1302,6 +1306,7 @@ def search_person(request):
     if request.method == 'POST' and request.FILES.get('selfie'):
         selfie = request.FILES['selfie']
         import time
+        import base64
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
         os.makedirs(temp_dir, exist_ok=True)
         safe_name = selfie.name.replace(' ', '_')
@@ -1312,12 +1317,38 @@ def search_person(request):
         
         try:
             normalize_selfie_file(full_temp_path)
+            with open(full_temp_path, 'rb') as img_f:
+                search_image_b64 = base64.b64encode(img_f.read()).decode('utf-8')
+
             results = search_person_by_selfie(full_temp_path, event_id=selected_event.id, tenant_user=request.user)
             if not request.user.is_superuser:
                 results = [res for res in results if res['image'].event and res['image'].event.owner == request.user]
             for res in results:
                 name_only, ext = os.path.splitext(res['image'].filename)
                 res['download_filename'] = f"{name_only}_{selected_event.slug}{ext}"
+
+            if results:
+                personal_link = PersonalGalleryLink.objects.create(
+                    event=selected_event,
+                    searcher_name=request.user.get_full_name() or request.user.username,
+                    selfie_thumbnail_b64=search_image_b64 or '',
+                    expires_at=selected_event.expires_at,
+                    match_scores={str(res['image'].id): res['score'] for res in results}
+                )
+                try:
+                    with open(full_temp_path, 'rb') as f_selfie:
+                        personal_link.selfie_image.save(f"selfie_{uuid.uuid4().hex[:6]}.jpg", File(f_selfie), save=False)
+                except Exception as s_err:
+                    print(f"Error saving selfie file: {s_err}")
+                personal_link.save()
+                personal_link.images.set([res['image'] for res in results])
+
+                personal_gallery_url = request.build_absolute_uri(
+                    reverse('gallery:personal_gallery', args=[personal_link.token])
+                )
+                from urllib.parse import quote
+                raw_wa = f"Here are my photos from {selected_event.name}: {personal_gallery_url}"
+                whatsapp_share_text = quote(raw_wa)
         except Exception as e:
             error_message = str(e)
         finally:
@@ -1329,6 +1360,10 @@ def search_person(request):
         'error_message': error_message,
         'selected_event': selected_event,
         'event': selected_event,
+        'personal_link': personal_link,
+        'personal_gallery_url': personal_gallery_url,
+        'search_image_b64': search_image_b64,
+        'whatsapp_share_text': whatsapp_share_text,
     })
 
 @login_required
@@ -2035,6 +2070,10 @@ def download_images_zip(request):
                     share_link = EventShareLink.objects.filter(token=token, event=img.event).first()
                     if share_link and share_link.is_accessible:
                         is_authorized = True
+                    else:
+                        p_link = PersonalGalleryLink.objects.filter(token=token, event=img.event).first()
+                        if p_link and p_link.is_accessible and p_link.images.filter(id=img.id).exists():
+                            is_authorized = True
                         
                 if not is_authorized:
                     continue
@@ -2307,6 +2346,10 @@ def public_search_person(request, token):
     results = None
     error_message = None
     search_image_b64 = None
+    personal_link = None
+    personal_gallery_url = None
+    whatsapp_share_text = None
+    created_lead = None
 
     if request.method == 'POST' and request.FILES.get('selfie'):
         selfie = request.FILES['selfie']
@@ -2318,7 +2361,7 @@ def public_search_person(request, token):
         email = request.POST.get('guest_email', '')
         
         if name and age and phone:
-            GuestLead.objects.create(
+            created_lead = GuestLead.objects.create(
                 event=event,
                 name=name,
                 age=age,
@@ -2359,6 +2402,32 @@ def public_search_person(request, token):
             for res in results:
                 name_only, ext = os.path.splitext(res['image'].filename)
                 res['download_filename'] = f"{name_only}_{event.slug}{ext}"
+
+            if results:
+                effective_expiry = link.expires_at or event.expires_at
+                personal_link = PersonalGalleryLink.objects.create(
+                    event=event,
+                    share_link=link,
+                    guest_lead=created_lead,
+                    searcher_name=name or 'Guest',
+                    selfie_thumbnail_b64=search_image_b64 or '',
+                    expires_at=effective_expiry,
+                    match_scores={str(res['image'].id): res['score'] for res in results}
+                )
+                try:
+                    with open(full_temp_path, 'rb') as f_selfie:
+                        personal_link.selfie_image.save(f"selfie_{uuid.uuid4().hex[:6]}.jpg", File(f_selfie), save=False)
+                except Exception as s_err:
+                    print(f"Error saving selfie: {s_err}")
+                personal_link.save()
+                personal_link.images.set([res['image'] for res in results])
+
+                personal_gallery_url = request.build_absolute_uri(
+                    reverse('gallery:personal_gallery', args=[personal_link.token])
+                )
+                from urllib.parse import quote
+                raw_wa = f"Here are my photos from {event.name}: {personal_gallery_url}"
+                whatsapp_share_text = quote(raw_wa)
         except Exception as e:
             error_message = str(e)
         finally:
@@ -2372,7 +2441,164 @@ def public_search_person(request, token):
         'event': event,
         'link': link,
         'search_image_b64': search_image_b64,
+        'personal_link': personal_link,
+        'personal_gallery_url': personal_gallery_url,
+        'whatsapp_share_text': whatsapp_share_text,
     })
+
+
+def personal_gallery(request, token):
+    """
+    Public accessible personal gallery for a user/guest who performed an AI search.
+    Accessible anytime until the event or share link expires.
+    """
+    from django.db.models import F
+    from urllib.parse import quote
+
+    personal_link = get_object_or_404(
+        PersonalGalleryLink.objects.select_related('event__owner', 'share_link', 'guest_lead'),
+        token=token
+    )
+    event = personal_link.event
+
+    if not personal_link.is_accessible:
+        return render(request, 'gallery/personal_gallery_expired.html', {
+            'personal_link': personal_link,
+            'event': event,
+            'expires_at': personal_link.get_effective_expires_at(),
+        })
+
+    # Increment view counter
+    PersonalGalleryLink.objects.filter(id=personal_link.id).update(
+        view_count=F('view_count') + 1,
+        last_viewed_at=timezone.now()
+    )
+
+    images = personal_link.images.select_related('event').order_by('-uploaded_at')
+    results = []
+    for img in images:
+        name_only, ext = os.path.splitext(img.filename)
+        results.append({
+            'image': img,
+            'score': personal_link.match_scores.get(str(img.id), 0.0),
+            'download_filename': f"{name_only}_{event.slug}{ext}"
+        })
+
+    current_url = request.build_absolute_uri()
+    raw_wa = f"Here are my photos from {event.name}: {current_url}"
+    whatsapp_share_text = quote(raw_wa)
+
+    return render(request, 'gallery/personal_gallery.html', {
+        'personal_link': personal_link,
+        'event': event,
+        'results': results,
+        'total_results': len(results),
+        'personal_gallery_url': current_url,
+        'whatsapp_share_text': whatsapp_share_text,
+        'expires_at': personal_link.get_effective_expires_at(),
+    })
+
+
+def download_personal_gallery_zip(request, token):
+    """Download all photos belonging to a personal gallery as a single ZIP."""
+    personal_link = get_object_or_404(
+        PersonalGalleryLink.objects.select_related('event'),
+        token=token
+    )
+    if not personal_link.is_accessible:
+        return HttpResponseForbidden("This personal gallery has expired.")
+
+    event = personal_link.event
+    images = personal_link.images.select_related('event').all()
+    if not images:
+        return redirect('gallery:personal_gallery', token=token)
+
+    import zipfile
+    from io import BytesIO
+    zip_buffer = BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
+        for img in images:
+            try:
+                content = None
+                # Check for rendered version with watermark/presets
+                if img.preset_name or img.preset_settings or (event and event.watermark_enabled):
+                    from .media_cache import rendered_cache_path
+                    apply_wm = bool(event and event.watermark_enabled)
+                    wm_config = event.get_watermark_config() if apply_wm else None
+                    cached = rendered_cache_path(img, 'processed', wm_config)
+                    if os.path.exists(cached):
+                        with open(cached, 'rb') as f:
+                            content = f.read()
+
+                if content is None:
+                    try:
+                        _p = getattr(img.file, 'path', None)
+                        if _p and os.path.exists(_p):
+                            with open(_p, 'rb') as f:
+                                content = f.read()
+                    except Exception:
+                        pass
+
+                if content is None:
+                    with img.file.open('rb') as f:
+                        content = f.read()
+
+                if content:
+                    name_only, ext = os.path.splitext(img.filename)
+                    out_name = f"{name_only}_{event.slug}{ext}"
+                    zip_file.writestr(out_name, content)
+            except Exception as ze:
+                print(f"Error zipping image {img.id}: {ze}")
+
+    zip_buffer.seek(0)
+    searcher_safe = slugify(personal_link.searcher_name or 'my')
+    zip_filename = f"{searcher_safe}_{event.slug}_photos.zip"
+    response = FileResponse(zip_buffer, content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{zip_filename}"'
+    return response
+
+
+@require_POST
+def scan_new_personal_photos(request, token):
+    """Re-scan the event for any newly uploaded photos matching this person's selfie."""
+    personal_link = get_object_or_404(
+        PersonalGalleryLink.objects.select_related('event'),
+        token=token
+    )
+    if not personal_link.is_accessible:
+        return JsonResponse({'success': False, 'message': 'This personal gallery has expired.'}, status=403)
+
+    if not personal_link.selfie_image or not personal_link.selfie_image.name:
+        return JsonResponse({'success': False, 'message': 'No selfie on record to re-scan with.'})
+
+    try:
+        selfie_path = personal_link.selfie_image.path
+        if not os.path.exists(selfie_path):
+            return JsonResponse({'success': False, 'message': 'Selfie file unavailable.'})
+
+        matches = search_person_by_selfie(selfie_path, event_id=personal_link.event_id)
+        existing_ids = set(personal_link.images.values_list('id', flat=True))
+
+        new_images = []
+        for m in matches:
+            img = m['image']
+            if img.id not in existing_ids:
+                new_images.append(img)
+                personal_link.match_scores[str(img.id)] = m['score']
+
+        if new_images:
+            personal_link.images.add(*new_images)
+            personal_link.save(update_fields=['match_scores'])
+
+        return JsonResponse({
+            'success': True,
+            'new_count': len(new_images),
+            'total_count': personal_link.images.count(),
+            'message': f"Found {len(new_images)} new photo(s)!" if new_images else "No new photos found. You are all up to date!"
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
 
