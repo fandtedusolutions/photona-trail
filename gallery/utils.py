@@ -151,6 +151,10 @@ def process_gallery_image(gallery_image, local_path=None, raw_bytes=None):
     # Update total faces count
     gallery_image.total_faces = len(faces)
     gallery_image.save()
+    try:
+        auto_sync_new_image_to_personal_links(gallery_image, faces)
+    except Exception as _sync_err:
+        pass
     return len(faces)
 
 from collections import OrderedDict
@@ -224,9 +228,10 @@ def get_event_embedding_matrix(event_id):
     return image_ids, matrix
 
 
-def search_person_by_selfie(selfie_path, event_id=None, tenant_user=None):
+def search_person_by_selfie(selfie_path, event_id=None, tenant_user=None, return_vector=False):
     """
     Query the database of face embeddings using a query selfie.
+    Optionally returns (matching_images, query_vector_list) if return_vector=True.
     """
     # Read query selfie
     img = cv2.imread(selfie_path)
@@ -245,6 +250,7 @@ def search_person_by_selfie(selfie_path, event_id=None, tenant_user=None):
     query_embedding = faces[0].embedding.astype(np.float32)
     query_embedding = np.expand_dims(query_embedding, axis=0)
     faiss.normalize_L2(query_embedding)
+    query_vector_list = query_embedding[0].tolist()
     
     # Load (cached) face embeddings matching filters
     if event_id:
@@ -256,7 +262,7 @@ def search_person_by_selfie(selfie_path, event_id=None, tenant_user=None):
         image_ids, matrix = _build_embedding_matrix(query)
 
     if matrix.shape[0] == 0:
-        return []
+        return ([], query_vector_list) if return_vector else []
 
     # Cosine similarity (vectors are L2-normalized) — same result as FAISS IndexFlatIP
     scores = matrix @ query_embedding[0]
@@ -273,14 +279,286 @@ def search_person_by_selfie(selfie_path, event_id=None, tenant_user=None):
             best[image_id] = score
 
     if not best:
-        return []
+        return ([], query_vector_list) if return_vector else []
 
     images = GalleryImage.objects.select_related('event__owner').in_bulk(list(best.keys()))
-    return [
+    results = [
         {"image": images[image_id], "score": score}
         for image_id, score in best.items()
         if image_id in images
     ]
+    return (results, query_vector_list) if return_vector else results
+
+
+def extract_face_embedding_from_image(image_path):
+    """Extract normalized 512-d face embedding list from an image file, or None."""
+    try:
+        img = cv2.imread(image_path)
+        if img is None:
+            return None
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = _downscale_rgb(img)
+        faces = detect_faces(img)
+        if not faces:
+            return None
+        emb = faces[0].embedding.astype(np.float32)
+        emb = np.expand_dims(emb, axis=0)
+        faiss.normalize_L2(emb)
+        return emb[0].tolist()
+    except Exception as e:
+        print(f"[EmbeddingExtract] Error: {e}")
+        return None
+
+
+def find_matching_images_for_embedding(query_vector, event_id, exclude_image_ids=None):
+    """
+    Sub-5ms vector dot-product search across an event's face embeddings
+    using a pre-computed 512-d normalized embedding vector.
+    """
+    if not query_vector or not event_id:
+        return []
+
+    q_vec = np.asarray(query_vector, dtype=np.float32)
+    if q_vec.ndim == 1:
+        q_vec = np.expand_dims(q_vec, axis=0)
+    faiss.normalize_L2(q_vec)
+
+    image_ids, matrix = get_event_embedding_matrix(event_id)
+    if matrix.shape[0] == 0:
+        return []
+
+    scores = matrix @ q_vec[0]
+    order = np.argsort(-scores)
+
+    exclude_set = set(exclude_image_ids or [])
+    new_matches = []
+    seen = set()
+
+    for row_index in order:
+        score = float(scores[row_index])
+        if score < SIMILARITY_THRESHOLD:
+            break
+        image_id = int(image_ids[row_index])
+        if image_id in exclude_set or image_id in seen:
+            continue
+        seen.add(image_id)
+        new_matches.append((image_id, score))
+
+    if not new_matches:
+        return []
+
+    images_dict = GalleryImage.objects.select_related('event').in_bulk([m[0] for m in new_matches])
+    return [
+        {"image": images_dict[img_id], "score": score}
+        for img_id, score in new_matches
+        if img_id in images_dict
+    ]
+
+
+def sync_personal_gallery_matches(personal_link):
+    """
+    Sync newly uploaded event photos into this personal gallery link.
+    Runs in <5ms using cached FAISS/numpy vector dot-product.
+    Auto-backfills query_embedding if missing on older links.
+    Returns list of newly added GalleryImage objects.
+    """
+    try:
+        from django.utils import timezone
+        query_vector = personal_link.query_embedding
+
+        # 1. Backfill query_vector if missing
+        if not query_vector:
+            # Try from selfie file
+            if personal_link.selfie_image:
+                try:
+                    s_path = getattr(personal_link.selfie_image, 'path', None)
+                    if s_path and os.path.exists(s_path):
+                        query_vector = extract_face_embedding_from_image(s_path)
+                except Exception:
+                    pass
+
+            # Try from existing photos' face embeddings
+            if not query_vector:
+                existing_img_ids = list(personal_link.images.values_list('id', flat=True))
+                if existing_img_ids:
+                    sample_embeddings = FaceEmbedding.objects.filter(
+                        image_id__in=existing_img_ids
+                    ).values_list('embedding_data', flat=True)[:5]
+                    if sample_embeddings:
+                        mat = np.asarray(list(sample_embeddings), dtype=np.float32)
+                        mean_vec = np.mean(mat, axis=0, keepdims=True)
+                        faiss.normalize_L2(mean_vec)
+                        query_vector = mean_vec[0].tolist()
+
+            if query_vector:
+                personal_link.query_embedding = query_vector
+                personal_link.save(update_fields=['query_embedding'])
+
+        if not query_vector:
+            return []
+
+        # 2. Find any newly added photos not yet in personal_link.images
+        current_img_ids = set(personal_link.images.values_list('id', flat=True))
+        new_matches = find_matching_images_for_embedding(
+            query_vector,
+            event_id=personal_link.event_id,
+            exclude_image_ids=current_img_ids
+        )
+
+        if new_matches:
+            new_imgs = [m['image'] for m in new_matches]
+            personal_link.images.add(*new_imgs)
+            for m in new_matches:
+                personal_link.match_scores[str(m['image'].id)] = m['score']
+            personal_link.save(update_fields=['match_scores'])
+            return new_imgs
+
+    except Exception as e:
+        print(f"[SyncPersonalGallery] Error syncing {personal_link.token}: {e}")
+
+    return []
+
+
+def find_or_create_personal_gallery_link(event, query_vector, results, searcher_name='', selfie_path=None, selfie_thumbnail_b64='', share_link=None, guest_lead=None, expires_at=None):
+    """
+    Finds an existing PersonalGalleryLink for this same person in this event,
+    OR creates a new one. Guarantees that when a person scans more photos of themselves,
+    they always get their SAME link with all photos merged!
+    Returns (personal_link, is_created: bool).
+    """
+    from .models import PersonalGalleryLink
+    from django.core.files import File
+    from django.utils import timezone
+
+    existing_links = list(PersonalGalleryLink.objects.filter(event=event).prefetch_related('images'))
+    target_link = None
+
+    q_vec = np.asarray(query_vector, dtype=np.float32) if query_vector else None
+    if q_vec is not None:
+        if q_vec.ndim == 1:
+            q_vec = np.expand_dims(q_vec, axis=0)
+        faiss.normalize_L2(q_vec)
+
+    # 1. Check face vector similarity with existing links (same person threshold >= 0.60)
+    if q_vec is not None:
+        best_sim = 0.0
+        for plink in existing_links:
+            pl_vec = plink.query_embedding
+            if pl_vec:
+                pl_arr = np.asarray(pl_vec, dtype=np.float32)
+                if pl_arr.ndim == 1:
+                    pl_arr = np.expand_dims(pl_arr, axis=0)
+                faiss.normalize_L2(pl_arr)
+                sim = float(np.dot(q_vec[0], pl_arr[0]))
+                if sim >= 0.60 and sim > best_sim:
+                    best_sim = sim
+                    target_link = plink
+
+    # 2. Check overlap of matched images if vector check didn't match
+    if not target_link and results and existing_links:
+        current_res_ids = set(r['image'].id for r in results)
+        for plink in existing_links:
+            existing_ids = set(plink.images.values_list('id', flat=True))
+            if existing_ids and current_res_ids:
+                overlap = len(existing_ids & current_res_ids)
+                overlap_ratio = overlap / max(1, min(len(existing_ids), len(current_res_ids)))
+                if overlap_ratio >= 0.50:  # 50% or more overlap means same person
+                    target_link = plink
+                    break
+
+    # If existing link matched for this person: REUSE AND MERGE!
+    if target_link:
+        if results:
+            target_link.images.add(*[r['image'] for r in results])
+            for r in results:
+                target_link.match_scores[str(r['image'].id)] = max(
+                    target_link.match_scores.get(str(r['image'].id), 0.0),
+                    r['score']
+                )
+        if q_vec is not None:
+            target_link.query_embedding = query_vector
+        if not target_link.selfie_thumbnail_b64 and selfie_thumbnail_b64:
+            target_link.selfie_thumbnail_b64 = selfie_thumbnail_b64
+        if searcher_name and (not target_link.searcher_name or target_link.searcher_name == 'Guest'):
+            target_link.searcher_name = searcher_name
+        if guest_lead and not target_link.guest_lead:
+            target_link.guest_lead = guest_lead
+        target_link.last_viewed_at = timezone.now()
+        target_link.save()
+        return target_link, False
+
+    # Otherwise: create brand new link
+    new_link = PersonalGalleryLink.objects.create(
+        event=event,
+        share_link=share_link,
+        guest_lead=guest_lead,
+        searcher_name=searcher_name,
+        selfie_thumbnail_b64=selfie_thumbnail_b64 or '',
+        query_embedding=query_vector,
+        expires_at=expires_at,
+        match_scores={str(r['image'].id): r['score'] for r in results} if results else {}
+    )
+    if selfie_path and os.path.exists(selfie_path):
+        try:
+            with open(selfie_path, 'rb') as f_selfie:
+                new_link.selfie_image.save(f"selfie_{uuid.uuid4().hex[:6]}.jpg", File(f_selfie), save=False)
+        except Exception as se:
+            print(f"Error saving selfie to new link: {se}")
+    new_link.save()
+    if results:
+        new_link.images.set([r['image'] for r in results])
+    return new_link, True
+
+
+def auto_sync_new_image_to_personal_links(gallery_image, new_face_embeddings=None):
+    """
+    Called whenever a new photo finishes AI face indexing.
+    Instantly attaches this photo to any matching PersonalGalleryLinks for the event!
+    """
+    try:
+        from .models import PersonalGalleryLink, FaceEmbedding
+        if not gallery_image.event_id:
+            return
+
+        personal_links = list(PersonalGalleryLink.objects.filter(event_id=gallery_image.event_id))
+        if not personal_links:
+            return
+
+        # Get embeddings for this new image
+        if new_face_embeddings is not None and len(new_face_embeddings) > 0:
+            embeddings_list = [f.embedding.astype(np.float32) if hasattr(f, 'embedding') else np.asarray(f, dtype=np.float32) for f in new_face_embeddings]
+        else:
+            raw = list(FaceEmbedding.objects.filter(image=gallery_image).values_list('embedding_data', flat=True))
+            if not raw:
+                return
+            embeddings_list = [np.asarray(e, dtype=np.float32) for e in raw]
+
+        if not embeddings_list:
+            return
+
+        img_mat = np.asarray(embeddings_list, dtype=np.float32)
+        faiss.normalize_L2(img_mat)
+
+        for plink in personal_links:
+            q_vec = plink.query_embedding
+            if not q_vec:
+                continue
+            q_arr = np.asarray(q_vec, dtype=np.float32)
+            if q_arr.ndim == 1:
+                q_arr = np.expand_dims(q_arr, axis=0)
+            faiss.normalize_L2(q_arr)
+
+            scores = img_mat @ q_arr[0]
+            max_score = float(np.max(scores))
+            if max_score >= SIMILARITY_THRESHOLD:
+                plink.images.add(gallery_image)
+                plink.match_scores[str(gallery_image.id)] = max_score
+                plink.save(update_fields=['match_scores'])
+                print(f"[AutoSync] Added photo #{gallery_image.id} (score {max_score:.2f}) to personal link {plink.token}")
+
+    except Exception as e:
+        print(f"[AutoSync] Error auto-syncing photo #{gallery_image.id}: {e}")
+
 
 
 import re

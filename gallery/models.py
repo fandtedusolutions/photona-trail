@@ -294,6 +294,7 @@ class PersonalGalleryLink(models.Model):
     # Matched images & scores
     images = models.ManyToManyField(GalleryImage, related_name='personal_links', blank=True)
     match_scores = models.JSONField(default=dict, blank=True)  # {str(image_id): float(score)}
+    query_embedding = models.JSONField(null=True, blank=True)  # 512-d normalized face vector for instant auto-sync
 
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(null=True, blank=True, help_text="Expiry date inherited from event or share link.")

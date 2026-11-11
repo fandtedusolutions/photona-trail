@@ -1320,7 +1320,13 @@ def search_person(request):
             with open(full_temp_path, 'rb') as img_f:
                 search_image_b64 = base64.b64encode(img_f.read()).decode('utf-8')
 
-            results = search_person_by_selfie(full_temp_path, event_id=selected_event.id, tenant_user=request.user)
+            from .utils import find_or_create_personal_gallery_link
+            results, query_vector = search_person_by_selfie(
+                full_temp_path,
+                event_id=selected_event.id,
+                tenant_user=request.user,
+                return_vector=True
+            )
             if not request.user.is_superuser:
                 results = [res for res in results if res['image'].event and res['image'].event.owner == request.user]
             for res in results:
@@ -1328,20 +1334,15 @@ def search_person(request):
                 res['download_filename'] = f"{name_only}_{selected_event.slug}{ext}"
 
             if results:
-                personal_link = PersonalGalleryLink.objects.create(
+                personal_link, is_new = find_or_create_personal_gallery_link(
                     event=selected_event,
+                    query_vector=query_vector,
+                    results=results,
                     searcher_name=request.user.get_full_name() or request.user.username,
+                    selfie_path=full_temp_path,
                     selfie_thumbnail_b64=search_image_b64 or '',
-                    expires_at=selected_event.expires_at,
-                    match_scores={str(res['image'].id): res['score'] for res in results}
+                    expires_at=selected_event.expires_at
                 )
-                try:
-                    with open(full_temp_path, 'rb') as f_selfie:
-                        personal_link.selfie_image.save(f"selfie_{uuid.uuid4().hex[:6]}.jpg", File(f_selfie), save=False)
-                except Exception as s_err:
-                    print(f"Error saving selfie file: {s_err}")
-                personal_link.save()
-                personal_link.images.set([res['image'] for res in results])
 
                 personal_gallery_url = request.build_absolute_uri(
                     reverse('gallery:personal_gallery', args=[personal_link.token])
@@ -2389,7 +2390,12 @@ def public_search_person(request, token):
             with open(full_temp_path, 'rb') as img_f:
                 search_image_b64 = base64.b64encode(img_f.read()).decode('utf-8')
 
-            results = search_person_by_selfie(full_temp_path, event_id=event.id)
+            from .utils import find_or_create_personal_gallery_link
+            results, query_vector = search_person_by_selfie(
+                full_temp_path,
+                event_id=event.id,
+                return_vector=True
+            )
             if link.person_label:
                 # One query instead of one query per result
                 allowed_ids = set(
@@ -2405,22 +2411,17 @@ def public_search_person(request, token):
 
             if results:
                 effective_expiry = link.expires_at or event.expires_at
-                personal_link = PersonalGalleryLink.objects.create(
+                personal_link, is_new = find_or_create_personal_gallery_link(
                     event=event,
+                    query_vector=query_vector,
+                    results=results,
+                    searcher_name=name or 'Guest',
+                    selfie_path=full_temp_path,
+                    selfie_thumbnail_b64=search_image_b64 or '',
                     share_link=link,
                     guest_lead=created_lead,
-                    searcher_name=name or 'Guest',
-                    selfie_thumbnail_b64=search_image_b64 or '',
-                    expires_at=effective_expiry,
-                    match_scores={str(res['image'].id): res['score'] for res in results}
+                    expires_at=effective_expiry
                 )
-                try:
-                    with open(full_temp_path, 'rb') as f_selfie:
-                        personal_link.selfie_image.save(f"selfie_{uuid.uuid4().hex[:6]}.jpg", File(f_selfie), save=False)
-                except Exception as s_err:
-                    print(f"Error saving selfie: {s_err}")
-                personal_link.save()
-                personal_link.images.set([res['image'] for res in results])
 
                 personal_gallery_url = request.build_absolute_uri(
                     reverse('gallery:personal_gallery', args=[personal_link.token])
@@ -2474,6 +2475,10 @@ def personal_gallery(request, token):
         last_viewed_at=timezone.now()
     )
 
+    # Automatically sync any newly uploaded event photos matching this person's face!
+    from .utils import sync_personal_gallery_matches
+    newly_added = sync_personal_gallery_matches(personal_link)
+
     images = personal_link.images.select_related('event').order_by('-uploaded_at')
     results = []
     for img in images:
@@ -2493,6 +2498,7 @@ def personal_gallery(request, token):
         'event': event,
         'results': results,
         'total_results': len(results),
+        'newly_added_count': len(newly_added) if newly_added else 0,
         'personal_gallery_url': current_url,
         'whatsapp_share_text': whatsapp_share_text,
         'expires_at': personal_link.get_effective_expires_at(),

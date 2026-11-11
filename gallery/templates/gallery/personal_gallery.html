@@ -80,6 +80,15 @@
         </div>
     </div>
 
+    {% if newly_added_count > 0 %}
+        <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border: 1.5px solid rgba(16, 185, 129, 0.3); border-radius: 14px; padding: 0.9rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; color: #065f46; font-size: 0.9rem; font-weight: 600; box-shadow: 0 2px 10px rgba(16, 185, 129, 0.1);">
+            <span style="font-size: 1.3rem;">🎉</span>
+            <div>
+                Great news! <strong>{{ newly_added_count }} new photo{{ newly_added_count|pluralize }}</strong> were automatically added to your gallery since your last visit.
+            </div>
+        </div>
+    {% endif %}
+
     <!-- ═══ PHOTO GRID ═══ -->
     <div class="card" style="padding: 1.5rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;">
