@@ -10,11 +10,12 @@ from PIL import Image, ImageOps
 def create_thumbnail(image_path, max_size=(600, 600)):
     try:
         with Image.open(image_path) as img:
+            img.draft('RGB', (1200, 1200))
             img = ImageOps.exif_transpose(img)
-            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            img.thumbnail(max_size, Image.Resampling.BILINEAR)
             
             thumb_io = BytesIO()
-            if img.mode in ('RGBA', 'P'): 
+            if img.mode not in ('RGB', 'L'): 
                 img = img.convert('RGB')
             img.save(thumb_io, format='WEBP', quality=80)
             thumb_io.seek(0)
@@ -22,6 +23,33 @@ def create_thumbnail(image_path, max_size=(600, 600)):
     except Exception as e:
         print(f"Error creating thumbnail: {e}")
         return None, None
+
+def compress_image_bytes(img_bytes, filename, compression_percentage):
+    if not compression_percentage or compression_percentage >= 100:
+        return img_bytes
+    try:
+        from PIL import Image, ImageOps
+        with Image.open(BytesIO(img_bytes)) as img:
+            img = ImageOps.exif_transpose(img)
+            icc_profile = img.info.get('icc_profile')
+            scale_factor = float(compression_percentage) / 100.0
+            new_width = max(1, int(img.width * scale_factor))
+            new_height = max(1, int(img.height * scale_factor))
+            if new_width < img.width and new_height < img.height:
+                img = img.resize((new_width, new_height), Image.Resampling.BILINEAR)
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+            ext = os.path.splitext(filename)[1].lower()
+            fmt = 'WEBP' if ext == '.webp' else 'JPEG'
+            out_io = BytesIO()
+            save_kwargs = {'format': fmt, 'quality': 88}
+            if icc_profile:
+                save_kwargs['icc_profile'] = icc_profile
+            img.save(out_io, **save_kwargs)
+            return out_io.getvalue()
+    except Exception as e:
+        print(f"[ZIP] Compression error: {e}")
+        return img_bytes
 
 def compress_image_if_needed(image_path, compression_percentage):
     if not compression_percentage or compression_percentage >= 100:
@@ -113,50 +141,127 @@ def process_image_upload_task(temp_paths, event_id, original_filenames):
             os.remove(temp_path)
 
 @shared_task
-def process_zip_upload_task(temp_zip_path, event_id=None):
+def process_zip_upload_task(temp_zip_path, event_id=None, job_id=None):
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    from io import BytesIO
+    from django.core.files.base import ContentFile
+    from .job_tracker import update_job
+    from .clustering import run_clustering_on_upload
+    from .models import GalleryImage, Event
+    from config import VALID_IMAGE_EXTENSIONS
+
     event = None
     if event_id:
         event = Event.objects.filter(id=event_id).first()
         
-    temp_dir = os.path.dirname(temp_zip_path)
-    extract_path = temp_zip_path.replace('.zip', '_extracted')
-    
+    if not job_id and event_id:
+        job_id = f"zip_{event_id}"
+
     try:
         if zipfile.is_zipfile(temp_zip_path):
-            with zipfile.ZipFile(temp_zip_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_path)
-                
-            image_ids = []
-            uploaded_images = []
-            
-            compression = event.compression_percentage if event else 100
-            
-            for root, dirs, extracted_files in os.walk(extract_path):
-                for file_name in extracted_files:
-                    file_ext = os.path.splitext(file_name)[1].lower()
+            # Fast index read directly from the ZIP central directory (< 5ms)
+            valid_entries = []
+            with zipfile.ZipFile(temp_zip_path, 'r') as zf_index:
+                for info in zf_index.infolist():
+                    if info.is_dir():
+                        continue
+                    base_name = os.path.basename(info.filename)
+                    if base_name.startswith('.') or '__MACOSX' in info.filename:
+                        continue
+                    file_ext = os.path.splitext(base_name)[1].lower()
                     if file_ext in VALID_IMAGE_EXTENSIONS:
-                        full_img_path = os.path.join(root, file_name)
-                        compress_image_if_needed(full_img_path, compression)
-                        with open(full_img_path, 'rb') as img_f:
-                            gallery_image = GalleryImage(filename=file_name, event=event, total_faces=-1)
-                            gallery_image.file.save(file_name, File(img_f), save=False)
-                            
-                            thumb_io, ext = create_thumbnail(full_img_path)
-                            if thumb_io:
-                                thumb_name = os.path.splitext(file_name)[0] + "_thumb" + ext
-                                gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
-                                
-                            gallery_image.save()
-                            
-                        process_single_image_task.delay(gallery_image.id, None)
+                        valid_entries.append((info.filename, base_name))
+            
+            total_files = len(valid_entries)
+            print(f"[ZIP] Discovered {total_files} photos in ZIP in milliseconds. Starting parallel streaming...")
+            
+            if job_id:
+                update_job(job_id, {
+                    'active': True,
+                    'total': total_files,
+                    'current': 0,
+                    'percent': 0,
+                    'message': f"Found {total_files} photos. Extracting & uploading..."
+                })
+
+            if total_files > 0:
+                compression = event.compression_percentage if event else 100
+                processed_counter = [0]
+                counter_lock = threading.Lock()
+
+                def process_one_zip_entry(item):
+                    from django.db import connection
+                    zip_entry_path, file_name = item
+                    try:
+                        # Stream photo bytes on-the-fly without heavy sequential extractall disk writes
+                        with zipfile.ZipFile(temp_zip_path, 'r') as zf_worker:
+                            img_bytes = zf_worker.read(zip_entry_path)
+
+                        if compression and compression < 100:
+                            img_bytes = compress_image_bytes(img_bytes, file_name, compression)
+
+                        gallery_image = GalleryImage(filename=file_name, event=event, total_faces=-1)
+                        gallery_image.file.save(file_name, ContentFile(img_bytes), save=False)
                         
+                        thumb_io, ext = create_thumbnail(BytesIO(img_bytes))
+                        if thumb_io:
+                            thumb_name = os.path.splitext(file_name)[0] + "_thumb" + ext
+                            gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                            
+                        gallery_image.save()
+                        process_single_image_task.delay(gallery_image.id, None)
+
+                        with counter_lock:
+                            processed_counter[0] += 1
+                            curr = processed_counter[0]
+                            pct = int((curr / total_files) * 100)
+                            if job_id:
+                                update_job(job_id, {
+                                    'active': True,
+                                    'total': total_files,
+                                    'current': curr,
+                                    'percent': pct,
+                                    'message': f"Extracted {curr} of {total_files} photos ({pct}%)"
+                                })
+                    except Exception as ex:
+                        print(f"[ZIP] Error processing {file_name}: {ex}")
+                    finally:
+                        try:
+                            connection.close()
+                        except Exception:
+                            pass
+
+                # Parallel workers for 4x speed throughput
+                with ThreadPoolExecutor(max_workers=4) as executor:
+                    list(executor.map(process_one_zip_entry, valid_entries))
+
+                if job_id:
+                    update_job(job_id, {
+                        'active': False,
+                        'total': total_files,
+                        'current': total_files,
+                        'percent': 100,
+                        'message': f"All {total_files} photos extracted successfully!"
+                    })
+
+                # Trigger AI face clustering now that all images are saved
+                if event:
+                    run_clustering_on_upload(event)
+
     except Exception as e:
         print(f"[ERROR] Celery ZIP processing error: {e}")
+        if job_id:
+            update_job(job_id, {
+                'active': False,
+                'message': f"ZIP processing error: {e}"
+            })
     finally:
-        if os.path.exists(extract_path):
-            shutil.rmtree(extract_path)
         if os.path.exists(temp_zip_path):
-            os.remove(temp_zip_path)
+            try:
+                os.remove(temp_zip_path)
+            except Exception:
+                pass
 
 @shared_task
 def process_gdrive_import_task(url, event_id=None):

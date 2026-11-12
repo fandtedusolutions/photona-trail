@@ -35,6 +35,32 @@
         margin-bottom: 0.85rem;
     }
 
+    @keyframes ai-pulse {
+        0%, 100% { transform: scale(0.9); opacity: 0.75; }
+        50% { transform: scale(1.15); opacity: 1; }
+    }
+    @keyframes spin-slow {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    @keyframes skeleton-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    @keyframes skeleton-fade-in {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .skeleton-card {
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-light);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        animation: skeleton-fade-in 0.25s ease-out;
+        position: relative;
+    }
+
     /* ── Upload Strip & Mobile Tabs ── */
     .upload-strip {
         display: grid;
@@ -2765,12 +2791,22 @@
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             All Events
         </a>
-        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 0.3rem;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 0.3rem;">
             <div class="event-hero-title" style="margin-bottom: 0;">{{ event.name }}</div>
-            <span style="font-size: 0.75rem; font-weight: 800; color: #b45309; background: rgba(245,158,11,0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(245,158,11,0.2);">🖼️ <span id="heroPhotoCount">{{ total_images }}</span> <span id="heroPhotoLabel">Photo{{ total_images|pluralize }}</span></span>
+            <span style="font-size: 0.74rem; font-weight: 750; color: #b45309; background: rgba(245,158,11,0.08); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(245,158,11,0.2); display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span><span id="heroPhotoCount">{{ total_images }}</span> <span id="heroPhotoLabel">Photo{{ total_images|pluralize }}</span></span>
+            </span>
             {% if clusters %}
-            <span style="font-size: 0.75rem; font-weight: 800; color: var(--accent-indigo); background: rgba(79,70,229,0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(79,70,229,0.15);">👥 {{ clusters|length }} People</span>
+            <span style="font-size: 0.74rem; font-weight: 750; color: var(--accent-indigo); background: rgba(79,70,229,0.08); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(79,70,229,0.18); display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>{{ clusters|length }} People</span>
+            </span>
             {% endif %}
+            <span id="aiStatusBadge" style="display: none; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 750; padding: 5px 12px; border-radius: 20px; transition: all 0.3s ease;">
+                <span id="aiStatusIcon" style="display: inline-flex; align-items: center; justify-content: center;"></span>
+                <span id="aiStatusText">AI Checking...</span>
+            </span>
         </div>
         <div class="event-hero-desc" style="margin-bottom: 0;">{{ event.description|default:"No description provided." }}</div>
     </div>
@@ -2966,8 +3002,20 @@
             {% else %}
                 <div class="people-empty">
                     <div class="people-empty-icon">🤖</div>
-                    <div class="people-empty-title">No face groups yet</div>
-                    <div class="people-empty-desc">Upload photos to automatically group faces with AI detection.</div>
+                    <div class="people-empty-title">
+                        {% if total_images > 0 %}
+                            AI Face Grouping in Progress
+                        {% else %}
+                            No face groups yet
+                        {% endif %}
+                    </div>
+                    <div class="people-empty-desc">
+                        {% if total_images > 0 %}
+                            Photos are being analyzed. Person groups will appear automatically once face clustering runs.
+                        {% else %}
+                            Upload photos to automatically group faces with AI detection.
+                        {% endif %}
+                    </div>
                 </div>
             {% endif %}
         </div>
@@ -3215,6 +3263,22 @@
     });
     dropzone.addEventListener('drop', e => { handleFiles(e.dataTransfer.files); });
 
+    async function getZipPhotoCount(file) {
+        try {
+            const sliceSize = Math.min(file.size, 65536);
+            const buffer = await file.slice(file.size - sliceSize).arrayBuffer();
+            const view = new DataView(buffer);
+            for (let i = buffer.byteLength - 22; i >= 0; i--) {
+                if (view.getUint32(i, true) === 0x06054b50) {
+                    return view.getUint16(i + 10, true);
+                }
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    let lastDetectedZipCount = null;
+
     function handleFiles(files) {
         selectedFiles = Array.from(files);
         fileList.innerHTML = '';
@@ -3222,6 +3286,23 @@
             uploadBtn.style.display = 'block';
             uploadBtn.innerHTML = `⚡ Upload & Process ${selectedFiles.length} Selected File${selectedFiles.length > 1 ? 's' : ''}`;
             
+            // Fast inspection of ZIP files to preview photo count before upload starts
+            const zipFile = selectedFiles.find(f => f.name.toLowerCase().endsWith('.zip'));
+            if (zipFile) {
+                getZipPhotoCount(zipFile).then(count => {
+                    if (count && count > 0) {
+                        lastDetectedZipCount = count;
+                        const zipBadge = document.getElementById('zip-info-badge');
+                        if (zipBadge) {
+                            zipBadge.innerHTML = `<span style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 200px;"><span style="color: var(--accent-indigo);">📦</span> ${zipFile.name}</span> <span style="background: rgba(99, 102, 241, 0.12); color: #4f46e5; padding: 2px 8px; border-radius: 12px; font-weight: 750; font-size: 0.72rem;">~${count} photos inside</span>`;
+                        }
+                        if (selectedFiles.length === 1) {
+                            uploadBtn.innerHTML = `⚡ Upload & Extract ~${count} Photos from ZIP`;
+                        }
+                    }
+                });
+            }
+
             if (selectedFiles.length > 15) {
                 // High-performance compact summary for large batches (prevents browser UI lag)
                 const totalBytes = selectedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
@@ -3233,9 +3314,11 @@
                 fileList.appendChild(summary);
 
                 selectedFiles.slice(0, 5).forEach(file => {
+                    const isZip = file.name.toLowerCase().endsWith('.zip');
                     const item = document.createElement('div');
+                    if (isZip) item.id = 'zip-info-badge';
                     item.style.cssText = 'padding: 4px 8px; font-size: 0.74rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between;';
-                    item.innerHTML = `<span style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 220px;"><span style="color: var(--accent-indigo);">📄</span> ${file.name}</span> <span style="color: var(--text-muted); font-size: 0.7rem;">${(file.size / 1024 / 1024).toFixed(1)} MB</span>`;
+                    item.innerHTML = `<span style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 220px;"><span style="color: var(--accent-indigo);">${isZip ? '📦' : '📄'}</span> ${file.name}</span> <span style="color: var(--text-muted); font-size: 0.7rem;">${(file.size / 1024 / 1024).toFixed(1)} MB</span>`;
                     fileList.appendChild(item);
                 });
 
@@ -3245,9 +3328,11 @@
                 fileList.appendChild(moreBadge);
             } else {
                 selectedFiles.forEach(file => {
+                    const isZip = file.name.toLowerCase().endsWith('.zip');
                     const item = document.createElement('div');
+                    if (isZip) item.id = 'zip-info-badge';
                     item.style.cssText = 'padding: 5px 8px; font-size: 0.75rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between;';
-                    item.innerHTML = `<span style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 220px;"><span style="color: var(--accent-indigo);">📄</span> ${file.name}</span> <span style="color: var(--text-muted); font-size: 0.7rem;">${(file.size / 1024 / 1024).toFixed(1)} MB</span>`;
+                    item.innerHTML = `<span style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 220px;"><span style="color: var(--accent-indigo);">${isZip ? '📦' : '📄'}</span> ${file.name}</span> <span style="color: var(--text-muted); font-size: 0.7rem;">${(file.size / 1024 / 1024).toFixed(1)} MB</span>`;
                     fileList.appendChild(item);
                 });
             }
@@ -3370,26 +3455,43 @@
         }
     }
 
-    function toggleSelectAllPhotos() {
-        const checkboxes = document.querySelectorAll('.photo-select-checkbox');
-        const allChecked = selectedPhotoIds.size > 0 && selectedPhotoIds.size === checkboxes.length;
+    async function toggleSelectAllPhotos() {
+        const totalExpected = eventPhotoTotal || document.querySelectorAll('.photo-select-checkbox').length;
+        const allChecked = selectedPhotoIds.size > 0 && selectedPhotoIds.size >= totalExpected;
 
-        checkboxes.forEach(cb => {
-            cb.checked = !allChecked;
+        if (allChecked) {
+            clearPhotoSelection();
+            return;
+        }
+
+        // Fetch all IDs for this event so Select All selects ALL photos (e.g. 300), not just page 1 (36)
+        try {
+            let url = `{% url "gallery:event_photo_ids" event.slug %}`;
+            if (activePersonFilter) {
+                url += `?person_label=${encodeURIComponent(activePersonFilter)}`;
+            }
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data && data.ids && data.ids.length > 0) {
+                selectedPhotoIds = new Set(data.ids);
+            }
+        } catch (e) {
+            document.querySelectorAll('.photo-select-checkbox').forEach(cb => {
+                const id = parseInt(cb.getAttribute('data-id'));
+                if (id) selectedPhotoIds.add(id);
+            });
+        }
+
+        // Update all visible checkboxes in the DOM
+        document.querySelectorAll('.photo-select-checkbox').forEach(cb => {
             const id = parseInt(cb.getAttribute('data-id'));
+            cb.checked = true;
             const checkmark = document.getElementById(`photo-chk-${id}`);
             const card = document.getElementById(`image-card-${id}`);
-
-            if (!allChecked) {
-                selectedPhotoIds.add(id);
-                if (checkmark) { checkmark.style.background = '#4f46e5'; checkmark.innerHTML = '✓'; }
-                if (card) { card.style.border = '2px solid #4f46e5'; card.style.boxShadow = '0 8px 25px rgba(79, 70, 229, 0.25)'; }
-            } else {
-                selectedPhotoIds.delete(id);
-                if (checkmark) { checkmark.style.background = 'rgba(15, 23, 42, 0.45)'; checkmark.innerHTML = ''; }
-                if (card) { card.style.border = '1px solid var(--border-light)'; card.style.boxShadow = 'none'; }
-            }
+            if (checkmark) { checkmark.style.background = '#4f46e5'; checkmark.innerHTML = '✓'; }
+            if (card) { card.style.border = '2px solid #4f46e5'; card.style.boxShadow = '0 8px 25px rgba(79, 70, 229, 0.25)'; }
         });
+
         updateBulkActionBar();
     }
 
@@ -3431,7 +3533,11 @@
                     allPhotosList = allPhotosList.filter(p => !data.deleted_ids.includes(p.id));
                     showToast(data.message, "success");
                     clearPhotoSelection();
-                    loadPeople();
+                    if (eventPhotoTotal === 0 || allPhotosList.length === 0) {
+                        const noPhotosMsg = document.getElementById('noPhotosMsg');
+                        if (noPhotosMsg) noPhotosMsg.style.display = 'block';
+                    }
+                    setTimeout(() => window.location.reload(), 600);
                 } else {
                     customAlert("Error", data.message);
                 }
@@ -3687,6 +3793,36 @@
         cardImg.src = photo.url;
     }
 
+    function makeSkeletonCard(imgId, filename, badgeText = 'Uploaded') {
+        const item = document.createElement('div');
+        item.className = 'rich-gallery-item skeleton-card';
+        item.id = `skeleton-card-${imgId}`;
+        item.style.cssText = 'position: relative; overflow: hidden; border-radius: var(--radius-md); background: var(--bg-secondary); border: 1px solid var(--border-light); box-shadow: 0 2px 8px rgba(0,0,0,0.03);';
+        item.innerHTML = `
+            <div class="skeleton-shimmer-box" style="position: relative; width: 100%; aspect-ratio: 1; background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%); background-size: 200% 100%; animation: skeleton-shimmer 1.6s infinite ease-in-out; border-radius: var(--radius-md) var(--radius-md) 0 0; display: flex; align-items: center; justify-content: center;">
+                <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.92); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.06); backdrop-filter: blur(4px);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin-slow 2.5s linear infinite;">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <span style="position: absolute; bottom: 8px; right: 8px; font-size: 0.65rem; font-weight: 800; color: #4f46e5; background: rgba(255,255,255,0.94); padding: 3px 8px; border-radius: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); display: inline-flex; align-items: center; gap: 4px;">
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #6366f1;"></span> ${badgeText}
+                </span>
+            </div>
+            <div class="rich-gallery-info" style="padding: 10px 12px;">
+                <div class="rich-gallery-name" style="font-size: 0.78rem; font-weight: 750; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="${filename}">
+                    ${filename}
+                </div>
+                <div class="rich-gallery-meta" style="font-size: 0.68rem; color: var(--text-muted); display: flex; align-items: center; gap: 5px; margin-top: 4px;">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #6366f1; animation: ai-pulse 1.3s infinite; display: inline-block;"></span>
+                    <span>Queued for AI</span>
+                </div>
+            </div>
+        `;
+        return item;
+    }
+
     function makePhotoCard(img, downloadName, uploading = false) {
         if (img && img.id) {
             const existing = allPhotosList.find(p => p.id === img.id);
@@ -3790,7 +3926,13 @@
         let failedCount = 0;
         const newlyUploadedPhotos = [];
 
-        queueCountText.innerText = `⚡ Processing Queue (0 / ${totalFiles})`;
+        const zipFileObj = filesToProcess.find(f => f.name.toLowerCase().endsWith('.zip'));
+        const isOnlyZip = zipFileObj && filesToProcess.length === 1;
+        const initialZipTotal = isOnlyZip ? (lastDetectedZipCount || 100) : totalFiles;
+
+        queueCountText.innerText = isOnlyZip 
+            ? `⚡ Uploading ZIP (~${initialZipTotal} Photos)...` 
+            : `⚡ Processing Queue (0 / ${totalFiles})`;
         queuePercentText.innerText = `0%`;
         queueProgressBar.style.width = `0%`;
 
@@ -3820,6 +3962,90 @@
         // Optimized Concurrency: 3 concurrent streams provides fast throughput while respecting browser & server limits
         const CONCURRENCY = 3;
         let currentIndex = 0;
+
+        async function pollZipExtraction(statusBadge, zipName) {
+            let zipSkeletonsInjected = false;
+            const expectedTotal = lastDetectedZipCount || 100;
+
+            function ensureZipSkeletons(totalCount) {
+                if (zipSkeletonsInjected || !gallery) return;
+                zipSkeletonsInjected = true;
+                const noMsg = document.getElementById('noPhotosMessage');
+                const noMsgAlt = document.getElementById('noPhotosMsg');
+                if (noMsg) noMsg.style.display = 'none';
+                if (noMsgAlt) noMsgAlt.style.display = 'none';
+
+                // Render up to 24 shimmer skeleton cards for immediate visual feedback in All Photos
+                const countToShow = Math.min(24, totalCount || 24);
+                for (let i = 1; i <= countToShow; i++) {
+                    const skId = `zip-skel-${i}`;
+                    if (!document.getElementById(`skeleton-card-${skId}`)) {
+                        const skCard = makeSkeletonCard(skId, `Photo #${i}`, 'Extracting');
+                        gallery.appendChild(skCard);
+                    }
+                }
+            }
+
+            // Immediately inject shimmer cards so user sees active cards right away!
+            ensureZipSkeletons(expectedTotal);
+
+            return new Promise((resolve) => {
+                let zipPollInterval = setInterval(async () => {
+                    try {
+                        const res = await fetch('{% url "gallery:zip_extract_status" event.slug %}');
+                        const job = await res.json();
+                        if (!job) return;
+
+                        const total = (job.total && job.total > 0) ? job.total : (lastDetectedZipCount || 100);
+                        const current = job.current || 0;
+                        const pct = (job.percent !== undefined && job.percent !== null && job.percent > 0)
+                            ? job.percent
+                            : (total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0);
+
+                        ensureZipSkeletons(total);
+
+                        if (current > 0) {
+                            setSectionPhotoCount(current);
+                        }
+
+                        if (statusBadge) {
+                            statusBadge.className = 'badge badge-purple';
+                            statusBadge.innerText = `⚡ ${current} / ${total} (${pct}%)`;
+                        }
+                        if (queueCountText) {
+                            queueCountText.innerText = `⚡ Extracting Photos: ${current} / ${total}`;
+                        }
+                        if (queuePercentText) {
+                            queuePercentText.innerText = `${pct}%`;
+                        }
+                        if (queueProgressBar) {
+                            queueProgressBar.style.width = `${pct}%`;
+                        }
+
+                        if (job.active === false && (job.total > 0 || job.current > 0 || job.percent === 100)) {
+                            clearInterval(zipPollInterval);
+                            const finalTotal = job.total || total;
+                            if (statusBadge) {
+                                statusBadge.className = 'badge badge-emerald';
+                                statusBadge.innerText = `✅ All ${finalTotal} photos extracted!`;
+                            }
+                            if (queueCountText) {
+                                queueCountText.innerText = `✅ All ${finalTotal} Photos Extracted!`;
+                            }
+                            if (queuePercentText) {
+                                queuePercentText.innerText = `100%`;
+                            }
+                            if (queueProgressBar) {
+                                queueProgressBar.style.width = `100%`;
+                            }
+                            resolve();
+                        }
+                    } catch (e) {
+                        // ignore network glitches during poll
+                    }
+                }, 800);
+            });
+        }
 
         async function processUploadTask(idx) {
             const file = filesToProcess[idx];
@@ -3861,12 +4087,71 @@
                     zipData.append('event_id', eventId);
                     zipData.append('csrfmiddlewaretoken', csrfToken);
 
-                    const res = await fetch('{% url "gallery:upload" %}', { method: 'POST', body: zipData });
-                    const data = await res.json();
-                    
                     if (statusBadge) {
-                        statusBadge.className = 'badge badge-emerald';
-                        statusBadge.innerText = '✅ ZIP Extracting';
+                        statusBadge.className = 'badge badge-purple';
+                        statusBadge.innerText = '📤 Uploading ZIP...';
+                    }
+
+                    const data = await new Promise((resolveUpload, rejectUpload) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', '{% url "gallery:upload" %}');
+                        xhr.upload.onprogress = (e) => {
+                            if (e.lengthComputable) {
+                                const uploadPct = Math.round((e.loaded / e.total) * 100);
+                                const loadedMB = (e.loaded / (1024 * 1024)).toFixed(1);
+                                const totalMB = (e.total / (1024 * 1024)).toFixed(1);
+                                if (uploadPct < 100) {
+                                    if (statusBadge) {
+                                        statusBadge.innerText = `📤 Uploading ZIP: ${uploadPct}% (${loadedMB}/${totalMB} MB)`;
+                                    }
+                                    if (queueCountText && isOnlyZip) {
+                                        queueCountText.innerText = `📤 Uploading ZIP File: ${uploadPct}% (${loadedMB} / ${totalMB} MB)`;
+                                        queuePercentText.innerText = `${uploadPct}%`;
+                                        queueProgressBar.style.width = `${uploadPct}%`;
+                                    }
+                                } else {
+                                    if (statusBadge) {
+                                        statusBadge.innerText = `⚙️ Preparing Extractor...`;
+                                    }
+                                    if (queueCountText && isOnlyZip) {
+                                        queueCountText.innerText = `⚡ Server received file! Initializing extractor...`;
+                                        queuePercentText.innerText = `100%`;
+                                        queueProgressBar.style.width = `100%`;
+                                    }
+                                }
+                            }
+                        };
+                        xhr.upload.onload = () => {
+                            if (statusBadge) {
+                                statusBadge.innerText = `⚙️ Preparing Extractor...`;
+                            }
+                            if (queueCountText && isOnlyZip) {
+                                queueCountText.innerText = `⚡ Server received file! Initializing extractor...`;
+                                queuePercentText.innerText = `100%`;
+                                queueProgressBar.style.width = `100%`;
+                            }
+                        };
+                        xhr.onload = () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                try {
+                                    resolveUpload(JSON.parse(xhr.responseText));
+                                } catch (err) {
+                                    rejectUpload(err);
+                                }
+                            } else {
+                                rejectUpload(new Error('Upload failed with status ' + xhr.status));
+                            }
+                        };
+                        xhr.onerror = () => rejectUpload(new Error('Network error during upload'));
+                        xhr.send(zipData);
+                    });
+                    
+                    if (data && data.has_zip) {
+                        if (statusBadge) {
+                            statusBadge.className = 'badge badge-purple';
+                            statusBadge.innerText = '⚡ Extracting ZIP...';
+                        }
+                        await pollZipExtraction(statusBadge, file.name);
                     }
                     successCount++;
                 } else {
@@ -3896,6 +4181,12 @@
                             const downloadName = `${nameOnly}_{{ event.slug }}${ext}`;
                             newlyUploadedPhotos.push({ img, downloadName });
                             adjustPhotoCount(1);
+
+                            // Option 1: Instantly render lightweight shimmer skeleton card (0 network GETs, zero freeze)
+                            if (gallery) {
+                                const skeleton = makeSkeletonCard(img.id, img.filename);
+                                gallery.insertBefore(skeleton, gallery.firstChild);
+                            }
                         }
                     } else {
                         failedCount++;
@@ -3915,11 +4206,15 @@
                 }
             }
 
-            completedCount++;
-            const pct = Math.round((completedCount / totalFiles) * 100);
-            queueCountText.innerText = `⚡ Processing Queue (${completedCount} / ${totalFiles})${failedCount > 0 ? ` • ${failedCount} failed` : ''}`;
-            queuePercentText.innerText = `${pct}%`;
-            queueProgressBar.style.width = `${pct}%`;
+            if (!isOnlyZip) {
+                completedCount++;
+                const pct = Math.round((completedCount / totalFiles) * 100);
+                queueCountText.innerText = `⚡ Processing Queue (${completedCount} / ${totalFiles})${failedCount > 0 ? ` • ${failedCount} failed` : ''}`;
+                queuePercentText.innerText = `${pct}%`;
+                queueProgressBar.style.width = `${pct}%`;
+            } else {
+                completedCount = 1;
+            }
         }
 
         async function queueWorker() {
@@ -3935,41 +4230,120 @@
         }
         await Promise.all(workers);
 
-        // Batch render all uploaded photos cleanly using a DocumentFragment
+        // Option 1: Smoothly swap each skeleton shimmer card with its rich photo card
         if (newlyUploadedPhotos.length > 0 && gallery) {
-            const fragment = document.createDocumentFragment();
             newlyUploadedPhotos.forEach(({ img, downloadName }) => {
                 if (!knownPhotoIds.has(img.id)) {
                     knownPhotoIds.add(img.id);
-                    const card = makePhotoCard(img, downloadName);
-                    fragment.appendChild(card);
+                    const skeleton = document.getElementById(`skeleton-card-${img.id}`);
+                    const realCard = makePhotoCard(img, downloadName);
+                    if (skeleton && skeleton.parentNode) {
+                        skeleton.parentNode.replaceChild(realCard, skeleton);
+                    } else {
+                        gallery.insertBefore(realCard, gallery.firstChild);
+                    }
                 }
             });
-            if (fragment.childNodes.length > 0) {
-                gallery.insertBefore(fragment, gallery.firstChild);
-            }
         }
 
-        showToast(`All ${totalFiles} photos processed & indexed!`, "success");
+        const hasZipFile = filesToProcess.some(f => f.name.toLowerCase().endsWith('.zip'));
+        if (hasZipFile) {
+            showToast(`All ZIP photos extracted successfully! Loading gallery...`, "success");
+            setTimeout(() => window.location.reload(), 1000);
+            return;
+        }
+
+        showToast(`All ${totalFiles} photos uploaded! AI indexing in background.`, "success");
         
-        queueCountText.innerText = `🧠 Grouping faces into Sorted People...`;
+        queueCountText.innerText = `AI face indexing running in background...`;
         
         fetch('{% url "gallery:trigger_clustering" event.slug %}', {
             method: 'POST',
             headers: { 'X-CSRFToken': '{{ csrf_token }}' }
         }).then(() => {
-            loadPeople();
+            checkAiStatus();
         }).catch(() => {
-            loadPeople();
+            checkAiStatus();
         });
 
         setTimeout(() => {
             queueContainer.style.display = 'none';
-        }, 5000);
+        }, 4000);
     });
 
     let knownPhotoIds = new Set();
     let pollInterval = null;
+
+    // ── Live AI Processing & Face Indexing Status Tracker ──
+    let aiStatusTimeout = null;
+    let lastAiIsIndexing = null;
+
+    function checkAiStatus() {
+        fetch('{% url "gallery:event_ai_status" event.slug %}')
+        .then(res => res.json())
+        .then(data => {
+            const badge = document.getElementById('aiStatusBadge');
+            const icon = document.getElementById('aiStatusIcon');
+            const text = document.getElementById('aiStatusText');
+            if (!badge || !icon || !text) return;
+
+            if (!data.total || data.total === 0) {
+                badge.style.display = 'none';
+                return;
+            }
+
+            badge.style.display = 'inline-flex';
+
+            // If clusters exist in DB but current DOM shows empty people list, reload immediately so user sees the face groups
+            const hasPeopleCards = document.querySelectorAll('.person-card').length > 0;
+            if (data.clusters_count > 0 && !hasPeopleCards) {
+                showToast('Faces indexed & sorted into people groups!', 'success');
+                setTimeout(() => window.location.reload(), 600);
+                return;
+            }
+
+            if (data.is_indexing) {
+                // Active AI face detection or import in background
+                badge.style.background = data.is_importing ? 'rgba(236, 72, 153, 0.08)' : 'rgba(99, 102, 241, 0.08)';
+                badge.style.color = data.is_importing ? '#db2777' : '#4f46e5';
+                badge.style.border = data.is_importing ? '1px solid rgba(236, 72, 153, 0.25)' : '1px solid rgba(99, 102, 241, 0.25)';
+                icon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="animation: ai-pulse 1.4s ease-in-out infinite;"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>`;
+                if (data.is_importing) {
+                    text.innerText = `Importing & Indexing: ${data.processed} / ${data.total} (${data.percent}%)`;
+                    badge.title = `${data.total - data.processed} photos remaining in import & face indexing`;
+                } else {
+                    text.innerText = `AI Indexing: ${data.processed} / ${data.total} (${data.percent}%)`;
+                    badge.title = `${data.pending} photos pending face detection in background`;
+                }
+
+                lastAiIsIndexing = true;
+                if (aiStatusTimeout) clearTimeout(aiStatusTimeout);
+                aiStatusTimeout = setTimeout(checkAiStatus, 2500);
+            } else {
+                // Complete!
+                badge.style.background = 'rgba(16, 185, 129, 0.08)';
+                badge.style.color = '#059669';
+                badge.style.border = '1px solid rgba(16, 185, 129, 0.25)';
+                icon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`;
+                text.innerText = `✓ AI Ready • Indexed`;
+                badge.title = `All ${data.total} photos indexed for AI face search`;
+
+                // If it just transitioned from indexing to complete, reload page to show fresh clusters
+                if (lastAiIsIndexing === true) {
+                    lastAiIsIndexing = false;
+                    showToast('All faces indexed & sorted into people groups!', 'success');
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            }
+        })
+        .catch(() => {});
+    }
+
+    // Auto-check on initial load
+    document.addEventListener('DOMContentLoaded', () => {
+        checkAiStatus();
+    });
+    checkAiStatus();
 
     function checkImportStatus() {
         fetch('{% url "gallery:gdrive_import_status" event.slug %}')
@@ -4202,6 +4576,16 @@
         else if (tabName === 'people' && tabBtns.length > 1) tabBtns[1].classList.add('active');
         
         document.getElementById('tab-' + tabName).classList.add('active');
+        if (tabName === 'people') {
+            const hasCards = document.querySelectorAll('.person-card').length > 0;
+            fetch('{% url "gallery:event_ai_status" event.slug %}')
+            .then(res => res.json())
+            .then(data => {
+                if (data.clusters_count > 0 && !hasCards) {
+                    window.location.reload();
+                }
+            }).catch(() => {});
+        }
     }
 
     // ── Lazy load photos

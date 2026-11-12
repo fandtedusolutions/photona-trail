@@ -74,6 +74,11 @@ def run_clustering_on_upload(event):
     if records_to_update:
         FaceEmbedding.objects.bulk_update(records_to_update, ['person_label'], batch_size=500)
 
+    # Invalidate cached clusters so fresh clusters show immediately without delay
+    from django.core.cache import cache
+    cache_key = f"event_clusters_v2_{event.id}"
+    cache.delete(cache_key)
+
 from django.core.cache import cache
 from django.db.models import Count, Min
 
@@ -83,6 +88,19 @@ def get_cached_clusters_for_event(event):
     Runs in 1-2 fast queries instead of dozens of loops, cached for instant page rendering.
     """
     cache_key = f"event_clusters_v2_{event.id}"
+
+    # If the event has zero images, immediately wipe any stale cache & sorted folders and return empty list
+    if not event.images.exists():
+        try:
+            cache.delete(cache_key)
+        except Exception:
+            pass
+        safe_event_name = "".join([c if c.isalnum() else "_" for c in event.name])
+        sorted_base_dir = os.path.join(settings.MEDIA_ROOT, 'sorted', f"{safe_event_name}_{event.id}")
+        if os.path.exists(sorted_base_dir):
+            shutil.rmtree(sorted_base_dir, ignore_errors=True)
+        return []
+
     try:
         cached_data = cache.get(cache_key)
         if cached_data is not None:
@@ -104,7 +122,7 @@ def get_cached_clusters_for_event(event):
 
     if not cluster_stats:
         try:
-            cache.set(cache_key, [], 180)
+            cache.set(cache_key, [], 3)
         except Exception:
             pass
         return []

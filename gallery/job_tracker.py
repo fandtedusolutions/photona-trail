@@ -1,9 +1,11 @@
 import os
 import json
+import threading
 from django.conf import settings
 from django.core.cache import cache
 
 JOB_CACHE_TIMEOUT = 86400  # 24 hours
+_job_lock = threading.Lock()
 
 def _get_job_file(job_id):
     jobs_dir = os.path.join(settings.MEDIA_ROOT, 'jobs')
@@ -39,7 +41,7 @@ def reset_job(job_id):
         'current': 0,
         'total': 0,
         'percent': 0,
-        'message': 'Connecting to Google Drive...',
+        'message': 'Starting extraction...',
         'new_photos': [],
         'cancelled': False
     }
@@ -50,32 +52,41 @@ def reset_job(job_id):
         pass
 
     file_path = _get_job_file(job_id)
+    tmp_path = f"{file_path}.tmp"
     try:
-        with open(file_path, 'w') as f:
+        with open(tmp_path, 'w') as f:
             json.dump(job, f)
+        os.replace(tmp_path, file_path)
     except Exception:
         pass
     return job
 
 def update_job(job_id, updates):
-    job = get_job(job_id)
-    
-    updates_copy = updates.copy()
-    if 'new_photo' in updates_copy:
-        new_photo = updates_copy.pop('new_photo')
-        job.setdefault('new_photos', []).append(new_photo)
+    with _job_lock:
+        job = get_job(job_id) or {}
         
-    job.update(updates_copy)
-    
-    cache_key = f"job_track_{job_id}"
-    try:
-        cache.set(cache_key, job, JOB_CACHE_TIMEOUT)
-    except Exception:
-        pass
+        updates_copy = updates.copy()
+        if 'new_photo' in updates_copy:
+            new_photo = updates_copy.pop('new_photo')
+            photos_list = job.setdefault('new_photos', [])
+            photos_list.append(new_photo)
+            if len(photos_list) > 10:
+                job['new_photos'] = photos_list[-10:]
+            
+        job.update(updates_copy)
+        
+        cache_key = f"job_track_{job_id}"
+        try:
+            cache.set(cache_key, job, JOB_CACHE_TIMEOUT)
+        except Exception:
+            pass
 
-    file_path = _get_job_file(job_id)
-    try:
-        with open(file_path, 'w') as f:
-            json.dump(job, f)
-    except Exception:
-        pass
+        file_path = _get_job_file(job_id)
+        tmp_path = f"{file_path}.tmp"
+        try:
+            with open(tmp_path, 'w') as f:
+                json.dump(job, f)
+            os.replace(tmp_path, file_path)
+        except Exception:
+            pass
+        return job

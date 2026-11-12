@@ -1109,13 +1109,25 @@ def upload_photos(request):
                 has_zip = True
                 temp_zip_path = os.path.join(temp_dir, file.name)
                 with open(temp_zip_path, 'wb') as f:
-                    for chunk in file.chunks():
+                    for chunk in file.chunks(chunk_size=2 * 1024 * 1024):
                         f.write(chunk)
                 
+                from .job_tracker import reset_job
+                job_id = f"zip_{event_id}"
+                reset_job(job_id)
+
+                dispatched = False
                 try:
-                    process_zip_upload_task.delay(temp_zip_path, event_id)
+                    process_zip_upload_task.delay(temp_zip_path, event_id, job_id)
+                    dispatched = True
                 except Exception as ce:
                     print(f"[ERROR] Celery dispatch error for zip: {ce}")
+
+                if not dispatched:
+                    import threading
+                    t = threading.Thread(target=process_zip_upload_task, args=(temp_zip_path, event_id, job_id))
+                    t.daemon = True
+                    t.start()
             else:
                 has_background_images = True
                 safe_name = file.name.replace(' ', '_')
@@ -1136,6 +1148,7 @@ def upload_photos(request):
             'success': True,
             'images': [],
             'has_zip': has_zip,
+            'job_id': f"zip_{event_id}" if has_zip else None,
             'is_background': has_background_images,
             'message': 'Upload successful. Photos are processing in the background.'
         })
@@ -1412,7 +1425,8 @@ def delete_image(request, image_id):
     if not request.user.is_superuser and gallery_image.event.owner != request.user:
         return HttpResponseForbidden("Unauthorized")
         
-    owner = gallery_image.event.owner if gallery_image.event else None
+    event = gallery_image.event
+    owner = event.owner if event else None
 
     if gallery_image.file:
         try:
@@ -1427,9 +1441,35 @@ def delete_image(request, image_id):
             pass
         
     gallery_image.delete()
+
+    if event:
+        from django.core.cache import cache
+        cache.delete(f"event_clusters_v2_{event.id}")
+        if not event.images.exists():
+            import shutil
+            safe_event_name = "".join([c if c.isalnum() else "_" for c in event.name])
+            sorted_base_dir = os.path.join(settings.MEDIA_ROOT, 'sorted', f"{safe_event_name}_{event.id}")
+            if os.path.exists(sorted_base_dir):
+                shutil.rmtree(sorted_base_dir, ignore_errors=True)
+
     if owner:
         recalculate_user_storage(owner)
     return JsonResponse({'success': True, 'message': 'Image deleted successfully.'})
+
+@login_required
+def event_photo_ids(request, slug):
+    if request.user.is_superuser:
+        event = get_object_or_404(Event, slug=slug)
+    else:
+        event = get_object_or_404(Event, slug=slug, owner=request.user)
+
+    person_label = request.GET.get('person_label', '').strip() or None
+    if person_label:
+        ids = list(GalleryImage.objects.filter(event=event, embeddings__person_label=person_label).distinct().values_list('id', flat=True))
+    else:
+        ids = list(GalleryImage.objects.filter(event=event).values_list('id', flat=True))
+
+    return JsonResponse({'ids': ids, 'total': len(ids)})
 
 @login_required
 @require_POST
@@ -1448,33 +1488,72 @@ def bulk_delete_images(request):
         if not image_ids:
             return JsonResponse({'success': False, 'message': 'No image IDs provided.'})
 
-        deleted_ids = []
-        owner = None
-        for img_id in image_ids:
+        int_ids = []
+        for x in image_ids:
             try:
-                gallery_image = GalleryImage.objects.get(id=img_id)
-                if not request.user.is_superuser and gallery_image.event.owner != request.user:
-                    continue
-                
-                if gallery_image.event:
-                    owner = gallery_image.event.owner
-                    
-                if gallery_image.file:
-                    try:
-                        gallery_image.file.delete(save=False)
-                    except Exception:
-                        pass
-                if gallery_image.thumbnail:
-                    try:
-                        gallery_image.thumbnail.delete(save=False)
-                    except Exception:
-                        pass
-                gallery_image.delete()
-                deleted_ids.append(int(img_id))
-            except (GalleryImage.DoesNotExist, ValueError):
+                int_ids.append(int(x))
+            except (ValueError, TypeError):
+                pass
+
+        if not int_ids:
+            return JsonResponse({'success': False, 'message': 'No valid image IDs provided.'})
+
+        # Fast bulk lookup (1 query)
+        images_to_delete = list(GalleryImage.objects.filter(id__in=int_ids).select_related('event', 'event__owner'))
+        if not images_to_delete:
+            return JsonResponse({'success': True, 'deleted_ids': [], 'message': 'No photos found to delete.'})
+
+        deleted_ids = []
+        affected_events = set()
+        owners = set()
+        files_to_remove = []
+
+        for img in images_to_delete:
+            if not request.user.is_superuser and img.event and img.event.owner != request.user:
                 continue
 
-        if owner:
+            if img.event:
+                affected_events.add(img.event)
+                if img.event.owner:
+                    owners.add(img.event.owner)
+
+            if img.file:
+                try:
+                    files_to_remove.append(img.file.path)
+                except Exception:
+                    pass
+            if img.thumbnail:
+                try:
+                    files_to_remove.append(img.thumbnail.path)
+                except Exception:
+                    pass
+
+            deleted_ids.append(img.id)
+
+        # Fast atomic bulk delete from database (1 query)
+        if deleted_ids:
+            GalleryImage.objects.filter(id__in=deleted_ids).delete()
+
+        # Delete physical files on disk
+        for fpath in files_to_remove:
+            try:
+                if os.path.exists(fpath):
+                    os.remove(fpath)
+            except Exception:
+                pass
+
+        # Invalidate cluster cache and clean empty sorted folders for affected events
+        from django.core.cache import cache
+        import shutil
+        for event in affected_events:
+            cache.delete(f"event_clusters_v2_{event.id}")
+            if not event.images.exists():
+                safe_event_name = "".join([c if c.isalnum() else "_" for c in event.name])
+                sorted_base_dir = os.path.join(settings.MEDIA_ROOT, 'sorted', f"{safe_event_name}_{event.id}")
+                if os.path.exists(sorted_base_dir):
+                    shutil.rmtree(sorted_base_dir, ignore_errors=True)
+
+        for owner in owners:
             recalculate_user_storage(owner)
 
         return JsonResponse({
@@ -1525,6 +1604,11 @@ def gdrive_import(request):
                 print(f"[SUCCESS] Google Drive import finished for '{target_event_name}': {indexed} images, {faces} faces indexed.")
                 
                 if indexed > 0:
+                    update_job(job_id, {
+                        'current': indexed,
+                        'percent': 99,
+                        'message': f'⚡ All {indexed} photos downloaded! Finalizing AI face albums...'
+                    })
                     # Run AI clustering on the newly imported faces
                     from .clustering import run_clustering_on_upload
                     re_fetched_event = Event.objects.filter(id=target_event_id).first()
@@ -1574,6 +1658,76 @@ def gdrive_import_status(request, slug):
     if not job:
         return JsonResponse({'active': False})
     return JsonResponse(job)
+
+@login_required
+def zip_extract_status(request, slug):
+    if request.user.is_superuser:
+        event = get_object_or_404(Event, slug=slug)
+    else:
+        event = get_object_or_404(Event, slug=slug, owner=request.user)
+    job_id = f"zip_{event.id}"
+    from gallery.job_tracker import get_job
+    job = get_job(job_id)
+    if not job:
+        return JsonResponse({'active': False})
+    return JsonResponse(job)
+
+@login_required
+def event_ai_status(request, slug):
+    """Returns live status of background AI face detection & indexing for an event."""
+    if request.user.is_superuser:
+        event = get_object_or_404(Event, slug=slug)
+    else:
+        event = get_object_or_404(Event, slug=slug, owner=request.user)
+
+    total = event.images.count()
+    from .job_tracker import get_job
+    import_job = get_job(f"import_{event.id}")
+    zip_job = get_job(f"zip_{event.id}")
+
+    is_import_active = bool(import_job and import_job.get('active'))
+    is_zip_active = bool(zip_job and zip_job.get('active'))
+    is_importing = is_import_active or is_zip_active
+
+    pending = event.images.filter(total_faces=-1).count()
+    processed = max(0, total - pending)
+
+    # Calculate real overall expected count when importing or unzipping
+    expected_total = total
+    if is_import_active and import_job.get('total', 0) > 0:
+        expected_total = max(total, import_job.get('total', 0))
+    elif is_zip_active and zip_job.get('total', 0) > 0:
+        expected_total = max(total, zip_job.get('total', 0))
+
+    if expected_total == 0 and not is_importing:
+        return JsonResponse({
+            'total': 0,
+            'processed': 0,
+            'pending': 0,
+            'percent': 100,
+            'is_indexing': False,
+            'is_importing': False,
+            'clusters_count': 0
+        })
+
+    is_indexing = is_importing or (pending > 0)
+    percent = int((processed / expected_total) * 100) if expected_total > 0 else 100
+    if is_indexing and percent >= 100:
+        percent = 99
+
+    from .clustering import get_cached_clusters_for_event
+    clusters = get_cached_clusters_for_event(event)
+    clusters_count = len(clusters) if clusters else 0
+
+    return JsonResponse({
+        'total': expected_total,
+        'processed': processed,
+        'pending': pending + max(0, expected_total - total),
+        'percent': percent,
+        'is_indexing': is_indexing,
+        'is_importing': is_importing,
+        'clusters_count': clusters_count
+    })
 
 @login_required
 @require_POST
