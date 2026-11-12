@@ -267,6 +267,23 @@ class GuestLead(models.Model):
         from django.core.signing import Signer
         return Signer().sign(f"{self.id}:selfie")
 
+    @property
+    def personal_link(self):
+        pl = self.personal_links.first()
+        if pl:
+            return pl
+        return self.event.personal_gallery_links.filter(searcher_name=self.name).first()
+
+    def get_personal_gallery_url(self, request=None):
+        pl = self.personal_link
+        if pl:
+            from django.urls import reverse
+            path = reverse('gallery:personal_gallery', args=[pl.token])
+            if request:
+                return request.build_absolute_uri(path)
+            return path
+        return None
+
     def __str__(self):
         return f"{self.name} - {self.event.name}"
 

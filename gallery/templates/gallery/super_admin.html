@@ -729,13 +729,37 @@
             </div>
 
             <div class="admin-table-wrap">
-                <div class="admin-table-head" style="flex-direction: column; align-items: flex-start; gap: 1.5rem;">
-                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <div class="admin-table-head" style="flex-direction: column; align-items: flex-start; gap: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; flex-wrap: wrap; gap: 12px;">
                         <div>
-                            <div class="admin-table-title">Captured Leads</div>
-                            <div style="font-size: 0.84rem; color: #64748b;">Guest info from selfie searches</div>
+                            <div class="admin-table-title" style="display: flex; align-items: center; gap: 8px;">
+                                <span>Captured Leads</span>
+                                {% if selected_event %}
+                                    <span style="font-size: 0.82rem; font-weight: 700; color: #4338ca; background: #e0e7ff; padding: 3px 12px; border-radius: 9999px; border: 1px solid #c7d2fe;">
+                                        Event: {{ selected_event.name }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 0.84rem; color: #64748b; margin-top: 3px;">
+                                {% if selected_event %}
+                                    Total leads registered for <strong>{{ selected_event.name }}</strong> (Organizer: {{ selected_event.owner.username }})
+                                {% else %}
+                                    Guest info and shared personal gallery links from AI selfie searches
+                                {% endif %}
+                            </div>
                         </div>
-                        <span class="badge badge-purple" style="padding: 6px 16px; font-size: 0.8rem;">{{ leads|length }} Total</span>
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            {% if selected_event %}
+                                <div style="display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(124, 58, 237, 0.08) 100%); border: 1.5px solid rgba(79, 70, 229, 0.3); padding: 6px 14px; border-radius: 12px;">
+                                    <span style="font-size: 1rem;">🎯</span>
+                                    <div>
+                                        <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 750; color: #6366f1;">Selected Event Leads</div>
+                                        <div style="font-size: 1.15rem; font-weight: 850; color: #3730a3; line-height: 1.1;">{{ selected_event_total_leads }}</div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            <span class="badge badge-purple" style="padding: 8px 16px; font-size: 0.82rem; font-weight: 700; border-radius: 10px;">{{ leads|length }} Shown</span>
+                        </div>
                     </div>
                     
                     <form id="leadFilterForm" method="GET" action="" style="display: flex; flex-wrap: wrap; gap: 1rem; width: 100%; background: #f8fafc; padding: 1.25rem; border-radius: 12px; border: 1px solid #e2e8f0; align-items: center;">
@@ -756,7 +780,9 @@
                             <select name="event_id" style="width: 100%; padding: 0.6rem 1rem; font-size: 0.85rem; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; background: white;" onchange="this.form.submit()">
                                 <option value="">All Events</option>
                                 {% for evt in all_events %}
-                                <option value="{{ evt.id }}" {% if request.GET.event_id == evt.id|stringformat:"s" %}selected{% endif %}>{{ evt.name }}</option>
+                                <option value="{{ evt.id }}" {% if request.GET.event_id == evt.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ evt.name }}{% if evt.leads_count is not None %} ({{ evt.leads_count }} leads){% endif %}
+                                </option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -780,6 +806,7 @@
                                 <th>Guest Details</th>
                                 <th>Contact Info</th>
                                 <th>Event & Organizer</th>
+                                <th>Shared Gallery Link</th>
                                 <th style="text-align: right;">Selfie</th>
                                 <th style="text-align: right; width: 80px;">Actions</th>
                             </tr>
@@ -800,6 +827,20 @@
                                     <span style="font-weight:600; color:#334155;">{{ lead.event.name }}</span>
                                     <div style="font-size:0.75rem; color:#64748b;">Org: {{ lead.event.owner.username }}</div>
                                 </td>
+                                <td>
+                                    {% if lead.personal_gallery_url %}
+                                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                            <a href="{{ lead.personal_gallery_url }}" target="_blank" class="btn btn-sm" title="Open WhatsApp Personal Gallery Link" style="background: rgba(79, 70, 229, 0.08); color: #4f46e5; border: 1px solid rgba(79, 70, 229, 0.25); border-radius: 8px; font-weight: 700; padding: 5px 11px; font-size: 0.78rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;" onmouseover="this.style.background='#4f46e5'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(79, 70, 229, 0.08)'; this.style.color='#4f46e5';">
+                                                <span>🔗</span> Link
+                                            </a>
+                                            <button type="button" class="btn btn-sm" onclick="copyLeadGalleryLink('{{ lead.personal_gallery_url }}', this)" title="Copy WhatsApp Shared Link" style="background: #ffffff; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700; padding: 5px 11px; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;" onmouseover="this.style.borderColor='#94a3b8'; this.style.background='#f8fafc';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.background='#ffffff';">
+                                                <span>📋</span> <span>Copy</span>
+                                            </button>
+                                        </div>
+                                    {% else %}
+                                        <span style="color: #94a3b8; font-size: 0.75rem; font-style: italic;">No link</span>
+                                    {% endif %}
+                                </td>
                                 <td style="text-align: right;">
                                     <a href="{% url 'gallery:secure_selfie' lead.get_secure_selfie_token %}" target="_blank">
                                         <img src="{% url 'gallery:secure_selfie' lead.get_secure_selfie_token %}" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" alt="Lead Selfie">
@@ -814,7 +855,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5">
+                                <td colspan="6">
                                     <div style="padding: 4rem 2rem; text-align: center; color: #64748b;">
                                         <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📸</div>
                                         <h3 style="font-size: 1.1rem; color: #334155; font-weight: 700;">No leads found</h3>
@@ -1224,6 +1265,38 @@ async function deleteLead(id) {
         else alert(data.message);
     } catch(err) {
         alert("Error deleting lead.");
+    }
+}
+
+function copyLeadGalleryLink(url, btn) {
+    if (!url) return;
+    const originalHtml = btn.innerHTML;
+    function setSuccess() {
+        btn.innerHTML = '<span>✅</span> <span style="color:#059669; font-weight:700;">Copied!</span>';
+        btn.style.borderColor = '#10b981';
+        btn.style.background = '#ecfdf5';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.style.borderColor = '#cbd5e1';
+            btn.style.background = '#ffffff';
+        }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(setSuccess).catch(() => {
+            prompt("Copy gallery link:", url);
+        });
+    } else {
+        const tempInput = document.createElement('input');
+        tempInput.value = url;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        try {
+            document.execCommand('copy');
+            setSuccess();
+        } catch (e) {
+            prompt("Copy gallery link:", url);
+        }
+        document.body.removeChild(tempInput);
     }
 }
 

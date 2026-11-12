@@ -225,7 +225,7 @@ def _get_super_admin_context(request):
         except Exception:
             pass
     
-    leads = GuestLead.objects.all().select_related('event', 'event__owner').order_by('-created_at')
+    leads = GuestLead.objects.all().select_related('event', 'event__owner').prefetch_related('personal_links').order_by('-created_at')
     
     search_q = request.GET.get('search_q')
     organizer_id = request.GET.get('organizer_id')
@@ -233,6 +233,13 @@ def _get_super_admin_context(request):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
+    selected_event = None
+    selected_event_total_leads = 0
+    if event_id and str(event_id).strip():
+        selected_event = Event.objects.filter(id=event_id).first()
+        if selected_event:
+            selected_event_total_leads = GuestLead.objects.filter(event_id=event_id).count()
+
     if search_q:
         from django.db.models import Q
         leads = leads.filter(Q(name__icontains=search_q) | Q(phone__icontains=search_q) | Q(email__icontains=search_q))
@@ -245,7 +252,24 @@ def _get_super_admin_context(request):
     if end_date:
         leads = leads.filter(created_at__date__lte=end_date)
         
-    all_events = Event.objects.all().select_related('owner')
+    from django.db.models import Count
+    all_events = Event.objects.all().select_related('owner').annotate(leads_count=Count('leads')).order_by('-created_at')
+
+    from django.urls import reverse
+    leads_list = list(leads)
+    for lead in leads_list:
+        pl = lead.personal_links.first()
+        if not pl:
+            pl = lead.event.personal_gallery_links.filter(searcher_name=lead.name).first()
+        if pl:
+            try:
+                lead.personal_gallery_url = request.build_absolute_uri(
+                    reverse('gallery:personal_gallery', args=[pl.token])
+                )
+            except Exception:
+                lead.personal_gallery_url = reverse('gallery:personal_gallery', args=[pl.token])
+        else:
+            lead.personal_gallery_url = None
     
     return {
         'admins': admins,
@@ -254,8 +278,10 @@ def _get_super_admin_context(request):
         'total_tenants': total_tenants,
         'total_plans': total_plans,
         'total_storage_used': total_storage_used,
-        'leads': leads,
+        'leads': leads_list,
         'all_events': all_events,
+        'selected_event': selected_event,
+        'selected_event_total_leads': selected_event_total_leads,
     }
 
 @user_passes_test(lambda u: u.is_superuser)
