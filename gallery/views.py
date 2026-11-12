@@ -1171,6 +1171,7 @@ def upload_single_photo(request):
             profile.save()
 
         import os
+        import gc
         from io import BytesIO
         from PIL import Image, ImageOps
         from django.core.files import File
@@ -1179,36 +1180,62 @@ def upload_single_photo(request):
         gallery_image = GalleryImage(filename=safe_filename, event=event)
         
         file.seek(0)
-        raw_bytes = None
         
-        # High-Speed Single-Pass Image Processing
+        # High-Speed Memory-Efficient Single-Pass Image Processing
         try:
-            with Image.open(file) as img:
-                img = ImageOps.exif_transpose(img)
-                icc_profile = img.info.get('icc_profile')
-                if img.mode in ('RGBA', 'P'):
-                    img = img.convert('RGB')
+            compression_percentage = event.compression_percentage if event else 100
 
-                # 1. Fast in-memory thumbnail (no duplicate disk read or re-decoding)
+            if not compression_percentage or compression_percentage >= 100:
+                # Fast path: original quality. Generate thumbnail via draft() to decode directly at low res (~4MB RAM vs 100MB+)
                 try:
-                    thumb_img = img.copy()
-                    thumb_img.thumbnail((600, 600), Image.Resampling.BILINEAR)
-                    thumb_io = BytesIO()
-                    thumb_img.save(thumb_io, format='WEBP', quality=80)
-                    thumb_io.seek(0)
-                    thumb_name = os.path.splitext(safe_filename)[0] + "_thumb.webp"
-                    gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                    with Image.open(file) as img:
+                        try:
+                            img.draft('RGB', (1200, 1200))
+                        except Exception:
+                            pass
+                        thumb_img = ImageOps.exif_transpose(img)
+                        if thumb_img.mode in ('RGBA', 'P'):
+                            thumb_img = thumb_img.convert('RGB')
+                        thumb_img.thumbnail((600, 600), Image.Resampling.BILINEAR)
+                        thumb_io = BytesIO()
+                        thumb_img.save(thumb_io, format='WEBP', quality=80)
+                        thumb_io.seek(0)
+                        thumb_name = os.path.splitext(safe_filename)[0] + "_thumb.webp"
+                        gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                        del thumb_img
+                        del thumb_io
                 except Exception as te:
-                    print(f"[DEBUG] thumbnail error: {te}")
+                    print(f"[DEBUG] thumbnail generation fallback: {te}")
 
-                # 2. Fast dimension compression if event compression is set < 100%
-                compression_percentage = event.compression_percentage if event else 100
-                if compression_percentage and compression_percentage < 100:
+                # Stream original file directly to storage without reading entire file into RAM
+                file.seek(0)
+                gallery_image.file.save(safe_filename, file, save=False)
+            else:
+                # Compression < 100%: downscale image and derive thumbnail from it
+                with Image.open(file) as img:
+                    img = ImageOps.exif_transpose(img)
+                    icc_profile = img.info.get('icc_profile')
+                    if img.mode in ('RGBA', 'P'):
+                        img = img.convert('RGB')
+
                     scale_factor = float(compression_percentage) / 100.0
                     new_width = max(1, int(img.width * scale_factor))
                     new_height = max(1, int(img.height * scale_factor))
                     if new_width < img.width and new_height < img.height:
                         img = img.resize((new_width, new_height), Image.Resampling.BILINEAR)
+
+                    try:
+                        thumb_img = img.copy()
+                        thumb_img.thumbnail((600, 600), Image.Resampling.BILINEAR)
+                        thumb_io = BytesIO()
+                        thumb_img.save(thumb_io, format='WEBP', quality=80)
+                        thumb_io.seek(0)
+                        thumb_name = os.path.splitext(safe_filename)[0] + "_thumb.webp"
+                        gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                        del thumb_img
+                        del thumb_io
+                    except Exception as te:
+                        print(f"[DEBUG] thumbnail error: {te}")
 
                     compressed_io = BytesIO()
                     save_kwargs = {'format': 'JPEG', 'quality': 88}
@@ -1217,19 +1244,15 @@ def upload_single_photo(request):
 
                     img.save(compressed_io, **save_kwargs)
                     compressed_io.seek(0)
-                    raw_bytes = compressed_io.getvalue()
                     gallery_image.file.save(safe_filename, File(compressed_io), save=False)
-                else:
-                    file.seek(0)
-                    raw_bytes = file.read()
-                    file.seek(0)
-                    gallery_image.file.save(safe_filename, file, save=False)
+                    del compressed_io
+                    del img
+            gc.collect()
         except Exception as e:
             print(f"[DEBUG] single upload processing fallback: {e}")
             file.seek(0)
-            raw_bytes = file.read()
-            file.seek(0)
             gallery_image.file.save(safe_filename, file, save=False)
+            gc.collect()
         gallery_image.total_faces = -1
         gallery_image.save()
         

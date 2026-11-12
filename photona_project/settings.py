@@ -234,6 +234,8 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_WORKER_CONCURRENCY = 1  # limit concurrent uploads to save memory
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 25  # Recycle worker every 25 tasks to free InsightFace/ONNX native memory
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 450000  # Recycle if worker RSS exceeds ~450MB to prevent Linux OOM
 
 # Cache configuration: In production (or when USE_REDIS_CACHE=True), use Redis
 # which is already running for Celery. In local development, use LocMemCache.

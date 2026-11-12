@@ -59,16 +59,20 @@ def run_clustering_on_upload(event):
         shutil.rmtree(sorted_base_dir)
     os.makedirs(sorted_base_dir, exist_ok=True)
 
-    # Save cluster labels in the DB and copy files
+    # Save cluster labels in the DB and create directory structure
+    records_to_update = []
     for idx, cluster in enumerate(clusters, start=1):
         person_name = f"Person_{idx}"
         person_dir = os.path.join(sorted_base_dir, person_name)
         os.makedirs(person_dir, exist_ok=True)
         
-        # Update person_label in DB for all faces in this cluster
+        # Collect faces in this cluster for single bulk update
         for face_rec in cluster['faces']:
             face_rec.person_label = person_name
-            face_rec.save(update_fields=['person_label'])
+            records_to_update.append(face_rec)
+
+    if records_to_update:
+        FaceEmbedding.objects.bulk_update(records_to_update, ['person_label'], batch_size=500)
 
 from django.core.cache import cache
 from django.db.models import Count, Min
