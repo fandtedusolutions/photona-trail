@@ -184,3 +184,8 @@ def process_gdrive_import_task(url, event_id=None):
         run_clustering_on_upload(event)
     except Exception as e:
         print(f"[ERROR] Celery GDrive import error: {e}")
+
+@shared_task
+def send_whatsapp_template_task(phone, name, link_url, template=None, language=None):
+    from .whatsapp import send_whatsapp_template_message
+    return send_whatsapp_template_message(phone, name, link_url, template=template, language=language)

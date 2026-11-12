@@ -1317,6 +1317,8 @@ def search_person(request):
     personal_gallery_url = None
     search_image_b64 = None
     whatsapp_share_text = None
+    whatsapp_sent = False
+    phone_entered = None
     
     if not selected_event_slug:
         return redirect('gallery:dashboard')
@@ -1356,11 +1358,11 @@ def search_person(request):
                 name_only, ext = os.path.splitext(res['image'].filename)
                 res['download_filename'] = f"{name_only}_{selected_event.slug}{ext}"
 
-            if results:
+            if results or query_vector:
                 personal_link, is_new = find_or_create_personal_gallery_link(
                     event=selected_event,
                     query_vector=query_vector,
-                    results=results,
+                    results=results or [],
                     searcher_name=request.user.get_full_name() or request.user.username,
                     selfie_path=full_temp_path,
                     selfie_thumbnail_b64=search_image_b64 or '',
@@ -1373,6 +1375,17 @@ def search_person(request):
                 from urllib.parse import quote
                 raw_wa = f"Here are my photos from {selected_event.name}: {personal_gallery_url}"
                 whatsapp_share_text = quote(raw_wa)
+
+                phone = request.POST.get('phone') or request.POST.get('guest_phone')
+                if phone:
+                    phone_entered = phone
+                    from .whatsapp import send_whatsapp_selfie_link_async
+                    send_whatsapp_selfie_link_async(
+                        phone=phone,
+                        name=request.user.get_full_name() or request.user.username,
+                        link_url=personal_gallery_url
+                    )
+                    whatsapp_sent = True
         except Exception as e:
             error_message = str(e)
         finally:
@@ -1388,6 +1401,8 @@ def search_person(request):
         'personal_gallery_url': personal_gallery_url,
         'search_image_b64': search_image_b64,
         'whatsapp_share_text': whatsapp_share_text,
+        'whatsapp_sent': whatsapp_sent,
+        'phone': phone_entered,
     })
 
 @login_required
@@ -2374,6 +2389,8 @@ def public_search_person(request, token):
     personal_gallery_url = None
     whatsapp_share_text = None
     created_lead = None
+    whatsapp_sent = False
+    guest_phone_entered = None
 
     if request.method == 'POST' and request.FILES.get('selfie'):
         selfie = request.FILES['selfie']
@@ -2383,6 +2400,7 @@ def public_search_person(request, token):
         age = request.POST.get('guest_age')
         phone = request.POST.get('guest_phone')
         email = request.POST.get('guest_email', '')
+        guest_phone_entered = phone
         
         if name and age and phone:
             created_lead = GuestLead.objects.create(
@@ -2432,12 +2450,12 @@ def public_search_person(request, token):
                 name_only, ext = os.path.splitext(res['image'].filename)
                 res['download_filename'] = f"{name_only}_{event.slug}{ext}"
 
-            if results:
+            if results or query_vector:
                 effective_expiry = link.expires_at or event.expires_at
                 personal_link, is_new = find_or_create_personal_gallery_link(
                     event=event,
                     query_vector=query_vector,
-                    results=results,
+                    results=results or [],
                     searcher_name=name or 'Guest',
                     selfie_path=full_temp_path,
                     selfie_thumbnail_b64=search_image_b64 or '',
@@ -2452,6 +2470,16 @@ def public_search_person(request, token):
                 from urllib.parse import quote
                 raw_wa = f"Here are my photos from {event.name}: {personal_gallery_url}"
                 whatsapp_share_text = quote(raw_wa)
+
+                # Send WhatsApp notification via Natdemy WhatsApp Template API
+                if phone:
+                    from .whatsapp import send_whatsapp_selfie_link_async
+                    send_whatsapp_selfie_link_async(
+                        phone=phone,
+                        name=name or 'Guest',
+                        link_url=personal_gallery_url
+                    )
+                    whatsapp_sent = True
         except Exception as e:
             error_message = str(e)
         finally:
@@ -2468,6 +2496,8 @@ def public_search_person(request, token):
         'personal_link': personal_link,
         'personal_gallery_url': personal_gallery_url,
         'whatsapp_share_text': whatsapp_share_text,
+        'whatsapp_sent': whatsapp_sent,
+        'guest_phone': guest_phone_entered,
     })
 
 

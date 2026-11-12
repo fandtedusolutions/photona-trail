@@ -253,3 +253,10 @@ else:
             'LOCATION': 'photona-local-cache',
         }
     }
+
+# Natdemy WhatsApp Notification API Configuration
+WAPP_API_URL = os.environ.get('WAPP_API_URL', 'https://wapp.natdemy.com/api/v1/messages/template')
+WAPP_API_KEY = os.environ.get('WAPP_API_KEY', 'nd_91e5ef319e5084ddbf6576e4549f6206dd250808d29c01d4')
+WAPP_API_SECRET = os.environ.get('WAPP_API_SECRET', 'nds_93943acac9c5820fca7e7fe2f51387ca6adb0909162a43e3eaa5776c4bf13853')
+WAPP_TEMPLATE_NAME = os.environ.get('WAPP_TEMPLATE_NAME', 'sahodhaya_1')
+WAPP_LANGUAGE = os.environ.get('WAPP_LANGUAGE', 'en_US')
