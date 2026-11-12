@@ -3220,12 +3220,37 @@
         fileList.innerHTML = '';
         if (selectedFiles.length > 0) {
             uploadBtn.style.display = 'block';
-            selectedFiles.forEach(file => {
-                const item = document.createElement('div');
-                item.style.cssText = 'padding: 5px 8px; font-size: 0.75rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 6px;';
-                item.innerHTML = `<span style="color: var(--accent-indigo);">📄</span> ${file.name}`;
-                fileList.appendChild(item);
-            });
+            uploadBtn.innerHTML = `⚡ Upload & Process ${selectedFiles.length} Selected File${selectedFiles.length > 1 ? 's' : ''}`;
+            
+            if (selectedFiles.length > 15) {
+                // High-performance compact summary for large batches (prevents browser UI lag)
+                const totalBytes = selectedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+                const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+
+                const summary = document.createElement('div');
+                summary.style.cssText = 'padding: 8px 10px; font-size: 0.82rem; font-weight: 700; color: #4f46e5; background: rgba(99, 102, 241, 0.08); border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;';
+                summary.innerHTML = `<span>📁 ${selectedFiles.length} files selected</span><span>~${totalMB} MB</span>`;
+                fileList.appendChild(summary);
+
+                selectedFiles.slice(0, 5).forEach(file => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'padding: 4px 8px; font-size: 0.74rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between;';
+                    item.innerHTML = `<span style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 220px;"><span style="color: var(--accent-indigo);">📄</span> ${file.name}</span> <span style="color: var(--text-muted); font-size: 0.7rem;">${(file.size / 1024 / 1024).toFixed(1)} MB</span>`;
+                    fileList.appendChild(item);
+                });
+
+                const moreBadge = document.createElement('div');
+                moreBadge.style.cssText = 'padding: 5px 8px; font-size: 0.72rem; color: var(--text-muted); font-style: italic; text-align: center;';
+                moreBadge.innerText = `+ ${selectedFiles.length - 5} more files ready for upload`;
+                fileList.appendChild(moreBadge);
+            } else {
+                selectedFiles.forEach(file => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'padding: 5px 8px; font-size: 0.75rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between;';
+                    item.innerHTML = `<span style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 220px;"><span style="color: var(--accent-indigo);">📄</span> ${file.name}</span> <span style="color: var(--text-muted); font-size: 0.7rem;">${(file.size / 1024 / 1024).toFixed(1)} MB</span>`;
+                    fileList.appendChild(item);
+                });
+            }
         } else {
             uploadBtn.style.display = 'none';
         }
@@ -3761,53 +3786,72 @@
 
         const totalFiles = filesToProcess.length;
         let completedCount = 0;
+        let successCount = 0;
+        let failedCount = 0;
+        const newlyUploadedPhotos = [];
 
         queueCountText.innerText = `⚡ Processing Queue (0 / ${totalFiles})`;
         queuePercentText.innerText = `0%`;
         queueProgressBar.style.width = `0%`;
 
-        // 1. Build Queue UI Items (Memory-conscious for 500+ bulk uploads)
-        const objectUrls = [];
-        filesToProcess.forEach((file, idx) => {
-            const isZip = file.name.split('.').pop().toLowerCase() === 'zip';
-            let previewHtml = '<span style="font-size: 1.1rem;">🖼️</span>';
-            if (isZip) {
-                previewHtml = '<span style="font-size: 1.1rem;">📦</span>';
-            } else if (idx < 25) {
-                // Generate preview object URL only for initial visible batch to prevent browser tab crashing
-                const localUrl = URL.createObjectURL(file);
-                objectUrls.push(localUrl);
-                previewHtml = `<img src="${localUrl}" style="width: 28px; height: 28px; border-radius: 7px; object-fit: cover;">`;
-            }
-            
-            const item = document.createElement('div');
-            item.id = `queue-item-${idx}`;
-            item.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.85rem; background: var(--bg-tertiary); border: 1px solid var(--border-light); border-radius: 12px; font-size: 0.78rem; transition: all 0.3s ease;`;
-            item.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-                    ${previewHtml}
-                    <span style="font-weight: 700; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 160px;">${file.name}</span>
-                </div>
-                <span id="queue-status-${idx}" class="badge badge-amber" style="font-size: 0.7rem;">⏳ In Queue</span>
-            `;
-            queueItemsList.appendChild(item);
-        });
+        // High-performance queue rendering:
+        // For large batches (e.g. 200+ photos), only keep active & recent items in the DOM to avoid UI freeze.
+        const isLargeBatch = totalFiles > 10;
+        if (!isLargeBatch) {
+            filesToProcess.forEach((file, idx) => {
+                const isZip = file.name.split('.').pop().toLowerCase() === 'zip';
+                const item = document.createElement('div');
+                item.id = `queue-item-${idx}`;
+                item.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.85rem; background: var(--bg-tertiary); border: 1px solid var(--border-light); border-radius: 12px; font-size: 0.78rem; transition: all 0.3s ease;`;
+                item.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                        <span style="font-size: 1.1rem;">${isZip ? '📦' : '🖼️'}</span>
+                        <span style="font-weight: 700; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 160px;">${file.name}</span>
+                    </div>
+                    <span id="queue-status-${idx}" class="badge badge-amber" style="font-size: 0.7rem;">⏳ In Queue</span>
+                `;
+                queueItemsList.appendChild(item);
+            });
+        }
 
         const csrfToken = document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value;
         const eventId = '{{ event.id }}';
 
-        // 2. High-Speed Stable Upload Queue (Concurrency of 2 prevents EC2 worker memory overload)
-        const CONCURRENCY = 2;
+        // Optimized Concurrency: 3 concurrent streams provides fast throughput while respecting browser & server limits
+        const CONCURRENCY = 3;
         let currentIndex = 0;
 
         async function processUploadTask(idx) {
             const file = filesToProcess[idx];
             const isZip = file.name.split('.').pop().toLowerCase() === 'zip';
-            const statusBadge = document.getElementById(`queue-status-${idx}`);
-
-            if (statusBadge) {
-                statusBadge.className = 'badge badge-purple';
-                statusBadge.innerText = '🔄 Uploading...';
+            
+            let statusBadge;
+            if (isLargeBatch) {
+                let item = document.getElementById(`queue-item-${idx}`);
+                if (!item) {
+                    item = document.createElement('div');
+                    item.id = `queue-item-${idx}`;
+                    item.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.85rem; background: var(--bg-tertiary); border: 1px solid var(--border-light); border-radius: 12px; font-size: 0.78rem; transition: all 0.3s ease;`;
+                    item.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                            <span style="font-size: 1.1rem;">${isZip ? '📦' : '🖼️'}</span>
+                            <span style="font-weight: 700; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 160px;">${file.name}</span>
+                        </div>
+                        <span id="queue-status-${idx}" class="badge badge-purple" style="font-size: 0.7rem;">🔄 Uploading...</span>
+                    `;
+                    queueItemsList.appendChild(item);
+                    // Keep DOM lightweight by pruning older completed elements from the queue view
+                    while (queueItemsList.children.length > 8) {
+                        queueItemsList.removeChild(queueItemsList.firstElementChild);
+                    }
+                }
+                statusBadge = document.getElementById(`queue-status-${idx}`);
+            } else {
+                statusBadge = document.getElementById(`queue-status-${idx}`);
+                if (statusBadge) {
+                    statusBadge.className = 'badge badge-purple';
+                    statusBadge.innerText = '🔄 Uploading...';
+                }
             }
 
             try {
@@ -3824,6 +3868,7 @@
                         statusBadge.className = 'badge badge-emerald';
                         statusBadge.innerText = '✅ ZIP Extracting';
                     }
+                    successCount++;
                 } else {
                     const singleData = new FormData();
                     singleData.append('photo', file);
@@ -3835,26 +3880,25 @@
 
                     if (data.success && data.image) {
                         const img = data.image;
+                        successCount++;
                         if (statusBadge) {
                             statusBadge.className = 'badge badge-emerald';
                             statusBadge.innerText = `✅ Uploaded`;
                         }
 
-                        // Stream & Add photo to Event Photos section in real-time!
+                        // Collect uploaded image for batch rendering once upload finishes
+                        // (Prevents thumbnail GET requests from choking the upload connection pipeline)
                         if (noPhotosMsg) noPhotosMsg.style.display = 'none';
                         if (!knownPhotoIds.has(img.id)) {
-                            knownPhotoIds.add(img.id);
                             const dotIdx = img.filename.lastIndexOf('.');
                             const nameOnly = dotIdx !== -1 ? img.filename.substring(0, dotIdx) : img.filename;
                             const ext = dotIdx !== -1 ? img.filename.substring(dotIdx) : '';
                             const downloadName = `${nameOnly}_{{ event.slug }}${ext}`;
-                            const card = makePhotoCard(img, downloadName);
-                            if (gallery) {
-                                gallery.insertBefore(card, gallery.firstChild);
-                            }
+                            newlyUploadedPhotos.push({ img, downloadName });
                             adjustPhotoCount(1);
                         }
                     } else {
+                        failedCount++;
                         const errMsg = data.message || 'Upload failed';
                         if (statusBadge) {
                             statusBadge.className = 'badge badge-rose';
@@ -3864,6 +3908,7 @@
                     }
                 }
             } catch (err) {
+                failedCount++;
                 if (statusBadge) {
                     statusBadge.className = 'badge badge-rose';
                     statusBadge.innerText = `✕ Failed`;
@@ -3872,7 +3917,7 @@
 
             completedCount++;
             const pct = Math.round((completedCount / totalFiles) * 100);
-            queueCountText.innerText = `⚡ Processing Queue (${completedCount} / ${totalFiles})`;
+            queueCountText.innerText = `⚡ Processing Queue (${completedCount} / ${totalFiles})${failedCount > 0 ? ` • ${failedCount} failed` : ''}`;
             queuePercentText.innerText = `${pct}%`;
             queueProgressBar.style.width = `${pct}%`;
         }
@@ -3890,10 +3935,20 @@
         }
         await Promise.all(workers);
 
-        // Cleanup blob object URLs to free browser memory
-        objectUrls.forEach(u => {
-            try { URL.revokeObjectURL(u); } catch(e) {}
-        });
+        // Batch render all uploaded photos cleanly using a DocumentFragment
+        if (newlyUploadedPhotos.length > 0 && gallery) {
+            const fragment = document.createDocumentFragment();
+            newlyUploadedPhotos.forEach(({ img, downloadName }) => {
+                if (!knownPhotoIds.has(img.id)) {
+                    knownPhotoIds.add(img.id);
+                    const card = makePhotoCard(img, downloadName);
+                    fragment.appendChild(card);
+                }
+            });
+            if (fragment.childNodes.length > 0) {
+                gallery.insertBefore(fragment, gallery.firstChild);
+            }
+        }
 
         showToast(`All ${totalFiles} photos processed & indexed!`, "success");
         

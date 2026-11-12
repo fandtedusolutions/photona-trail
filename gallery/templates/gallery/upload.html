@@ -88,12 +88,36 @@
         
         if (selectedFiles.length > 0) {
             uploadBtn.style.display = 'block';
-            selectedFiles.forEach(file => {
-                const item = document.createElement('div');
-                item.style.cssText = 'padding: 8px 10px; border-bottom: 1px solid var(--border-light); font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center;';
-                item.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--accent-indigo);">📄</span> ${file.name}</span> <span style="color: var(--text-muted)">${(file.size / 1024 / 1024).toFixed(2)} MB</span>`;
-                fileList.appendChild(item);
-            });
+            uploadBtn.innerText = `Index ${selectedFiles.length} Uploaded Image${selectedFiles.length > 1 ? 's' : ''}`;
+
+            if (selectedFiles.length > 15) {
+                const totalBytes = selectedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+                const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+
+                const summary = document.createElement('div');
+                summary.style.cssText = 'padding: 8px 10px; font-size: 0.82rem; font-weight: 700; color: #4f46e5; background: rgba(99, 102, 241, 0.08); border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;';
+                summary.innerHTML = `<span>📁 ${selectedFiles.length} files selected</span><span>~${totalMB} MB</span>`;
+                fileList.appendChild(summary);
+
+                selectedFiles.slice(0, 5).forEach(file => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'padding: 6px 10px; border-bottom: 1px solid var(--border-light); font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center;';
+                    item.innerHTML = `<span style="display: flex; align-items: center; gap: 6px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 220px;"><span style="color: var(--accent-indigo);">📄</span> ${file.name}</span> <span style="color: var(--text-muted)">${(file.size / 1024 / 1024).toFixed(2)} MB</span>`;
+                    fileList.appendChild(item);
+                });
+
+                const moreBadge = document.createElement('div');
+                moreBadge.style.cssText = 'padding: 6px 10px; font-size: 0.74rem; color: var(--text-muted); font-style: italic; text-align: center;';
+                moreBadge.innerText = `+ ${selectedFiles.length - 5} more files`;
+                fileList.appendChild(moreBadge);
+            } else {
+                selectedFiles.forEach(file => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'padding: 8px 10px; border-bottom: 1px solid var(--border-light); font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center;';
+                    item.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><span style="color: var(--accent-indigo);">📄</span> ${file.name}</span> <span style="color: var(--text-muted)">${(file.size / 1024 / 1024).toFixed(2)} MB</span>`;
+                    fileList.appendChild(item);
+                });
+            }
         } else {
             uploadBtn.style.display = 'none';
         }
