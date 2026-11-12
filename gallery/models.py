@@ -284,6 +284,19 @@ class GuestLead(models.Model):
             return path
         return None
 
+    @property
+    def matched_photos_count(self):
+        if hasattr(self, '_matched_photos_count') and self._matched_photos_count is not None:
+            return self._matched_photos_count
+        pl = self.personal_link
+        if pl:
+            return pl.images.count()
+        return 0
+
+    @matched_photos_count.setter
+    def matched_photos_count(self, value):
+        self._matched_photos_count = value
+
     def __str__(self):
         return f"{self.name} - {self.event.name}"
 

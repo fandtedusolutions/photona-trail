@@ -225,7 +225,7 @@ def _get_super_admin_context(request):
         except Exception:
             pass
     
-    leads = GuestLead.objects.all().select_related('event', 'event__owner').prefetch_related('personal_links').order_by('-created_at')
+    leads = GuestLead.objects.all().select_related('event', 'event__owner').prefetch_related('personal_links__images').order_by('-created_at')
     
     search_q = request.GET.get('search_q')
     organizer_id = request.GET.get('organizer_id')
@@ -268,8 +268,10 @@ def _get_super_admin_context(request):
                 )
             except Exception:
                 lead.personal_gallery_url = reverse('gallery:personal_gallery', args=[pl.token])
+            lead.matched_photos_count = len(pl.images.all())
         else:
             lead.personal_gallery_url = None
+            lead.matched_photos_count = 0
     
     return {
         'admins': admins,

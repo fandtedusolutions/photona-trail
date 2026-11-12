@@ -4,6 +4,56 @@
 {% block title %}My Photos in {{ event.name }} - Photona{% endblock %}
 
 {% block content %}
+<!-- ═══ FULL-PAGE SMOOTH LOADING OVERLAY ═══ -->
+<div id="personalGalleryLoader" style="position: fixed; inset: 0; background: #ffffff; z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 2rem; transition: opacity 0.4s ease, visibility 0.4s ease;">
+    <div style="position: relative; width: 88px; height: 88px; display: flex; align-items: center; justify-content: center;">
+        <div style="position: absolute; inset: 0; border: 3.5px solid rgba(99, 102, 241, 0.15); border-top-color: #6366f1; border-radius: 50%; animation: pgLoaderSpin 0.9s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;"></div>
+        <div style="position: absolute; inset: 10px; border: 3px solid rgba(168, 85, 247, 0.15); border-bottom-color: #a855f7; border-radius: 50%; animation: pgLoaderSpinRev 1.3s linear infinite;"></div>
+        <span style="font-size: 2.2rem; animation: pgPulseIcon 1.6s ease-in-out infinite;">📸</span>
+    </div>
+    
+    <div style="text-align: center; max-width: 320px;">
+        <div style="font-size: 1.2rem; font-weight: 850; color: #1e1b4b; margin-bottom: 6px; letter-spacing: -0.01em;">
+            Loading Your Photos...
+        </div>
+        <div style="font-size: 0.88rem; color: #64748b; line-height: 1.45;">
+            Preparing personal gallery for <strong>{{ event.name }}</strong>
+        </div>
+    </div>
+
+    <div id="loaderSlowNotice" style="display: none; text-align: center; max-width: 310px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 10px 16px; font-size: 0.8rem; color: #b45309; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);">
+        <div>⏳ Slow connection detected. Photos are still loading, please hold on...</div>
+        <button type="button" onclick="window.location.reload()" style="margin-top: 8px; background: #f59e0b; color: white; border: none; padding: 5px 14px; border-radius: 8px; font-size: 0.76rem; font-weight: 750; cursor: pointer;">
+            🔄 Retry Page
+        </button>
+    </div>
+</div>
+
+<style>
+    @keyframes pgLoaderSpin { to { transform: rotate(360deg); } }
+    @keyframes pgLoaderSpinRev { to { transform: rotate(-360deg); } }
+    @keyframes pgPulseIcon {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.15); opacity: 1; }
+    }
+    @keyframes pgThumbShimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+    .rich-thumb-wrap {
+        background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%) !important;
+        background-size: 200% 100% !important;
+        animation: pgThumbShimmer 1.8s ease-in-out infinite;
+    }
+    .rich-thumb {
+        opacity: 0;
+        transition: opacity 0.35s ease, transform 0.4s ease !important;
+    }
+    .rich-thumb.loaded {
+        opacity: 1 !important;
+    }
+</style>
+
 <div style="max-width: 1200px; margin: 0 auto 3rem auto;">
     
     <!-- ═══ HERO BANNER ═══ -->
@@ -283,7 +333,7 @@
                     <div class="rich-gallery-item" style="border-radius: 18px; overflow: hidden; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06); transition: transform 0.25s ease, box-shadow 0.25s ease;">
                         <div class="rich-thumb-wrap" style="position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: #0f172a;">
                             <a href="{% url 'gallery:secure_image' res.image.get_secure_processed_token %}" onclick="openSearchLightbox({{ forloop.counter0 }}); return false;" style="display: block; width: 100%; height: 100%; cursor: pointer;" title="View photo">
-                                <img class="rich-thumb" src="{% url 'gallery:secure_image' res.image.get_secure_processed_thumbnail_token %}" alt="{{ res.image.filename }}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+                                <img class="rich-thumb" src="{% url 'gallery:secure_image' res.image.get_secure_processed_thumbnail_token %}" alt="{{ res.image.filename }}" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.classList.add('loaded')" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
                             </a>
 
                             {% with wm_event=res.image.event|default:event %}
@@ -512,6 +562,37 @@
         else if (e.key === 'ArrowLeft') navigateSearchLightbox(-1);
         else if (e.key === 'ArrowRight') navigateSearchLightbox(1);
     });
+
+    // ── Preloader dismiss logic ──
+    function dismissGalleryLoader() {
+        const loader = document.getElementById('personalGalleryLoader');
+        if (loader && loader.style.visibility !== 'hidden') {
+            loader.style.opacity = '0';
+            loader.style.visibility = 'hidden';
+            setTimeout(() => {
+                if (loader.parentNode) loader.parentNode.removeChild(loader);
+            }, 450);
+        }
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(dismissGalleryLoader, 300);
+    } else {
+        window.addEventListener('DOMContentLoaded', () => setTimeout(dismissGalleryLoader, 300));
+        window.addEventListener('load', () => setTimeout(dismissGalleryLoader, 100));
+    }
+
+    // Hard fallback: never leave loader stuck
+    setTimeout(dismissGalleryLoader, 7000);
+
+    // Show slow network notice if still loading after 3.5 seconds
+    setTimeout(() => {
+        const notice = document.getElementById('loaderSlowNotice');
+        const loader = document.getElementById('personalGalleryLoader');
+        if (loader && loader.style.visibility !== 'hidden' && notice) {
+            notice.style.display = 'block';
+        }
+    }, 3500);
 </script>
 {% endblock %}
 
