@@ -1127,7 +1127,7 @@ def photos_api(request):
     
     for img in page:
         file_token = img.get_secure_file_token()
-        thumb_token = img.get_secure_thumbnail_token() if img.thumbnail else file_token
+        thumb_token = img.get_secure_thumbnail_token()
         data.append({
             'id': img.id,
             'filename': img.filename,
@@ -1922,17 +1922,22 @@ def secure_image_serve(request, token):
             from django.core.files.base import ContentFile
             with img.file.open('rb') as src_file:
                 with Image.open(src_file) as pil_img:
+                    try:
+                        pil_img.draft('RGB', (1200, 1200))
+                    except Exception:
+                        pass
                     pil_img = ImageOps.exif_transpose(pil_img)
-                    pil_img.thumbnail((600, 600), Image.Resampling.LANCZOS)
-                    if pil_img.mode in ('RGBA', 'P'):
+                    pil_img.thumbnail((600, 600), Image.Resampling.BILINEAR)
+                    if pil_img.mode not in ('RGB', 'L'):
                         pil_img = pil_img.convert('RGB')
                     buf = BytesIO()
-                    pil_img.save(buf, format='JPEG', quality=82)
+                    pil_img.save(buf, format='WEBP', quality=80)
                     buf.seek(0)
-                    thumb_name = os.path.splitext(img.filename)[0] + "_thumb.jpg"
+                    thumb_name = os.path.splitext(img.filename)[0] + "_thumb.webp"
                     img.thumbnail.save(thumb_name, ContentFile(buf.read()), save=True)
                     target_field = img.thumbnail
         except Exception as e:
+            print(f"[Thumbnail] On-demand fallback failed for img {img.id}: {e}")
             target_field = img.file
 
     if not target_field or not target_field.name:
@@ -2928,7 +2933,7 @@ def public_photos_api(request):
         for img in page_obj.object_list:
             file_token = img.get_secure_file_token()
             processed_token = img.get_secure_processed_token()
-            thumb_token = img.get_secure_thumbnail_token() if img.thumbnail else file_token
+            thumb_token = img.get_secure_thumbnail_token()
             data.append({
                 'id': img.id,
                 'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[thumb_token])),

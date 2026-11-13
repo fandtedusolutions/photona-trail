@@ -203,8 +203,6 @@ class GalleryImage(models.Model):
 
     def get_secure_thumbnail_token(self):
         from django.core.signing import Signer
-        if not self.thumbnail:
-            return self.get_secure_file_token()
         return Signer().sign(f"{self.id}:thumbnail")
 
     def get_secure_processed_token(self):
