@@ -5,6 +5,96 @@
 
 {% block content %}
 <style>
+    /* Super Admin Framework */
+    :root {
+        --vz-bg: #f3f3f9;
+        --vz-card-bg: #ffffff;
+        --vz-text-main: #495057;
+        --vz-text-muted: #878a99;
+        --vz-text-dark: #212529;
+        --vz-primary: #405189;
+        --vz-border: #e9ebec;
+    }
+    .app-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+    .admin-shell { display: flex; min-height: 100vh; }
+    .admin-sidebar {
+        width: 260px;
+        background: var(--vz-card-bg, #ffffff);
+        border-right: 1px solid var(--vz-border, #e9ebec);
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1000;
+        overflow-y: auto;
+    }
+    .sidebar-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 70px;
+        padding: 0 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .sidebar-brand-text {
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--vz-text-dark, #212529);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+    .sidebar-section-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--vz-text-muted, #878a99);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0 1.5rem;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .sidebar-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.65rem 1.5rem;
+        font-size: 0.9rem;
+        color: var(--vz-text-main, #495057);
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .sidebar-nav-item:hover, .sidebar-nav-item.active {
+        color: var(--vz-primary, #405189);
+        font-weight: 600;
+        background: rgba(64, 81, 137, 0.05);
+    }
+    .sidebar-nav-icon {
+        width: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        opacity: 0.7;
+    }
+    .sidebar-nav-item.active .sidebar-nav-icon {
+        opacity: 1;
+    }
+    .admin-main-wrapper {
+        margin-left: 260px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        background: var(--vz-bg, #f3f3f9);
+    }
+    @media (max-width: 991px) {
+        .admin-sidebar { display: none; }
+        .admin-main-wrapper { margin-left: 0; }
+    }
+
     .analytics-kpi-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -114,7 +204,13 @@
     }
 </style>
 
-<div style="max-width: 1350px; margin: 0 auto; padding: 1.5rem 1rem 4rem 1rem;">
+<div class="admin-shell">
+    <!-- ══ LEFT SIDEBAR ══ -->
+    {% include 'gallery/_super_admin_sidebar.html' %}
+
+    <!-- ══ RIGHT MAIN PANEL ══ -->
+    <div class="admin-main-wrapper">
+        <div style="max-width: 1400px; margin: 0; padding: 1.5rem 2rem 4rem 2rem;">
     <!-- ══ HEADER & CONTROLS ══ -->
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;">
         <div>
@@ -579,6 +675,9 @@
                 <div style="color: var(--text-muted); font-size: 0.78rem;">Location data will populate automatically as visitors browse.</div>
                 {% endfor %}
             </div>
+        </div>
+    </div>
+</div>
         </div>
     </div>
 </div>

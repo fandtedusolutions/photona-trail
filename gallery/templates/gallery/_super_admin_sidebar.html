@@ -1,0 +1,40 @@
+<aside class="admin-sidebar">
+    <div class="sidebar-brand">
+        <span class="sidebar-brand-text">PHOTONA</span>
+    </div>
+
+    <div class="sidebar-section-label">Menu</div>
+    
+    <div style="padding: 0 1rem; margin-bottom: 1rem;">
+        <div style="font-size: 0.85rem; color: var(--vz-text-muted, #878a99); font-weight: 600; padding: 0.5rem 1rem; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.05em;">
+            Dashboards
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+            <a href="{% url 'gallery:super_admin_dashboard' %}" class="sidebar-nav-item {% if active_tab == 'overview' %}active{% endif %}">
+                <span class="sidebar-nav-icon">📊</span> Overview
+            </a>
+            <a href="{% url 'gallery:super_admin_analytics' %}" class="sidebar-nav-item {% if active_tab == 'analytics' %}active{% endif %}">
+                <span class="sidebar-nav-icon">📈</span> Live Analytics
+            </a>
+            <a href="{% url 'gallery:super_admin_studio_admins' %}" class="sidebar-nav-item {% if active_tab == 'tenants' %}active{% endif %}">
+                <span class="sidebar-nav-icon">👥</span> Studio Admins
+            </a>
+            <a href="{% url 'gallery:super_admin_guest_leads' %}" class="sidebar-nav-item {% if active_tab == 'leads' %}active{% endif %}">
+                <span class="sidebar-nav-icon">🎯</span> Guest Leads
+            </a>
+            <a href="{% url 'gallery:super_admin_manage_plans' %}" class="sidebar-nav-item {% if active_tab == 'plans' %}active{% endif %}">
+                <span class="sidebar-nav-icon">💳</span> Manage Plans
+            </a>
+        </div>
+    </div>
+
+    <div class="sidebar-section-label">Pages</div>
+    <div style="padding: 0 1rem; display: flex; flex-direction: column; gap: 0.3rem;">
+        <a href="{% url 'gallery:dashboard' %}" class="sidebar-nav-item">
+            <span class="sidebar-nav-icon">👤</span> Authentication
+        </a>
+        <a href="/" class="sidebar-nav-item">
+            <span class="sidebar-nav-icon">📄</span> Pages
+        </a>
+    </div>
+</aside>
