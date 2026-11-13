@@ -3958,6 +3958,65 @@
 
         const csrfToken = document.querySelector('#uploadForm [name=csrfmiddlewaretoken]').value;
         const eventId = '{{ event.id }}';
+        const eventCompression = parseInt('{{ event.compression_percentage|default:"100" }}', 10);
+
+        // ⚡ Hardware-Accelerated Dynamic Client Pre-Compression
+        async function compressImageForUpload(file, compressionPercent) {
+            if (!file || !file.type || !file.type.startsWith('image/')) return file;
+            if (!compressionPercent || compressionPercent >= 100) return file;
+            if (file.size <= 1.5 * 1024 * 1024) return file; // Skip if already small
+
+            try {
+                const factor = Math.max(0.3, Math.min(1.0, compressionPercent / 100));
+                const maxDim = Math.max(1600, Math.round(2880 * factor));
+                const quality = Math.max(0.75, Math.min(0.92, 0.70 + (factor * 0.22)));
+
+                let imgBitmap;
+                try {
+                    imgBitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                } catch (e) {
+                    imgBitmap = await createImageBitmap(file);
+                }
+
+                let width = imgBitmap.width;
+                let height = imgBitmap.height;
+
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+
+                let blob;
+                if (typeof OffscreenCanvas !== 'undefined') {
+                    const offCanvas = new OffscreenCanvas(width, height);
+                    const ctx = offCanvas.getContext('2d');
+                    ctx.drawImage(imgBitmap, 0, 0, width, height);
+                    blob = await offCanvas.convertToBlob({ type: 'image/jpeg', quality: quality });
+                } else {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(imgBitmap, 0, 0, width, height);
+                    blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+                }
+
+                imgBitmap.close();
+
+                if (blob && blob.size < file.size) {
+                    return new File([blob], file.name, { type: 'image/jpeg', lastModified: file.lastModified });
+                }
+                return file;
+            } catch (err) {
+                console.warn("[Upload] Client pre-compression fallback to original file:", err);
+                return file;
+            }
+        }
 
         // Optimized Concurrency: 3 concurrent streams provides fast throughput while respecting browser & server limits
         const CONCURRENCY = 3;
@@ -4155,8 +4214,22 @@
                     }
                     successCount++;
                 } else {
+                    let uploadFile = file;
+                    if (eventCompression < 100 && file.type && file.type.startsWith('image/')) {
+                        if (statusBadge) {
+                            statusBadge.className = 'badge badge-purple';
+                            statusBadge.innerText = '⚡ Optimizing...';
+                        }
+                        uploadFile = await compressImageForUpload(file, eventCompression);
+                    }
+
+                    if (statusBadge) {
+                        statusBadge.className = 'badge badge-slate';
+                        statusBadge.innerText = 'Uploading...';
+                    }
+
                     const singleData = new FormData();
-                    singleData.append('photo', file);
+                    singleData.append('photo', uploadFile);
                     singleData.append('event_id', eventId);
                     singleData.append('csrfmiddlewaretoken', csrfToken);
 

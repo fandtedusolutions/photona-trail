@@ -29,10 +29,36 @@ def _ai_background_worker():
             image_id, event_id = item
             from .models import GalleryImage
             g_img = GalleryImage.objects.filter(id=image_id).first()
-            if g_img and g_img.total_faces == -1:
-                num_f = process_gallery_image(g_img)
-                g_img.total_faces = num_f
-                g_img.save(update_fields=['total_faces'])
+            if g_img:
+                if not g_img.thumbnail and g_img.file:
+                    try:
+                        from io import BytesIO
+                        from PIL import Image, ImageOps
+                        from django.core.files import File
+                        g_img.file.open('rb')
+                        with Image.open(g_img.file) as img:
+                            try:
+                                img.draft('RGB', (1200, 1200))
+                            except Exception:
+                                pass
+                            t_img = ImageOps.exif_transpose(img)
+                            if t_img.mode not in ('RGB', 'L'):
+                                t_img = t_img.convert('RGB')
+                            t_img.thumbnail((600, 600), Image.Resampling.BILINEAR)
+                            t_io = BytesIO()
+                            t_img.save(t_io, format='WEBP', quality=80)
+                            t_io.seek(0)
+                            t_name = os.path.splitext(g_img.filename)[0] + "_thumb.webp"
+                            g_img.thumbnail.save(t_name, File(t_io), save=False)
+                            g_img.save(update_fields=['thumbnail'])
+                        g_img.file.close()
+                    except Exception as te:
+                        print(f"[AI_WORKER] Background thumbnail error: {te}")
+
+                if g_img.total_faces == -1:
+                    num_f = process_gallery_image(g_img)
+                    g_img.total_faces = num_f
+                    g_img.save(update_fields=['total_faces'])
         except Exception as ex:
             print(f"[AI_WORKER] Error processing image {item}: {ex}")
         finally:

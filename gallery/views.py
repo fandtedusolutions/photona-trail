@@ -1269,97 +1269,21 @@ def upload_single_photo(request):
             profile.save()
 
         import os
-        import gc
-        from io import BytesIO
-        from PIL import Image, ImageOps
-        from django.core.files import File
-
         safe_filename = os.path.basename(file.name)
-        gallery_image = GalleryImage(filename=safe_filename, event=event)
+        gallery_image = GalleryImage(filename=safe_filename, event=event, total_faces=-1)
         
+        # Fast Stream Save directly to storage (S3 / disk) without synchronous image decoding
         file.seek(0)
-        
-        # High-Speed Memory-Efficient Single-Pass Image Processing
-        try:
-            compression_percentage = event.compression_percentage if event else 100
-
-            if not compression_percentage or compression_percentage >= 100:
-                # Fast path: original quality. Generate thumbnail via draft() to decode directly at low res (~4MB RAM vs 100MB+)
-                try:
-                    with Image.open(file) as img:
-                        try:
-                            img.draft('RGB', (1200, 1200))
-                        except Exception:
-                            pass
-                        thumb_img = ImageOps.exif_transpose(img)
-                        if thumb_img.mode in ('RGBA', 'P'):
-                            thumb_img = thumb_img.convert('RGB')
-                        thumb_img.thumbnail((600, 600), Image.Resampling.BILINEAR)
-                        thumb_io = BytesIO()
-                        thumb_img.save(thumb_io, format='WEBP', quality=80)
-                        thumb_io.seek(0)
-                        thumb_name = os.path.splitext(safe_filename)[0] + "_thumb.webp"
-                        gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
-                        del thumb_img
-                        del thumb_io
-                except Exception as te:
-                    print(f"[DEBUG] thumbnail generation fallback: {te}")
-
-                # Stream original file directly to storage without reading entire file into RAM
-                file.seek(0)
-                gallery_image.file.save(safe_filename, file, save=False)
-            else:
-                # Compression < 100%: downscale image and derive thumbnail from it
-                with Image.open(file) as img:
-                    img = ImageOps.exif_transpose(img)
-                    icc_profile = img.info.get('icc_profile')
-                    if img.mode in ('RGBA', 'P'):
-                        img = img.convert('RGB')
-
-                    scale_factor = float(compression_percentage) / 100.0
-                    new_width = max(1, int(img.width * scale_factor))
-                    new_height = max(1, int(img.height * scale_factor))
-                    if new_width < img.width and new_height < img.height:
-                        img = img.resize((new_width, new_height), Image.Resampling.BILINEAR)
-
-                    try:
-                        thumb_img = img.copy()
-                        thumb_img.thumbnail((600, 600), Image.Resampling.BILINEAR)
-                        thumb_io = BytesIO()
-                        thumb_img.save(thumb_io, format='WEBP', quality=80)
-                        thumb_io.seek(0)
-                        thumb_name = os.path.splitext(safe_filename)[0] + "_thumb.webp"
-                        gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
-                        del thumb_img
-                        del thumb_io
-                    except Exception as te:
-                        print(f"[DEBUG] thumbnail error: {te}")
-
-                    compressed_io = BytesIO()
-                    save_kwargs = {'format': 'JPEG', 'quality': 88}
-                    if icc_profile:
-                        save_kwargs['icc_profile'] = icc_profile
-
-                    img.save(compressed_io, **save_kwargs)
-                    compressed_io.seek(0)
-                    gallery_image.file.save(safe_filename, File(compressed_io), save=False)
-                    del compressed_io
-                    del img
-            gc.collect()
-        except Exception as e:
-            print(f"[DEBUG] single upload processing fallback: {e}")
-            file.seek(0)
-            gallery_image.file.save(safe_filename, file, save=False)
-            gc.collect()
-        gallery_image.total_faces = -1
+        gallery_image.file.save(safe_filename, file, save=False)
         gallery_image.save()
         
+        # Enqueue background thumbnail generation, InsightFace AI face detection, and auto-sync
         from .utils import enqueue_image_for_ai
         enqueue_image_for_ai(gallery_image.id, event.id)
         
         from django.urls import reverse
         file_token = gallery_image.get_secure_file_token()
-        thumb_token = gallery_image.get_secure_thumbnail_token() if gallery_image.thumbnail else file_token
+        thumb_token = gallery_image.get_secure_thumbnail_token()
         return JsonResponse({
             'success': True,
             'image': {

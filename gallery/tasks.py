@@ -98,6 +98,35 @@ def process_single_image_task(gallery_image_id, local_path=None):
     from .utils import process_gallery_image
     gallery_image = GalleryImage.objects.filter(id=gallery_image_id).first()
     if gallery_image:
+        # 1. Background Thumbnail Generation (if not already generated)
+        if not gallery_image.thumbnail and gallery_image.file:
+            try:
+                from io import BytesIO
+                from django.core.files import File
+                src_stream = None
+                if local_path and os.path.exists(local_path):
+                    src_stream = local_path
+                else:
+                    try:
+                        gallery_image.file.open('rb')
+                        src_stream = gallery_image.file
+                    except Exception:
+                        src_stream = None
+
+                if src_stream:
+                    thumb_io, ext = create_thumbnail(src_stream)
+                    if thumb_io:
+                        thumb_name = os.path.splitext(gallery_image.filename)[0] + "_thumb" + ext
+                        gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                        gallery_image.save(update_fields=['thumbnail'])
+                    if hasattr(src_stream, 'close') and src_stream is not local_path:
+                        try:
+                            src_stream.close()
+                        except Exception:
+                            pass
+            except Exception as te:
+                print(f"[Celery] Background thumbnail generation error: {te}")
+
         num_faces = process_gallery_image(gallery_image, local_path=local_path)
         gallery_image.total_faces = num_faces
         gallery_image.save(update_fields=['total_faces'])
