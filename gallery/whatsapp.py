@@ -67,6 +67,15 @@ def send_whatsapp_template_message(phone, name, link_url, template=None, languag
         logger.warning(f"[WhatsApp] Invalid or missing phone number: {phone}")
         return False, "Invalid phone number"
 
+    # Flag Variable Check: Enable real WhatsApp delivery vs Simulated dev mode
+    is_enabled = getattr(settings, 'ENABLE_WHATSAPP_LINK_SEND', False)
+    if not is_enabled:
+        logger.info(
+            f"[WhatsApp] [DEV SIMULATED] WhatsApp delivery is PAUSED (ENABLE_WHATSAPP_LINK_SEND=False). "
+            f"Would send template to '{formatted_phone}' ({name}): {link_url}"
+        )
+        return True, {"success": True, "simulated": True, "message": "WhatsApp delivery simulated (disabled in dev mode)."}
+
     api_url = getattr(settings, 'WAPP_API_URL', 'https://wapp.natdemy.com/api/v1/messages/template')
     api_key = getattr(settings, 'WAPP_API_KEY', 'nd_91e5ef319e5084ddbf6576e4549f6206dd250808d29c01d4')
     api_secret = getattr(settings, 'WAPP_API_SECRET', 'nds_93943acac9c5820fca7e7fe2f51387ca6adb0909162a43e3eaa5776c4bf13853')
@@ -122,6 +131,16 @@ def send_whatsapp_selfie_link_async(phone, name, link_url, template=None, langua
     """
     if not phone or not link_url:
         return False
+
+    # Skip external queuing and API calls in development mode
+    is_enabled = getattr(settings, 'ENABLE_WHATSAPP_LINK_SEND', False)
+    if not is_enabled:
+        formatted_phone = format_whatsapp_phone(phone) or phone
+        logger.info(
+            f"[WhatsApp] [DEV SIMULATED] WhatsApp delivery is PAUSED (ENABLE_WHATSAPP_LINK_SEND=False). "
+            f"Simulated personal gallery link dispatch for '{name}' to '{formatted_phone}': {link_url}"
+        )
+        return True
 
     try:
         from .tasks import send_whatsapp_template_task

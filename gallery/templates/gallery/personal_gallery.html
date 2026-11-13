@@ -4,12 +4,41 @@
 {% block title %}My Photos in {{ event.name }} - Photona{% endblock %}
 
 {% block content %}
+<script>
+    // Fail-safe global handlers for lightbox & loader
+    window.onSlbImgLoad = function() {
+        const spinner = document.getElementById('slbSpinner');
+        const img = document.getElementById('slbMainImg');
+        if (spinner) spinner.style.display = 'none';
+        if (img) img.style.opacity = '1';
+    };
+    window.onSlbImgError = function() {
+        const spinner = document.getElementById('slbSpinner');
+        if (spinner) spinner.style.display = 'none';
+    };
+    window.dismissGalleryLoader = function() {
+        const loader = document.getElementById('personalGalleryLoader');
+        if (loader && loader.style.visibility !== 'hidden') {
+            loader.style.opacity = '0';
+            loader.style.visibility = 'hidden';
+            setTimeout(() => {
+                if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+            }, 450);
+        }
+    };
+</script>
+
 <!-- ═══ FULL-PAGE SMOOTH LOADING OVERLAY ═══ -->
 <div id="personalGalleryLoader" style="position: fixed; inset: 0; background: #ffffff; z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 2rem; transition: opacity 0.4s ease, visibility 0.4s ease;">
-    <div style="position: relative; width: 88px; height: 88px; display: flex; align-items: center; justify-content: center;">
+    <div style="position: relative; width: 92px; height: 92px; display: flex; align-items: center; justify-content: center;">
         <div style="position: absolute; inset: 0; border: 3.5px solid rgba(99, 102, 241, 0.15); border-top-color: #6366f1; border-radius: 50%; animation: pgLoaderSpin 0.9s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;"></div>
         <div style="position: absolute; inset: 10px; border: 3px solid rgba(168, 85, 247, 0.15); border-bottom-color: #a855f7; border-radius: 50%; animation: pgLoaderSpinRev 1.3s linear infinite;"></div>
-        <span style="font-size: 2.2rem; animation: pgPulseIcon 1.6s ease-in-out infinite;">📸</span>
+        <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px -4px rgba(79, 70, 229, 0.45); animation: pgPulseIcon 1.6s ease-in-out infinite;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+        </div>
     </div>
     
     <div style="text-align: center; max-width: 320px;">
@@ -21,20 +50,32 @@
         </div>
     </div>
 
-    <div id="loaderSlowNotice" style="display: none; text-align: center; max-width: 310px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 10px 16px; font-size: 0.8rem; color: #b45309; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);">
-        <div>⏳ Slow connection detected. Photos are still loading, please hold on...</div>
-        <button type="button" onclick="window.location.reload()" style="margin-top: 8px; background: #f59e0b; color: white; border: none; padding: 5px 14px; border-radius: 8px; font-size: 0.76rem; font-weight: 750; cursor: pointer;">
-            🔄 Retry Page
+    <div id="loaderSlowNotice" style="display: none; text-align: center; max-width: 320px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 12px 16px; font-size: 0.8rem; color: #b45309; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>Photos are taking a moment to load...</span>
+        </div>
+        <button type="button" onclick="window.location.reload()" style="margin-top: 4px; background: #f59e0b; color: white; border: none; padding: 6px 16px; border-radius: 8px; font-size: 0.78rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            <span>Retry Page</span>
         </button>
     </div>
 </div>
 
 <style>
+    @keyframes autoDismissLoader {
+        0%, 80% { opacity: 1; visibility: visible; }
+        99% { opacity: 0; visibility: visible; }
+        100% { opacity: 0; visibility: hidden; pointer-events: none; display: none; }
+    }
+    #personalGalleryLoader {
+        animation: autoDismissLoader 0.4s ease 2.2s forwards;
+    }
     @keyframes pgLoaderSpin { to { transform: rotate(360deg); } }
     @keyframes pgLoaderSpinRev { to { transform: rotate(-360deg); } }
     @keyframes pgPulseIcon {
-        0%, 100% { transform: scale(1); opacity: 0.9; }
-        50% { transform: scale(1.15); opacity: 1; }
+        0%, 100% { transform: scale(1); opacity: 0.95; }
+        50% { transform: scale(1.1); opacity: 1; }
     }
     @keyframes pgThumbShimmer {
         0% { background-position: -200% 0; }
@@ -80,12 +121,14 @@
                             Personal Gallery
                         </span>
                         {% if expires_at %}
-                            <span style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: rgba(245, 158, 11, 0.12); padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.25);">
-                                ⏰ Valid until {{ expires_at|date:"M d, Y" }}
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: rgba(245, 158, 11, 0.12); padding: 4px 11px; border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.25); display: inline-flex; align-items: center; gap: 5px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                <span>Valid until {{ expires_at|date:"M d, Y" }}</span>
                             </span>
                         {% else %}
-                            <span style="font-size: 0.72rem; font-weight: 700; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.25);">
-                                ✨ Active
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 4px 11px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.25); display: inline-flex; align-items: center; gap: 6px;">
+                                <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                                <span>Active</span>
                             </span>
                         {% endif %}
                     </div>
@@ -108,31 +151,48 @@
             <!-- Action buttons -->
             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                 {% if results %}
-                    <a href="{% url 'gallery:download_personal_gallery_zip' token=personal_link.token %}" class="btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 24px; font-weight: 700; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); text-decoration: none;">
-                        📦 Download All (ZIP)
+                    <a href="{% url 'gallery:download_personal_gallery_zip' token=personal_link.token %}" class="btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px; border-radius: 24px; font-weight: 700; font-size: 0.88rem; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); text-decoration: none; transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>Download All (ZIP)</span>
                     </a>
                 {% endif %}
 
-                <button type="button" class="btn" onclick="copyPersonalLink('{{ personal_gallery_url }}')" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-light); display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 24px; font-weight: 600; cursor: pointer;">
-                    📋 <span id="copyBtnText">Copy Link</span>
+                <button type="button" class="btn" onclick="copyPersonalLink('{{ personal_gallery_url }}')" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1.5px solid var(--border-light); display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 24px; font-weight: 650; font-size: 0.88rem; cursor: pointer; transition: all 0.2s ease;">
+                    <span id="copyIconContainer" style="display: flex; align-items: center;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </span>
+                    <span id="copyBtnText">Copy Link</span>
                 </button>
 
-                <a href="https://api.whatsapp.com/send?text={{ whatsapp_share_text }}" target="_blank" class="btn" style="background: #25D366; color: white; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 24px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);">
-                    💬 WhatsApp
+                <a href="https://api.whatsapp.com/send?text={{ whatsapp_share_text }}" target="_blank" class="btn" style="background: #25D366; color: white; display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 24px; font-weight: 700; font-size: 0.88rem; text-decoration: none; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35); transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                    </svg>
+                    <span>WhatsApp</span>
                 </a>
 
-                {% if personal_link.selfie_image %}
-                    <button type="button" id="scanNewBtn" class="btn" onclick="scanForNewPhotos()" style="background: transparent; color: var(--accent-indigo); border: 1px solid rgba(99, 102, 241, 0.3); display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 24px; font-weight: 600; cursor: pointer;">
-                        🔄 Check New Photos
-                    </button>
-                {% endif %}
+                <button type="button" id="autoSyncBtn" onclick="autoSyncNow(true)" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1.5px solid rgba(16, 185, 129, 0.28); display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 24px; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;" title="Automatically synchronized with all event photos">
+                    <svg id="autoSyncSvg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-1.19"/>
+                    </svg>
+                    <span id="autoSyncText">Auto-Synced</span>
+                </button>
             </div>
         </div>
     </div>
 
     {% if newly_added_count > 0 %}
         <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border: 1.5px solid rgba(16, 185, 129, 0.3); border-radius: 14px; padding: 0.9rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; color: #065f46; font-size: 0.9rem; font-weight: 600; box-shadow: 0 2px 10px rgba(16, 185, 129, 0.1);">
-            <span style="font-size: 1.3rem;">🎉</span>
+            <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #10b981; color: white;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            </div>
             <div>
                 Great news! <strong>{{ newly_added_count }} new photo{{ newly_added_count|pluralize }}</strong> were automatically added to your gallery since your last visit.
             </div>
@@ -143,7 +203,10 @@
     <div class="card" style="padding: 1.5rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;">
             <h2 style="font-size: 1.15rem; font-weight: 750; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 8px;">
-                <span>🖼️</span> Matched Photos (<span id="photoHeaderCount">{{ total_results }}</span>)
+                <span style="display: flex; align-items: center; color: var(--accent-indigo);">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                </span>
+                <span>Matched Photos (<span id="photoHeaderCount">{{ total_results }}</span>)</span>
             </h2>
             <div style="font-size: 0.8rem; color: var(--text-muted);">
                 Click any photo to view in high resolution or download individually.
@@ -351,22 +414,28 @@
                                     {% if wm_event.watermark_type == 'image' and wm_event.watermark_image %}
                                         <img src="{{ wm_event.watermark_image.url }}" alt="Watermark" style="width: 70px; max-height: 40px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));">
                                     {% else %}
-                                        <div style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); border-radius: 6px; padding: 3px 8px; color: #ffffff; font-size: 11px; font-weight: 750; letter-spacing: 0.03em; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,0.8); display: flex; align-items: center; gap: 4px;">
-                                            <span>🛡️</span> <span>{{ wm_event.watermark_text|default:wm_event.name }}</span>
+                                        <div style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); border-radius: 6px; padding: 3px 8px; color: #ffffff; font-size: 11px; font-weight: 750; letter-spacing: 0.03em; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,0.8); display: flex; align-items: center; gap: 5px;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                            <span>{{ wm_event.watermark_text|default:wm_event.name }}</span>
                                         </div>
                                     {% endif %}
                                 </div>
                             {% endif %}
                             {% endwith %}
 
-                            <a href="{% url 'gallery:secure_image' res.image.get_secure_processed_token %}?download=1" download="{{ res.download_filename|default:res.image.filename }}" class="thumb-action-btn" title="Download Photo" style="position: absolute; bottom: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(15, 23, 42, 0.75); color: white; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 0.9rem; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(15, 23, 42, 0.75)'" onclick="event.stopPropagation();">⬇</a>
+                            <a href="{% url 'gallery:secure_image' res.image.get_secure_processed_token %}?download=1" download="{{ res.download_filename|default:res.image.filename }}" class="thumb-action-btn" title="Download Photo" style="position: absolute; bottom: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(15, 23, 42, 0.75); color: white; display: flex; align-items: center; justify-content: center; text-decoration: none; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(15, 23, 42, 0.75)'" onclick="if(typeof window.photonaTrackPhoto==='function') window.photonaTrackPhoto({{ res.image.id }}, 'download', 0); event.stopPropagation();">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            </a>
                         </div>
                         <div class="rich-gallery-info" style="padding: 0.85rem 1rem;">
                             <div class="rich-gallery-name" title="{{ res.image.filename }}" style="font-weight: 750; font-size: 0.85rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                 {{ res.image.filename }}
                             </div>
                             <div style="font-size: 0.75rem; color: #64748b; margin-top: 3px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>👤 {{ res.image.total_faces }} face{{ res.image.total_faces|pluralize }}</span>
+                                <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    <span>{{ res.image.total_faces }} face{{ res.image.total_faces|pluralize }}</span>
+                                </span>
                                 <span>{{ res.image.uploaded_at|date:"M d, H:i" }}</span>
                             </div>
                         </div>
@@ -384,7 +453,7 @@
                             <div class="search-lightbox-title" id="slbTitle">Photo</div>
                         </div>
                         <div class="search-lightbox-actions">
-                            <a id="slbDownloadBtn" href="#" class="slb-btn slb-btn-primary" download title="Download Photo">
+                            <a id="slbDownloadBtn" href="#" class="slb-btn slb-btn-primary" download title="Download Photo" onclick="onSlbDownloadClick()">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 <span>Download</span>
                             </a>
@@ -409,9 +478,12 @@
                 </div>
             </div>
         {% else %}
-            <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
-                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
-                <p style="font-size: 0.95rem;">No matching photos are currently in this personal gallery.</p>
+            <div style="text-align: center; padding: 4rem 1rem; color: var(--text-muted);">
+                <div style="display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: rgba(99, 102, 241, 0.08); color: var(--accent-indigo); margin: 0 auto 1rem auto;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </div>
+                <div style="font-size: 1.1rem; font-weight: 750; color: var(--text-primary); margin-bottom: 0.35rem;">No matched photos yet</div>
+                <p style="font-size: 0.88rem; margin: 0;">Photos will automatically appear here as they are indexed by the event organizer.</p>
             </div>
         {% endif %}
     </div>
@@ -422,29 +494,34 @@
     function copyPersonalLink(url) {
         navigator.clipboard.writeText(url).then(() => {
             const btnText = document.getElementById('copyBtnText');
+            const iconContainer = document.getElementById('copyIconContainer');
             if (btnText) {
-                const old = btnText.innerText;
-                btnText.innerText = "Copied! ✓";
-                setTimeout(() => { btnText.innerText = old; }, 2500);
+                btnText.innerText = "Copied!";
+                if (iconContainer) {
+                    iconContainer.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                }
+                setTimeout(() => {
+                    btnText.innerText = "Copy Link";
+                    if (iconContainer) {
+                        iconContainer.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                    }
+                }, 2200);
             }
             if (typeof showToast === 'function') {
                 showToast("Personal gallery link copied to clipboard!", "success");
-            } else {
-                alert("Personal gallery link copied to clipboard!");
             }
         }).catch(() => {
             prompt("Copy your gallery link:", url);
         });
     }
 
-    // Scan for new photos
-    function scanForNewPhotos() {
-        const btn = document.getElementById('scanNewBtn');
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '🔄 Scanning...';
-        }
-        
+    // Automatic live sync poller
+    function autoSyncNow(isManual = false) {
+        const svg = document.getElementById('autoSyncSvg');
+        const text = document.getElementById('autoSyncText');
+        if (svg) svg.style.animation = 'pgLoaderSpin 0.8s linear infinite';
+        if (text && isManual) text.innerText = 'Syncing...';
+
         fetch("{% url 'gallery:scan_new_personal_photos' token=personal_link.token %}", {
             method: 'POST',
             headers: {
@@ -454,39 +531,46 @@
         })
         .then(r => r.json())
         .then(d => {
-            if (d.success) {
-                if (d.new_count > 0) {
-                    alert(`Great news! ${d.message} Reloading gallery...`);
-                    window.location.reload();
-                } else {
-                    alert(d.message);
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.innerHTML = '🔄 Check New Photos';
+            if (svg) svg.style.animation = '';
+            if (d.success && d.new_count > 0) {
+                if (typeof showToast === 'function') {
+                    showToast(`${d.new_count} new photo(s) automatically added!`, 'success');
+                }
+                setTimeout(() => window.location.reload(), 600);
+            } else {
+                if (isManual) {
+                    if (typeof showToast === 'function') {
+                        showToast(d.message || "You have all available photos!", 'info');
                     }
                 }
-            } else {
-                alert(d.message || "Could not check for new photos.");
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = '🔄 Check New Photos';
-                }
+                if (text) text.innerText = 'Auto-Synced';
             }
         })
         .catch(err => {
-            console.error(err);
-            alert("Error scanning for new photos.");
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '🔄 Check New Photos';
-            }
+            if (svg) svg.style.animation = '';
+            if (text) text.innerText = 'Auto-Synced';
         });
     }
+
+    // Silent background sync: check after 8s, then every 30s for 4 cycles
+    let syncCycles = 0;
+    setTimeout(() => {
+        autoSyncNow(false);
+        const syncInterval = setInterval(() => {
+            syncCycles++;
+            if (syncCycles >= 4) {
+                clearInterval(syncInterval);
+                return;
+            }
+            autoSyncNow(false);
+        }, 30000);
+    }, 8000);
 
     // Lightbox items data
     const lightboxItems = [
         {% for res in results %}
         {
+            id: {{ res.image.id }},
             filename: "{{ res.image.filename|escapejs }}",
             fullUrl: "{% url 'gallery:secure_image' res.image.get_secure_processed_token %}",
             downloadUrl: "{% url 'gallery:secure_image' res.image.get_secure_processed_token %}?download=1",
@@ -496,6 +580,32 @@
     ];
 
     let slbIndex = 0;
+    let currentSlbPhotoId = null;
+    let currentSlbViewStart = null;
+    let slbDwellHeartbeat = null;
+
+    function trackCurrentPhotoDwell() {
+        if (currentSlbPhotoId && currentSlbViewStart) {
+            const elapsed = Math.max(1, Math.round((Date.now() - currentSlbViewStart) / 1000));
+            if (typeof window.photonaTrackPhoto === 'function') {
+                window.photonaTrackPhoto(currentSlbPhotoId, 'view', elapsed);
+            }
+        }
+        currentSlbPhotoId = null;
+        currentSlbViewStart = null;
+        if (slbDwellHeartbeat) {
+            clearInterval(slbDwellHeartbeat);
+            slbDwellHeartbeat = null;
+        }
+    }
+
+    function onSlbDownloadClick() {
+        const item = lightboxItems[slbIndex];
+        if (item && item.id && typeof window.photonaTrackPhoto === 'function') {
+            window.photonaTrackPhoto(item.id, 'download', 0);
+        }
+    }
+
     function openSearchLightbox(index) {
         if (!lightboxItems || lightboxItems.length === 0) return;
         slbIndex = Math.max(0, Math.min(index, lightboxItems.length - 1));
@@ -507,6 +617,7 @@
     }
 
     function closeSearchLightbox() {
+        trackCurrentPhotoDwell();
         const modal = document.getElementById('searchPhotoLightbox');
         if (modal) modal.style.display = 'none';
         document.body.style.overflow = '';
@@ -514,6 +625,7 @@
 
     function navigateSearchLightbox(dir) {
         if (!lightboxItems || lightboxItems.length === 0) return;
+        trackCurrentPhotoDwell();
         slbIndex = (slbIndex + dir + lightboxItems.length) % lightboxItems.length;
         renderSearchLightboxItem();
     }
@@ -521,6 +633,24 @@
     function renderSearchLightboxItem() {
         const item = lightboxItems[slbIndex];
         if (!item) return;
+
+        // Start dwell tracking and send lightbox zoom event
+        currentSlbPhotoId = item.id;
+        currentSlbViewStart = Date.now();
+        if (typeof window.photonaTrackPhoto === 'function') {
+            window.photonaTrackPhoto(item.id, 'lightbox', 0);
+        }
+
+        // Heartbeat to accumulate viewing time every 10 seconds
+        if (slbDwellHeartbeat) clearInterval(slbDwellHeartbeat);
+        slbDwellHeartbeat = setInterval(() => {
+            if (currentSlbPhotoId && currentSlbViewStart) {
+                const elapsed = Math.round((Date.now() - currentSlbViewStart) / 1000);
+                if (typeof window.photonaTrackPhoto === 'function') {
+                    window.photonaTrackPhoto(currentSlbPhotoId, 'view', elapsed);
+                }
+            }
+        }, 10000);
 
         const img = document.getElementById('slbMainImg');
         const spinner = document.getElementById('slbSpinner');

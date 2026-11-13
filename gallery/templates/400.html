@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>400 - Bad Request | Photona Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #080b11;
+            background-image: 
+                radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(212, 175, 55, 0.05) 0%, transparent 40%);
+            color: #e2e8f0;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 1.25rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .ambient-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            margin-bottom: 2rem;
+            z-index: 10;
+        }
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #d4af37, #aa7c11);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.35);
+        }
+        .brand-icon::after {
+            content: '';
+            width: 18px;
+            height: 18px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            box-sizing: border-box;
+        }
+        .brand-icon-dot {
+            width: 5px;
+            height: 5px;
+            background: #ffffff;
+            border-radius: 50%;
+            position: absolute;
+            top: 9px;
+            right: 9px;
+        }
+        .brand-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.9rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            background: linear-gradient(135deg, #f3e5ab 0%, #d4af37 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .error-card {
+            background: rgba(14, 19, 31, 0.75);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 24px;
+            padding: 3.5rem 2.5rem;
+            max-width: 560px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 
+                0 25px 60px -15px rgba(0, 0, 0, 0.7),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            position: relative;
+            z-index: 10;
+        }
+
+        .watermark-code {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -55%);
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 14rem;
+            font-weight: 700;
+            color: rgba(99, 102, 241, 0.035);
+            letter-spacing: 0.08em;
+            user-select: none;
+            pointer-events: none;
+            line-height: 1;
+            z-index: -1;
+        }
+
+        .icon-badge {
+            width: 86px;
+            height: 86px;
+            margin: 0 auto 1.75rem auto;
+            border-radius: 50%;
+            background: linear-gradient(145deg, rgba(99, 102, 241, 0.15), rgba(212, 175, 55, 0.05));
+            border: 1.5px solid rgba(99, 102, 241, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 30px rgba(99, 102, 241, 0.18);
+            color: #a5b4fc;
+        }
+        .icon-badge svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #c7d2fe;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            padding: 5px 14px;
+            border-radius: 50px;
+            margin-bottom: 1.25rem;
+        }
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: #6366f1;
+            border-radius: 50%;
+        }
+
+        .error-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.75rem;
+            line-height: 1.2;
+        }
+
+        .error-description {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            line-height: 1.65;
+            margin-bottom: 2.25rem;
+            font-weight: 400;
+        }
+
+        .actions-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn-gold {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #f3e5ab 0%, #d4af37 100%);
+            color: #0b0f19;
+            font-size: 0.92rem;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 12px 26px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 18px rgba(212, 175, 55, 0.3);
+        }
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.45);
+            filter: brightness(1.05);
+        }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            color: #cbd5e1;
+            font-size: 0.92rem;
+            font-weight: 500;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .footer-note {
+            font-size: 0.78rem;
+            color: #64748b;
+            text-align: center;
+            margin-top: 2rem;
+            z-index: 10;
+        }
+
+        @media (max-width: 580px) {
+            .error-card {
+                padding: 2.5rem 1.5rem;
+            }
+            .error-title {
+                font-size: 1.85rem;
+            }
+            .watermark-code {
+                font-size: 10rem;
+            }
+            .actions-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            .btn-gold, .btn-ghost {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-glow"></div>
+
+    <a href="/" class="brand-header">
+        <div class="brand-icon">
+            <div class="brand-icon-dot"></div>
+        </div>
+        <span class="brand-text">Photona</span>
+    </a>
+
+    <div class="error-card">
+        <div class="watermark-code">400</div>
+
+        <div class="icon-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        </div>
+
+        <div class="status-pill">
+            <span class="status-dot"></span>
+            Error 400 • Bad Request
+        </div>
+
+        <h1 class="error-title">Invalid Request</h1>
+
+        <p class="error-description">
+            The server could not understand or process your request. This may be caused by malformed input, missing parameters, or an invalid session state.
+        </p>
+
+        <div class="actions-group">
+            <a href="/" class="btn-gold">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                Return Home
+            </a>
+            <button onclick="window.history.length > 1 ? window.history.back() : window.location.href='/'" class="btn-ghost">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"></path></svg>
+                Go Back
+            </button>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        Photona Studio &copy; {% now "Y" %} &bull; Intelligent Event Photography
+    </div>
+
+</body>
+</html>

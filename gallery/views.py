@@ -21,8 +21,9 @@ import datetime
 
 from django.utils.text import slugify
 from config import VALID_IMAGE_EXTENSIONS
-from .models import GalleryImage, FaceEmbedding, Event, UserProfile, SubscriptionPlan, EventShareLink, GuestLead, PersonalGalleryLink
+from .models import GalleryImage, FaceEmbedding, Event, UserProfile, SubscriptionPlan, EventShareLink, GuestLead, PersonalGalleryLink, VisitorSession, PageViewEvent, PhotoInteraction
 from .utils import process_gallery_image, search_person_by_selfie, normalize_selfie_file
+from .analytics import format_duration_display
 from .tasks import process_image_upload_task, process_zip_upload_task, process_gdrive_import_task
 # -------------------------------------------------------------
 # Authentication Views
@@ -225,7 +226,7 @@ def _get_super_admin_context(request):
         except Exception:
             pass
     
-    leads = GuestLead.objects.all().select_related('event', 'event__owner').prefetch_related('personal_links__images').order_by('-created_at')
+    leads = GuestLead.objects.all().select_related('event', 'event__owner', 'personal_gallery_link').prefetch_related('personal_links__images', 'personal_gallery_link__images').order_by('-created_at')
     
     search_q = request.GET.get('search_q')
     organizer_id = request.GET.get('organizer_id')
@@ -258,9 +259,27 @@ def _get_super_admin_context(request):
     from django.urls import reverse
     leads_list = list(leads)
     for lead in leads_list:
-        pl = lead.personal_links.first()
+        pl = getattr(lead, 'personal_gallery_link', None) or lead.personal_links.first()
         if not pl:
             pl = lead.event.personal_gallery_links.filter(searcher_name=lead.name).first()
+        if not pl and lead.phone:
+            sibling = GuestLead.objects.filter(event=lead.event, phone=lead.phone).exclude(id=lead.id).filter(personal_gallery_link__isnull=False).first()
+            if sibling and sibling.personal_gallery_link:
+                pl = sibling.personal_gallery_link
+                try:
+                    lead.personal_gallery_link = pl
+                    lead.save(update_fields=['personal_gallery_link'])
+                except Exception:
+                    pass
+            else:
+                sibling_pl = PersonalGalleryLink.objects.filter(event=lead.event, guest_lead__phone=lead.phone).first()
+                if sibling_pl:
+                    pl = sibling_pl
+                    try:
+                        lead.personal_gallery_link = pl
+                        lead.save(update_fields=['personal_gallery_link'])
+                    except Exception:
+                        pass
         if pl:
             try:
                 lead.personal_gallery_url = request.build_absolute_uri(
@@ -269,9 +288,13 @@ def _get_super_admin_context(request):
             except Exception:
                 lead.personal_gallery_url = reverse('gallery:personal_gallery', args=[pl.token])
             lead.matched_photos_count = len(pl.images.all())
+            lead.personal_link_obj = pl
+            lead.is_link_active = getattr(pl, 'is_active', True)
         else:
             lead.personal_gallery_url = None
             lead.matched_photos_count = 0
+            lead.personal_link_obj = None
+            lead.is_link_active = False
     
     return {
         'admins': admins,
@@ -554,8 +577,42 @@ def delete_lead(request, lead_id):
     lead = GuestLead.objects.filter(id=lead_id).first()
     if not lead:
         return JsonResponse({'success': False, 'message': 'Lead not found.'})
+    # Remove associated personal gallery links so this person immediately loses all gallery access
+    PersonalGalleryLink.objects.filter(guest_lead=lead).delete()
+    if lead.personal_gallery_link:
+        pl = lead.personal_gallery_link
+        if not GuestLead.objects.filter(personal_gallery_link=pl).exclude(id=lead.id).exists():
+            pl.delete()
+    PersonalGalleryLink.objects.filter(event=lead.event, searcher_name=lead.name).delete()
     lead.delete()
-    return JsonResponse({'success': True, 'message': 'Lead deleted successfully.'})
+    return JsonResponse({'success': True, 'message': 'Lead and associated gallery link deleted successfully.'})
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def toggle_lead_link_status(request, lead_id):
+    lead = GuestLead.objects.filter(id=lead_id).first()
+    if not lead:
+        return JsonResponse({'success': False, 'message': 'Lead not found.'})
+
+    is_active_str = request.POST.get('is_active')
+    new_is_active = is_active_str.lower() in ['true', '1', 'yes'] if is_active_str is not None else True
+
+    links = PersonalGalleryLink.objects.filter(guest_lead=lead)
+    if not links.exists() and lead.personal_gallery_link:
+        links = PersonalGalleryLink.objects.filter(id=lead.personal_gallery_link_id)
+    if not links.exists():
+        links = PersonalGalleryLink.objects.filter(event=lead.event, searcher_name=lead.name)
+
+    if not links.exists():
+        return JsonResponse({'success': False, 'message': 'No personal gallery link found for this lead.'})
+
+    links.update(is_active=new_is_active)
+    status_text = "activated" if new_is_active else "deactivated"
+    return JsonResponse({
+        'success': True,
+        'is_active': new_is_active,
+        'message': f"Personal gallery link for {lead.name} has been {status_text}."
+    })
 
 
 # -------------------------------------------------------------
@@ -1420,6 +1477,24 @@ def search_person(request):
                 phone = request.POST.get('phone') or request.POST.get('guest_phone')
                 if phone:
                     phone_entered = phone
+                    from .models import GuestLead
+                    user_lead = GuestLead.objects.filter(event=selected_event, phone=phone).first()
+                    if not user_lead:
+                        user_lead = GuestLead.objects.create(
+                            event=selected_event,
+                            name=request.user.get_full_name() or request.user.username,
+                            phone=phone,
+                            age=25
+                        )
+                    if user_lead and personal_link:
+                        user_lead.personal_gallery_link = personal_link
+                        try:
+                            user_lead.save(update_fields=['personal_gallery_link'])
+                        except Exception:
+                            pass
+                    telemetry_session_id = request.POST.get('telemetry_session_id')
+                    if telemetry_session_id:
+                        VisitorSession.objects.filter(session_id=telemetry_session_id).update(guest_lead=user_lead)
                     from .whatsapp import send_whatsapp_selfie_link_async
                     send_whatsapp_selfie_link_async(
                         phone=phone,
@@ -1443,6 +1518,7 @@ def search_person(request):
         'search_image_b64': search_image_b64,
         'whatsapp_share_text': whatsapp_share_text,
         'whatsapp_sent': whatsapp_sent,
+        'whatsapp_enabled': getattr(settings, 'ENABLE_WHATSAPP_LINK_SEND', False),
         'phone': phone_entered,
     })
 
@@ -1827,6 +1903,20 @@ def secure_image_serve(request, token):
             name_only, ext = os.path.splitext(img.filename)
             evt_tag = slugify(img.event.name) if (img.event and img.event.name) else (img.event.slug if img.event else 'photo')
             download_name = f"{name_only}_{evt_tag}{ext}"
+
+            # Server-side fallback: record photo download interaction
+            try:
+                sid = request.COOKIES.get('photona_sid')
+                sess = VisitorSession.objects.filter(session_id=sid).first() if sid else None
+                PhotoInteraction.objects.create(
+                    image=img,
+                    event=img.event,
+                    session=sess,
+                    action='download',
+                    dwell_seconds=1
+                )
+            except Exception:
+                pass
 
         cache_control = 'public, max-age=2592000, immutable'
 
@@ -2328,6 +2418,18 @@ def download_images_zip(request):
                         file_added = True
                         if img.event:
                             added_events.add(img.event)
+                        try:
+                            sid = request.COOKIES.get('photona_sid')
+                            sess = VisitorSession.objects.filter(session_id=sid).first() if sid else None
+                            PhotoInteraction.objects.create(
+                                image=img,
+                                event=img.event,
+                                session=sess,
+                                action='download',
+                                dwell_seconds=1
+                            )
+                        except Exception:
+                            pass
             except GalleryImage.DoesNotExist:
                 continue
 
@@ -2374,6 +2476,9 @@ def manage_shares(request, slug):
             'label': lnk.label,
             'token': str(lnk.token),
             'is_active': lnk.is_active,
+            'search_only': lnk.search_only,
+            'allow_upload': getattr(lnk, 'allow_upload', True),
+            'allow_back_camera': getattr(lnk, 'allow_back_camera', True),
             'has_password': bool(lnk.password),
             'created_at': lnk.created_at.strftime('%b %d, %Y'),
             'expires_at': lnk.expires_at.strftime('%Y-%m-%dT%H:%M') if lnk.expires_at else '',
@@ -2408,6 +2513,8 @@ def create_share(request, slug):
             return JsonResponse({'success': False, 'message': 'Invalid expiry date format.'})
 
     search_only = request.POST.get('search_only') == 'true'
+    allow_upload = request.POST.get('allow_upload', 'true') != 'false'
+    allow_back_camera = request.POST.get('allow_back_camera', 'true') != 'false'
 
     link = EventShareLink.objects.create(
         event=event,
@@ -2416,6 +2523,8 @@ def create_share(request, slug):
         password=hashed,
         expires_at=expires_dt,
         search_only=search_only,
+        allow_upload=allow_upload,
+        allow_back_camera=allow_back_camera,
     )
     return JsonResponse({
         'success': True,
@@ -2426,6 +2535,8 @@ def create_share(request, slug):
         'person_label': link.person_label or '',
         'is_active': link.is_active,
         'search_only': link.search_only,
+        'allow_upload': link.allow_upload,
+        'allow_back_camera': link.allow_back_camera,
         'has_password': bool(link.password),
         'created_at': link.created_at.strftime('%b %d, %Y'),
         'expires_at': link.expires_at.strftime('%Y-%m-%dT%H:%M') if link.expires_at else '',
@@ -2458,6 +2569,14 @@ def update_share(request, slug, share_id):
     search_only = request.POST.get('search_only', None)
     if search_only is not None:
         link.search_only = (search_only == 'true')
+
+    allow_upload = request.POST.get('allow_upload', None)
+    if allow_upload is not None:
+        link.allow_upload = (allow_upload == 'true')
+
+    allow_back_camera = request.POST.get('allow_back_camera', None)
+    if allow_back_camera is not None:
+        link.allow_back_camera = (allow_back_camera == 'true')
 
     raw_password = request.POST.get('password', None)
     if raw_password is not None:
@@ -2574,9 +2693,18 @@ def public_search_person(request, token):
     whatsapp_sent = False
     guest_phone_entered = None
 
-    if request.method == 'POST' and request.FILES.get('selfie'):
-        selfie = request.FILES['selfie']
-        
+    if request.method == 'POST':
+        selfie = request.FILES.get('selfie')
+        if not selfie or getattr(selfie, 'size', 0) == 0:
+            # Browser reload/refresh on POST page without re-transmitting file bytes
+            cached_token = request.session.get(f'last_personal_token_{link.token}')
+            if cached_token:
+                pl = PersonalGalleryLink.objects.filter(token=cached_token).first()
+                if pl and pl.is_accessible:
+                    return redirect('gallery:personal_gallery', token=pl.token)
+            # If no cached gallery, cleanly reload the search form
+            return redirect('gallery:public_search', token=link.token)
+
         # 1. Save the Guest Lead
         name = request.POST.get('guest_name')
         age = request.POST.get('guest_age')
@@ -2596,6 +2724,11 @@ def public_search_person(request, token):
             # Reset file pointer after saving to DB so the chunk reading below works correctly
             selfie.seek(0)
 
+            # Immediately link the visitor's telemetry session to this new GuestLead
+            telemetry_session_id = request.POST.get('telemetry_session_id')
+            if telemetry_session_id:
+                VisitorSession.objects.filter(session_id=telemetry_session_id).update(guest_lead=created_lead)
+
         # 2. Process FAISS Search via temp file
         import time
         import base64
@@ -2609,6 +2742,9 @@ def public_search_person(request, token):
                 f.write(chunk)
 
         try:
+            if not os.path.exists(full_temp_path) or os.path.getsize(full_temp_path) == 0:
+                raise ValueError("No selfie image data was received. Please select and upload your selfie photo.")
+
             normalize_selfie_file(full_temp_path)
             with open(full_temp_path, 'rb') as img_f:
                 search_image_b64 = base64.b64encode(img_f.read()).decode('utf-8')
@@ -2645,6 +2781,14 @@ def public_search_person(request, token):
                     guest_lead=created_lead,
                     expires_at=effective_expiry
                 )
+                if created_lead and personal_link:
+                    created_lead.personal_gallery_link = personal_link
+                    try:
+                        created_lead.save(update_fields=['personal_gallery_link'])
+                    except Exception:
+                        pass
+                # Cache token in session so page refresh preserves personal gallery
+                request.session[f'last_personal_token_{link.token}'] = str(personal_link.token)
 
                 personal_gallery_url = request.build_absolute_uri(
                     reverse('gallery:personal_gallery', args=[personal_link.token])
@@ -2674,11 +2818,14 @@ def public_search_person(request, token):
         'selected_event': event,
         'event': event,
         'link': link,
+        'allow_upload': getattr(link, 'allow_upload', True),
+        'allow_back_camera': getattr(link, 'allow_back_camera', True),
         'search_image_b64': search_image_b64,
         'personal_link': personal_link,
         'personal_gallery_url': personal_gallery_url,
         'whatsapp_share_text': whatsapp_share_text,
         'whatsapp_sent': whatsapp_sent,
+        'whatsapp_enabled': getattr(settings, 'ENABLE_WHATSAPP_LINK_SEND', False),
         'guest_phone': guest_phone_entered,
     })
 
@@ -2802,7 +2949,7 @@ def download_personal_gallery_zip(request, token):
 
 @require_POST
 def scan_new_personal_photos(request, token):
-    """Re-scan the event for any newly uploaded photos matching this person's selfie."""
+    """Re-scan the event for any newly uploaded photos matching this person's face (100% S3 and local safe)."""
     personal_link = get_object_or_404(
         PersonalGalleryLink.objects.select_related('event'),
         token=token
@@ -2810,33 +2957,15 @@ def scan_new_personal_photos(request, token):
     if not personal_link.is_accessible:
         return JsonResponse({'success': False, 'message': 'This personal gallery has expired.'}, status=403)
 
-    if not personal_link.selfie_image or not personal_link.selfie_image.name:
-        return JsonResponse({'success': False, 'message': 'No selfie on record to re-scan with.'})
-
     try:
-        selfie_path = personal_link.selfie_image.path
-        if not os.path.exists(selfie_path):
-            return JsonResponse({'success': False, 'message': 'Selfie file unavailable.'})
-
-        matches = search_person_by_selfie(selfie_path, event_id=personal_link.event_id)
-        existing_ids = set(personal_link.images.values_list('id', flat=True))
-
-        new_images = []
-        for m in matches:
-            img = m['image']
-            if img.id not in existing_ids:
-                new_images.append(img)
-                personal_link.match_scores[str(img.id)] = m['score']
-
-        if new_images:
-            personal_link.images.add(*new_images)
-            personal_link.save(update_fields=['match_scores'])
+        from .utils import sync_personal_gallery_matches
+        new_images = sync_personal_gallery_matches(personal_link)
 
         return JsonResponse({
             'success': True,
             'new_count': len(new_images),
             'total_count': personal_link.images.count(),
-            'message': f"Found {len(new_images)} new photo(s)!" if new_images else "No new photos found. You are all up to date!"
+            'message': f"Found {len(new_images)} new photo(s)!" if new_images else "You have all available photos."
         })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -3003,4 +3132,768 @@ def apply_preset_api(request):
     except Exception as ex:
         import traceback
         return JsonResponse({'success': False, 'error': str(ex), 'traceback': traceback.format_exc()}, status=500)
+
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+@require_POST
+def check_selfie_face(request):
+    """
+    Ultra-fast pre-flight face count check before photo upload or form submission.
+    Accepts image file or base64 data.
+    Returns:
+      valid: bool
+      face_count: int
+      error: optional str
+    """
+    import base64
+    import json
+    import cv2
+    import numpy as np
+    from .utils import detect_faces, _downscale_rgb
+
+    file_obj = request.FILES.get('image') or request.FILES.get('selfie')
+    raw_bytes = None
+
+    if file_obj:
+        raw_bytes = file_obj.read()
+    else:
+        b64_data = request.POST.get('image_b64') or request.POST.get('image_data') or request.POST.get('image')
+        if not b64_data and 'application/json' in request.content_type.lower():
+            try:
+                body_json = json.loads(request.body.decode('utf-8'))
+                b64_data = body_json.get('image_b64') or body_json.get('image_data') or body_json.get('image')
+            except Exception:
+                pass
+        if b64_data:
+            if ',' in b64_data:
+                b64_data = b64_data.split(',', 1)[1]
+            try:
+                raw_bytes = base64.b64decode(b64_data)
+            except Exception:
+                return JsonResponse({'valid': False, 'face_count': 0, 'error': 'Invalid image data.'}, status=400)
+
+    if not raw_bytes:
+        return JsonResponse({'valid': False, 'face_count': 0, 'error': 'No image provided.'}, status=400)
+
+    try:
+        arr = np.asarray(bytearray(raw_bytes), dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            return JsonResponse({'valid': False, 'face_count': 0, 'error': 'Could not decode image.'}, status=400)
+
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = _downscale_rgb(img, max_dim=640)
+        faces = detect_faces(img)
+        count = len(faces)
+
+        if count == 1:
+            return JsonResponse({
+                'valid': True,
+                'face_count': 1,
+                'message': '1 face verified successfully.'
+            })
+        elif count == 0:
+            return JsonResponse({
+                'valid': False,
+                'face_count': 0,
+                'error': 'No face detected in the photo. Please make sure your face is clearly visible and well-lit.'
+            })
+        else:
+            return JsonResponse({
+                'valid': False,
+                'face_count': count,
+                'error': f'Multiple faces detected ({count} faces found). Please upload or take a photo with only yourself.'
+            })
+    except Exception as e:
+        return JsonResponse({'valid': False, 'face_count': 0, 'error': f'Face validation failed: {str(e)}'}, status=500)
+
+
+# ═════════════════════════════════════════════════════════════════
+# 📊 PHOTONA REAL-TIME ANALYTICS API & DASHBOARD
+# ═════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+@require_POST
+def analytics_track_page(request):
+    """
+    Non-blocking endpoint to track pageviews, user-agent telemetry, and traffic acquisition.
+    Runs via navigator.sendBeacon or fetch().
+    """
+    import json
+    from .analytics import parse_user_agent, detect_traffic_source, get_client_ip, get_client_location
+
+    try:
+        data = {}
+        if request.content_type == 'application/json' and request.body:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                pass
+        if not data:
+            data = request.POST
+
+        session_id = data.get('session_id') or str(uuid.uuid4())
+        url_path = data.get('url_path', request.path)
+        page_type = data.get('page_type', 'other')
+        page_title = data.get('page_title', '')
+        event_slug = data.get('event_slug')
+        query_src = data.get('traffic_src')
+        lead_id = data.get('lead_id')
+
+        # Ignore staff/admin console views and non-guest internal paths
+        if (request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)) or \
+           url_path.startswith('/super-admin') or url_path.startswith('/admin') or url_path.startswith('/preview-error'):
+            return JsonResponse({'status': 'ignored', 'reason': 'admin_internal_path'})
+
+        # 1. Resolve Event if provided
+        event = None
+        if event_slug:
+            event = Event.objects.filter(slug=event_slug).first()
+
+        # 2. Extract telemetry
+        ua = request.META.get('HTTP_USER_AGENT', '')
+        device_type, os_name, browser_name = parse_user_agent(ua)
+        traffic_source = detect_traffic_source(request, query_src)
+        ip = get_client_ip(request)
+        city, country = get_client_location(request)
+
+        # 3. Get or create VisitorSession
+        session, created = VisitorSession.objects.get_or_create(
+            session_id=session_id,
+            defaults={
+                'ip_address': ip,
+                'country': country,
+                'city': city,
+                'device_type': device_type,
+                'os_name': os_name,
+                'browser_name': browser_name,
+                'traffic_source': traffic_source,
+            }
+        )
+        if not created:
+            session.last_seen = timezone.now()
+            if session.city == 'Unknown' and city != 'Unknown':
+                session.city = city
+                session.country = country
+            if session.traffic_source == 'Direct' and traffic_source != 'Direct':
+                session.traffic_source = traffic_source
+
+        if lead_id and not session.guest_lead_id:
+            session.guest_lead_id = lead_id
+
+        # Also auto-resolve guest lead if visiting personal gallery (/my-photos/<token>/)
+        if not session.guest_lead_id and '/my-photos/' in url_path:
+            import re
+            m = re.search(r'/my-photos/([0-9a-fA-F-]{36})', url_path)
+            if m:
+                token_str = m.group(1)
+                pl = PersonalGalleryLink.objects.filter(token=token_str).select_related('guest_lead').first()
+                if pl and pl.guest_lead:
+                    session.guest_lead = pl.guest_lead
+
+        session.save()
+
+        # 4. Record PageViewEvent
+        page_view = PageViewEvent.objects.create(
+            session=session,
+            event=event,
+            page_type=page_type,
+            url_path=url_path[:500],
+            page_title=page_title[:255],
+            duration_seconds=0
+        )
+
+        return JsonResponse({
+            'status': 'ok',
+            'view_id': page_view.id,
+            'session_id': session.session_id
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@csrf_exempt
+@require_POST
+def analytics_heartbeat(request):
+    """
+    Records dwell time and scroll depth periodically or on page exit (sendBeacon).
+    """
+    import json
+    try:
+        data = {}
+        if request.content_type == 'application/json' and request.body:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                pass
+        if not data:
+            data = request.POST
+
+        view_id = data.get('view_id')
+        session_id = data.get('session_id')
+        duration_inc = int(data.get('duration_seconds', 0) or 0)
+        scroll_depth = int(data.get('scroll_depth', 0) or 0)
+
+        if view_id:
+            pv = PageViewEvent.objects.filter(id=view_id).first()
+            if pv:
+                pv.duration_seconds = max(pv.duration_seconds, duration_inc)
+                if scroll_depth > pv.scroll_depth:
+                    pv.scroll_depth = min(scroll_depth, 100)
+                pv.save(update_fields=['duration_seconds', 'scroll_depth'])
+
+        if session_id:
+            session = VisitorSession.objects.filter(session_id=session_id).first()
+            if session:
+                session.last_seen = timezone.now()
+                session.total_time_seconds += duration_inc
+                session.save(update_fields=['last_seen', 'total_time_seconds'])
+
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@csrf_exempt
+@require_POST
+def analytics_photo_interaction(request):
+    """
+    Tracks engagement with individual photos (grid views, lightbox zoom, downloads).
+    """
+    import json
+    try:
+        data = {}
+        if request.content_type == 'application/json' and request.body:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                pass
+        if not data:
+            data = request.POST
+
+        image_id = data.get('photo_id') or data.get('image_id')
+        session_id = data.get('session_id')
+        action = data.get('action', 'view')
+        dwell = int(data.get('dwell_seconds', 0) or 0)
+
+        if not image_id:
+            return JsonResponse({'status': 'error', 'message': 'Missing image_id'}, status=400)
+
+        img = GalleryImage.objects.filter(id=image_id).select_related('event').first()
+        if not img:
+            return JsonResponse({'status': 'error', 'message': 'Image not found'}, status=404)
+
+        session = None
+        if session_id:
+            session = VisitorSession.objects.filter(session_id=session_id).first()
+
+        PhotoInteraction.objects.create(
+            image=img,
+            event=img.event,
+            session=session,
+            action=action,
+            dwell_seconds=dwell
+        )
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def analytics_live_feed(request):
+    """
+    High-frequency real-time polling API for the Super Admin Analytics Dashboard.
+    Streams new visitor pageviews and photo interactions (downloads & zooms) live without page reloads.
+    """
+    from django.db.models import Count, Sum, Q
+    from datetime import timedelta
+    from django.utils.timesince import timesince
+
+    now = timezone.now()
+    organizer_id = request.GET.get('organizer_id', '').strip()
+    event_id = request.GET.get('event_id', '').strip()
+    time_range = request.GET.get('range', '7d').strip().lower()
+
+    views_qs = PageViewEvent.objects.select_related('session', 'session__guest_lead', 'event')
+    interactions_qs = PhotoInteraction.objects.select_related('session', 'session__guest_lead', 'image', 'event')
+    sessions_qs = VisitorSession.objects.all()
+
+    if event_id and event_id != 'all':
+        views_qs = views_qs.filter(event_id=event_id)
+        sessions_qs = sessions_qs.filter(page_views__event_id=event_id).distinct()
+        interactions_qs = interactions_qs.filter(event_id=event_id)
+    elif organizer_id and organizer_id != 'all':
+        views_qs = views_qs.filter(event__owner_id=organizer_id)
+        sessions_qs = sessions_qs.filter(page_views__event__owner_id=organizer_id).distinct()
+        interactions_qs = interactions_qs.filter(event__owner_id=organizer_id)
+
+    if time_range == 'today':
+        views_qs = views_qs.filter(timestamp__date=now.date())
+        interactions_qs = interactions_qs.filter(timestamp__date=now.date())
+        sessions_qs = sessions_qs.filter(last_seen__date=now.date())
+    elif time_range == '7d':
+        cutoff = now - timedelta(days=7)
+        views_qs = views_qs.filter(timestamp__gte=cutoff)
+        interactions_qs = interactions_qs.filter(timestamp__gte=cutoff)
+        sessions_qs = sessions_qs.filter(last_seen__gte=cutoff)
+    elif time_range == '30d':
+        cutoff = now - timedelta(days=30)
+        views_qs = views_qs.filter(timestamp__gte=cutoff)
+        interactions_qs = interactions_qs.filter(timestamp__gte=cutoff)
+        sessions_qs = sessions_qs.filter(last_seen__gte=cutoff)
+
+    live_cutoff = now - timedelta(minutes=5)
+    live_visitors = VisitorSession.objects.filter(last_seen__gte=live_cutoff).count()
+
+    total_pageviews = views_qs.count()
+    unique_visitors = sessions_qs.count()
+    funnel_visits = views_qs.filter(page_type__in=['event_gallery', 'landing', 'search', 'other']).count()
+    funnel_searches = views_qs.filter(page_type='search').count()
+    funnel_matches = views_qs.filter(page_type='personal_gallery').count()
+    funnel_downloads = views_qs.filter(page_type='zip_download').count() + interactions_qs.filter(action='download').count()
+
+    raw_views = list(views_qs.order_by('-timestamp')[:20])
+    raw_interactions = list(interactions_qs.order_by('-timestamp')[:20])
+
+    activities = []
+    for v in raw_views:
+        lead_name = v.session.guest_lead.name if v.session.guest_lead else 'Guest (Visitor)'
+        badge_text = 'SEARCH' if v.page_type == 'search' else ('GALLERY' if v.page_type == 'personal_gallery' else 'PAGE')
+        badge_color = '#2563eb' if v.page_type == 'search' else ('#7c3aed' if v.page_type == 'personal_gallery' else '#6366f1')
+        badge_bg = 'rgba(37, 99, 235, 0.12)' if v.page_type == 'search' else ('rgba(124, 58, 237, 0.12)' if v.page_type == 'personal_gallery' else 'rgba(99, 102, 241, 0.12)')
+        icon = '🔍' if v.page_type == 'search' else ('📸' if v.page_type == 'personal_gallery' else '📄')
+        
+        activities.append({
+            'id': f'v_{v.id}',
+            'lead_name': lead_name,
+            'is_lead': bool(v.session.guest_lead),
+            'title': v.exact_page_name,
+            'badge_text': badge_text,
+            'badge_color': badge_color,
+            'badge_bg': badge_bg,
+            'icon': icon,
+            'event_name': v.event.name if v.event else 'Global',
+            'device': f'{v.session.device_type} ({v.session.os_name})',
+            'city': v.session.city if v.session.city != 'Unknown' else '',
+            'duration_str': format_duration_display(v.duration_seconds) if v.duration_seconds > 0 else '',
+            'time_ago': f'{timesince(v.timestamp)} ago',
+            'timestamp': v.timestamp.isoformat()
+        })
+
+    for i in raw_interactions:
+        lead_name = i.session.guest_lead.name if (i.session and i.session.guest_lead) else 'Guest (Visitor)'
+        is_dl = (i.action == 'download')
+        badge_text = 'DOWNLOAD' if is_dl else 'ZOOM'
+        badge_color = '#059669' if is_dl else '#d97706'
+        badge_bg = 'rgba(16, 185, 129, 0.15)' if is_dl else 'rgba(217, 119, 6, 0.15)'
+        icon = '⬇️' if is_dl else '👁️'
+        action_desc = f"{icon} Downloaded photo" if is_dl else f"{icon} Viewed in lightbox"
+
+        activities.append({
+            'id': f'i_{i.id}',
+            'lead_name': lead_name,
+            'is_lead': bool(i.session and i.session.guest_lead),
+            'title': f"{action_desc}: {i.image.filename}",
+            'badge_text': badge_text,
+            'badge_color': badge_color,
+            'badge_bg': badge_bg,
+            'icon': icon,
+            'event_name': i.event.name if i.event else (i.image.event.name if i.image.event else 'Event'),
+            'device': f'{i.session.device_type} ({i.session.os_name})' if i.session else 'Mobile',
+            'city': i.session.city if (i.session and i.session.city != 'Unknown') else '',
+            'duration_str': format_duration_display(i.dwell_seconds) if i.dwell_seconds > 0 else '',
+            'time_ago': f'{timesince(i.timestamp)} ago',
+            'timestamp': i.timestamp.isoformat()
+        })
+
+    activities.sort(key=lambda x: x['timestamp'], reverse=True)
+    activities = activities[:25]
+
+    # Top Photos (live leaderboard sync)
+    top_photo_ids = interactions_qs.values('image_id').annotate(
+        views=Count('id', filter=Q(action__in=['view', 'lightbox'])),
+        downloads=Count('id', filter=Q(action='download')),
+        dwell=Sum('dwell_seconds')
+    ).annotate(
+        score=Count('id', filter=Q(action='download')) * 5 + Count('id', filter=Q(action__in=['view', 'lightbox'])) * 2
+    ).order_by('-score', '-downloads', '-views', '-dwell')[:20]
+
+    top_photos = []
+    for tp in top_photo_ids:
+        img = GalleryImage.objects.filter(id=tp['image_id']).first()
+        if img:
+            thumb_url = img.thumbnail.url if img.thumbnail else (img.file.url if img.file else '')
+            dwell = tp['dwell'] or 0
+            top_photos.append({
+                'id': img.id,
+                'filename': img.filename,
+                'thumbnail_url': thumb_url,
+                'views': tp['views'],
+                'downloads': tp['downloads'],
+                'dwell_sec': dwell,
+                'dwell_display': format_duration_display(dwell),
+            })
+
+    return JsonResponse({
+        'status': 'ok',
+        'live_visitors': live_visitors,
+        'total_pageviews': total_pageviews,
+        'unique_visitors': unique_visitors,
+        'funnel_visits': funnel_visits,
+        'funnel_searches': funnel_searches,
+        'funnel_matches': funnel_matches,
+        'funnel_downloads': funnel_downloads,
+        'activities': activities,
+        'top_photos': top_photos,
+    })
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def super_admin_analytics_dashboard(request):
+    """
+    Massive Analytics Dashboard: Real-time visitors, dwell times, visitor journeys, top viral photos, funnels.
+    Supports hierarchical filtering: All Organizers ➔ Specific Organizer ➔ All Events / Specific Event.
+    """
+    from django.db.models import Count, Sum, Avg, Q
+    from datetime import timedelta
+    from django.contrib.auth.models import User
+
+    now = timezone.now()
+    organizer_id = request.GET.get('organizer_id', '').strip()
+    event_id = request.GET.get('event_id', '').strip()
+    time_range = request.GET.get('range', '7d').strip().lower()
+
+    # Organizers query (users who are studio admins / event owners)
+    all_organizers = User.objects.filter(Q(is_superuser=False) | Q(events__isnull=False)).distinct().order_by('username')
+    selected_organizer = None
+    if organizer_id and organizer_id != 'all':
+        selected_organizer = all_organizers.filter(id=organizer_id).first()
+
+    # Events query (filtered by organizer if selected)
+    events_qs = Event.objects.all().select_related('owner').order_by('-created_at')
+    if selected_organizer:
+        events_qs = events_qs.filter(owner=selected_organizer)
+    available_events = list(events_qs)
+
+    selected_event = None
+
+    views_qs = PageViewEvent.objects.all()
+    sessions_qs = VisitorSession.objects.all()
+    interactions_qs = PhotoInteraction.objects.all()
+
+    # 1. Filter by Event or Organizer
+    if event_id and event_id != 'all':
+        selected_event = Event.objects.filter(id=event_id).first()
+        if selected_event:
+            views_qs = views_qs.filter(event=selected_event)
+            sessions_qs = sessions_qs.filter(page_views__event=selected_event).distinct()
+            interactions_qs = interactions_qs.filter(event=selected_event)
+    elif selected_organizer:
+        views_qs = views_qs.filter(event__owner=selected_organizer)
+        sessions_qs = sessions_qs.filter(page_views__event__owner=selected_organizer).distinct()
+        interactions_qs = interactions_qs.filter(event__owner=selected_organizer)
+
+    # 2. Filter by Time Range
+    if time_range == 'today':
+        views_qs = views_qs.filter(timestamp__date=now.date())
+        sessions_qs = sessions_qs.filter(last_seen__date=now.date())
+        interactions_qs = interactions_qs.filter(timestamp__date=now.date())
+    elif time_range == '7d':
+        cutoff = now - timedelta(days=7)
+        views_qs = views_qs.filter(timestamp__gte=cutoff)
+        sessions_qs = sessions_qs.filter(last_seen__gte=cutoff)
+        interactions_qs = interactions_qs.filter(timestamp__gte=cutoff)
+    elif time_range == '30d':
+        cutoff = now - timedelta(days=30)
+        views_qs = views_qs.filter(timestamp__gte=cutoff)
+        sessions_qs = sessions_qs.filter(last_seen__gte=cutoff)
+        interactions_qs = interactions_qs.filter(timestamp__gte=cutoff)
+
+    # 3. Key Executive Metrics
+    total_pageviews = views_qs.count()
+    unique_visitors = sessions_qs.count()
+    total_time_sec = views_qs.aggregate(s=Sum('duration_seconds'))['s'] or 0
+    avg_dwell_sec = round(total_time_sec / unique_visitors) if unique_visitors else 0
+
+    # Live Visitors Right Now (active within last 5 minutes)
+    live_cutoff = now - timedelta(minutes=5)
+    live_visitors = VisitorSession.objects.filter(last_seen__gte=live_cutoff).count()
+
+    # Funnel Counts
+    funnel_visits = views_qs.filter(page_type__in=['event_gallery', 'landing', 'search', 'other']).count()
+    funnel_searches = views_qs.filter(page_type='search').count()
+    funnel_matches = views_qs.filter(page_type='personal_gallery').count()
+    funnel_downloads = views_qs.filter(page_type='zip_download').count() + interactions_qs.filter(action='download').count()
+
+    # 4. Per-Page Time Spent Breakdown with Exact Page Names
+    page_aggregation = {}
+    for p in views_qs:
+        # Standardize key so guest funnel actions are neatly grouped, while custom pages show their exact path
+        if p.page_type in ('search', 'personal_gallery', 'event_gallery', 'landing', 'zip_download'):
+            path_key = p.page_type
+        else:
+            path_key = (p.url_path or 'other').strip()
+
+        if path_key not in page_aggregation:
+            page_aggregation[path_key] = {
+                'label': p.exact_page_name,
+                'page_type': p.page_type,
+                'url_path': p.url_path or '',
+                'url_description': p.url_description,
+                'views_count': 0,
+                'visitors': set(),
+                'total_seconds': 0,
+            }
+        page_aggregation[path_key]['views_count'] += 1
+        page_aggregation[path_key]['visitors'].add(p.session_id)
+        page_aggregation[path_key]['total_seconds'] += (p.duration_seconds or 0)
+
+    page_stats = []
+    for k, item in sorted(page_aggregation.items(), key=lambda x: x[1]['views_count'], reverse=True):
+        views_c = item['views_count']
+        tot_sec = item['total_seconds']
+        avg_p_sec = round(tot_sec / views_c) if views_c else 0
+
+        mins = avg_p_sec // 60
+        secs = avg_p_sec % 60
+        time_display = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+
+        page_stats.append({
+            'page_type': item['page_type'],
+            'url_path': item['url_path'],
+            'url_description': item.get('url_description', ''),
+            'label': item['label'],
+            'views_count': views_c,
+            'visitors_count': len(item['visitors']),
+            'avg_time_display': time_display,
+            'total_time_display': f"{tot_sec // 60}m {tot_sec % 60}s"
+        })
+
+    # 5. Top 10 Most Popular & Viewed Photos (Ranked by downloads & views)
+    top_photo_ids = interactions_qs.values('image_id').annotate(
+        views=Count('id', filter=Q(action__in=['view', 'lightbox'])),
+        downloads=Count('id', filter=Q(action='download')),
+        dwell=Sum('dwell_seconds')
+    ).annotate(
+        score=Count('id', filter=Q(action='download')) * 5 + Count('id', filter=Q(action__in=['view', 'lightbox'])) * 2
+    ).order_by('-score', '-downloads', '-views', '-dwell')[:20]
+
+    top_photos = []
+    for tp in top_photo_ids:
+        img = GalleryImage.objects.filter(id=tp['image_id']).first()
+        if img:
+            dwell = tp['dwell'] or 0
+            top_photos.append({
+                'image': img,
+                'views': tp['views'],
+                'downloads': tp['downloads'],
+                'dwell_sec': dwell,
+                'dwell_display': format_duration_display(dwell),
+            })
+
+    # 6. Device, OS, Browser, Source Breakdowns
+    device_breakdown = list(sessions_qs.values('device_type').annotate(count=Count('id')).order_by('-count'))
+    os_breakdown = list(sessions_qs.values('os_name').annotate(count=Count('id')).order_by('-count')[:5])
+    browser_breakdown = list(sessions_qs.values('browser_name').annotate(count=Count('id')).order_by('-count')[:5])
+    sources_breakdown = list(sessions_qs.values('traffic_source').annotate(count=Count('id')).order_by('-count')[:5])
+    top_cities = list(sessions_qs.exclude(city='Unknown').values('city', 'country').annotate(count=Count('id')).order_by('-count')[:6])
+
+    # 7. Live Real-Time Activity Feed (Combined Pageviews + Photo Downloads/Zooms)
+    from django.utils.timesince import timesince
+    raw_views = list(views_qs.select_related('session', 'session__guest_lead', 'event').order_by('-timestamp')[:25])
+    raw_interactions = list(interactions_qs.select_related('session', 'session__guest_lead', 'image', 'event').order_by('-timestamp')[:25])
+    recent_activities = []
+    for v in raw_views:
+        lead_name = v.session.guest_lead.name if v.session.guest_lead else 'Guest (Visitor)'
+        badge_text = 'SEARCH' if v.page_type == 'search' else ('GALLERY' if v.page_type == 'personal_gallery' else 'PAGE')
+        badge_color = '#2563eb' if v.page_type == 'search' else ('#7c3aed' if v.page_type == 'personal_gallery' else '#6366f1')
+        badge_bg = 'rgba(37, 99, 235, 0.12)' if v.page_type == 'search' else ('rgba(124, 58, 237, 0.12)' if v.page_type == 'personal_gallery' else 'rgba(99, 102, 241, 0.12)')
+        icon = '🔍' if v.page_type == 'search' else ('📸' if v.page_type == 'personal_gallery' else '📄')
+        recent_activities.append({
+            'id': f'v_{v.id}',
+            'lead_name': lead_name,
+            'is_lead': bool(v.session.guest_lead),
+            'title': v.exact_page_name,
+            'badge_text': badge_text,
+            'badge_color': badge_color,
+            'badge_bg': badge_bg,
+            'icon': icon,
+            'event_name': v.event.name if v.event else 'Global',
+            'device': f'{v.session.device_type} ({v.session.os_name})',
+            'city': v.session.city if v.session.city != 'Unknown' else '',
+            'duration_str': format_duration_display(v.duration_seconds) if v.duration_seconds > 0 else '',
+            'time_ago': f'{timesince(v.timestamp)} ago',
+            'timestamp': v.timestamp
+        })
+
+    for i in raw_interactions:
+        lead_name = i.session.guest_lead.name if (i.session and i.session.guest_lead) else 'Guest (Visitor)'
+        is_dl = (i.action == 'download')
+        badge_text = 'DOWNLOAD' if is_dl else 'ZOOM'
+        badge_color = '#059669' if is_dl else '#d97706'
+        badge_bg = 'rgba(16, 185, 129, 0.15)' if is_dl else 'rgba(217, 119, 6, 0.15)'
+        icon = '⬇️' if is_dl else '👁️'
+        action_desc = f"{icon} Downloaded photo" if is_dl else f"{icon} Viewed in lightbox"
+        recent_activities.append({
+            'id': f'i_{i.id}',
+            'lead_name': lead_name,
+            'is_lead': bool(i.session and i.session.guest_lead),
+            'title': f"{action_desc}: {i.image.filename}",
+            'badge_text': badge_text,
+            'badge_color': badge_color,
+            'badge_bg': badge_bg,
+            'icon': icon,
+            'event_name': i.event.name if i.event else (i.image.event.name if i.image.event else 'Event'),
+            'device': f'{i.session.device_type} ({i.session.os_name})' if i.session else 'Mobile',
+            'city': i.session.city if (i.session and i.session.city != 'Unknown') else '',
+            'duration_str': format_duration_display(i.dwell_seconds) if i.dwell_seconds > 0 else '',
+            'time_ago': f'{timesince(i.timestamp)} ago',
+            'timestamp': i.timestamp
+        })
+
+    recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
+    recent_activities = recent_activities[:25]
+
+    # 8. Recent Guest Sessions with Timelines
+    recent_sessions = sessions_qs.select_related('guest_lead').prefetch_related('page_views').order_by('-last_seen')[:15]
+
+    # Format average total dwell time
+    avg_mins = avg_dwell_sec // 60
+    avg_secs = avg_dwell_sec % 60
+    avg_time_str = f"{avg_mins}m {avg_secs}s" if avg_mins > 0 else f"{avg_secs}s"
+
+    context = {
+        'active_tab': 'analytics',
+        'all_organizers': all_organizers,
+        'selected_organizer': selected_organizer,
+        'selected_organizer_id': organizer_id,
+        'available_events': available_events,
+        'selected_event': selected_event,
+        'selected_event_id': event_id,
+        'time_range': time_range,
+        'total_pageviews': total_pageviews,
+        'unique_visitors': unique_visitors,
+        'avg_time_str': avg_time_str,
+        'live_visitors': live_visitors,
+        'funnel': {
+            'visits': funnel_visits,
+            'searches': funnel_searches,
+            'matches': funnel_matches,
+            'downloads': funnel_downloads,
+        },
+        'page_stats': page_stats,
+        'top_photos': top_photos,
+        'device_breakdown': device_breakdown,
+        'os_breakdown': os_breakdown,
+        'browser_breakdown': browser_breakdown,
+        'sources_breakdown': sources_breakdown,
+        'top_cities': top_cities,
+        'recent_activities': recent_activities,
+        'recent_sessions': recent_sessions,
+    }
+    return render(request, 'gallery/analytics_dashboard.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def export_analytics_csv(request):
+    """Export pageview and visitor analytics to a CSV file."""
+    import csv
+    from django.http import HttpResponse
+    from datetime import timedelta
+
+    now = timezone.now()
+    organizer_id = request.GET.get('organizer_id', '').strip()
+    event_id = request.GET.get('event_id', '').strip()
+    time_range = request.GET.get('range', '7d').strip().lower()
+
+    views_qs = PageViewEvent.objects.select_related('session', 'session__guest_lead', 'event', 'event__owner').order_by('-timestamp')
+
+    if event_id and event_id != 'all':
+        views_qs = views_qs.filter(event_id=event_id)
+    elif organizer_id and organizer_id != 'all':
+        views_qs = views_qs.filter(event__owner_id=organizer_id)
+
+    if time_range == 'today':
+        views_qs = views_qs.filter(timestamp__date=now.date())
+    elif time_range == '7d':
+        views_qs = views_qs.filter(timestamp__gte=now - timedelta(days=7))
+    elif time_range == '30d':
+        views_qs = views_qs.filter(timestamp__gte=now - timedelta(days=30))
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="photona_analytics_{timezone.now().strftime("%Y%m%d_%H%M")}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Timestamp', 'Session ID', 'Organizer', 'Event Name', 'Page Type', 'URL Path', 'Duration (Seconds)', 'Device', 'OS', 'Browser', 'City', 'Traffic Source', 'Guest Name'])
+
+    views = views_qs[:5000]
+    for v in views:
+        sess = v.session
+        lead_name = sess.guest_lead.name if sess.guest_lead else ''
+        organizer_name = v.event.owner.username if v.event and v.event.owner else 'Global'
+        writer.writerow([
+            v.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            sess.session_id[:12],
+            organizer_name,
+            v.event.name if v.event else 'Global',
+            v.page_type,
+            v.url_path,
+            v.duration_seconds,
+            sess.device_type,
+            sess.os_name,
+            sess.browser_name,
+            sess.city,
+            sess.traffic_source,
+            lead_name
+        ])
+
+    return response
+
+
+# -----------------------------------------------------------------------------
+# Classic Error Handlers & Preview Views
+# -----------------------------------------------------------------------------
+
+def custom_page_not_found(request, exception=None):
+    """Classic 404 Not Found error handler."""
+    return render(request, '404.html', status=404)
+
+
+def custom_permission_denied(request, exception=None):
+    """Classic 403 Forbidden error handler."""
+    return render(request, '403.html', status=403)
+
+
+def custom_server_error(request):
+    """Classic 500 Internal Server Error handler."""
+    return render(request, '500.html', status=500)
+
+
+def custom_bad_request(request, exception=None):
+    """Classic 400 Bad Request error handler."""
+    return render(request, '400.html', status=400)
+
+
+def preview_error_404(request):
+    """Developer preview for 404 page."""
+    return render(request, '404.html')
+
+
+def preview_error_403(request):
+    """Developer preview for 403 page."""
+    return render(request, '403.html')
+
+
+def preview_error_500(request):
+    """Developer preview for 500 page."""
+    return render(request, '500.html')
+
+
+def preview_error_400(request):
+    """Developer preview for 400 page."""
+    return render(request, '400.html')
+
+
 

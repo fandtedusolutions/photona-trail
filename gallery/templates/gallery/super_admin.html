@@ -758,7 +758,7 @@
                                     </div>
                                 </div>
                             {% endif %}
-                            <span class="badge badge-purple" style="padding: 8px 16px; font-size: 0.82rem; font-weight: 700; border-radius: 10px;">{{ leads|length }} Shown</span>
+                            <span id="leadsBadgeCountDisplay" class="badge badge-purple" style="padding: 8px 16px; font-size: 0.82rem; font-weight: 700; border-radius: 10px;">{% if leads|length > 50 %}50 / {{ leads|length }} Shown{% else %}{{ leads|length }} Shown{% endif %}</span>
                         </div>
                     </div>
                     
@@ -813,7 +813,7 @@
                         </thead>
                         <tbody>
                             {% for lead in leads %}
-                            <tr>
+                            <tr class="lead-table-row" data-lead-index="{{ forloop.counter0 }}" {% if forloop.counter0 >= 50 %}style="display: none;"{% endif %}>
                                 <td>
                                     <span style="font-weight:700; color:#0f172a; font-size: 0.95rem;">{{ lead.name }}</span>
                                     <div style="font-size:0.75rem; color:#64748b;">Age: {{ lead.age }}</div>
@@ -883,6 +883,23 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination / Show More & Less Controls (50 per batch) -->
+                {% if leads|length > 0 %}
+                <div id="leadsPaginationControls" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0; flex-wrap: wrap; gap: 12px;">
+                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">
+                        Showing <strong id="leadsCurrentCountDisplay" style="color: #0f172a;">{% if leads|length > 50 %}50{% else %}{{ leads|length }}{% endif %}</strong> of <strong style="color: #4f46e5;">{{ leads|length }}</strong> Captured Leads
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button type="button" id="btnShowLessLeads" class="btn btn-sm" onclick="showLessLeads()" style="display: none; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700; padding: 7px 15px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9';" onmouseout="this.style.background='#ffffff';">
+                            ↑ Show Less (-50)
+                        </button>
+                        <button type="button" id="btnShowMoreLeads" class="btn btn-sm" onclick="showMoreLeads()" style="{% if leads|length <= 50 %}display: none;{% else %}display: inline-flex;{% endif %} background: #4f46e5; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; padding: 7px 18px; font-size: 0.8rem; cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25); transition: all 0.2s;" onmouseover="this.style.background='#4338ca';" onmouseout="this.style.background='#4f46e5';">
+                            <span>↓ Show More (+50 Leads)</span>
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endif %}
@@ -1230,6 +1247,64 @@
 
 <script>
 const CSRF = '{{ csrf_token }}';
+
+// Progressive Lead Pagination (Show 50 -> 100 -> 150... with Show Less)
+let currentVisibleLeads = 50;
+const LEADS_CHUNK_SIZE = 50;
+
+function updateLeadsVisibility() {
+    const rows = document.querySelectorAll('.lead-table-row');
+    const total = rows.length;
+    if (total === 0) return;
+
+    rows.forEach((row, idx) => {
+        if (idx < currentVisibleLeads) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    const shown = Math.min(currentVisibleLeads, total);
+    const countDisplay = document.getElementById('leadsCurrentCountDisplay');
+    if (countDisplay) countDisplay.innerText = shown;
+
+    const badgeDisplay = document.getElementById('leadsBadgeCountDisplay');
+    if (badgeDisplay) {
+        badgeDisplay.innerText = total > LEADS_CHUNK_SIZE ? `${shown} / ${total} Shown` : `${total} Shown`;
+    }
+
+    const btnMore = document.getElementById('btnShowMoreLeads');
+    if (btnMore) {
+        if (currentVisibleLeads >= total) {
+            btnMore.style.display = 'none';
+        } else {
+            btnMore.style.display = 'inline-flex';
+            const remaining = total - currentVisibleLeads;
+            const nextBatch = Math.min(LEADS_CHUNK_SIZE, remaining);
+            btnMore.innerHTML = `<span>↓ Show More (+${nextBatch} Leads)</span>`;
+        }
+    }
+
+    const btnLess = document.getElementById('btnShowLessLeads');
+    if (btnLess) {
+        if (currentVisibleLeads > LEADS_CHUNK_SIZE) {
+            btnLess.style.display = 'inline-flex';
+        } else {
+            btnLess.style.display = 'none';
+        }
+    }
+}
+
+function showMoreLeads() {
+    currentVisibleLeads += LEADS_CHUNK_SIZE;
+    updateLeadsVisibility();
+}
+
+function showLessLeads() {
+    currentVisibleLeads = Math.max(LEADS_CHUNK_SIZE, currentVisibleLeads - LEADS_CHUNK_SIZE);
+    updateLeadsVisibility();
+}
 
 // Lead Management JS
 function openEditLeadModal(id, name, age, phone, email) {

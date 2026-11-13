@@ -4,74 +4,150 @@
 {% block title %}AI Search - Photona{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 560px; margin: 0 auto 3rem auto;">
-    <h2 class="card-title">
-        <span style="display: inline-flex; width: 32px; height: 32px; border-radius: 8px; background: rgba(99, 102, 241, 0.08); align-items: center; justify-content: center; font-size: 0.9rem;">🔍</span>
-        Find Your Photos
-    </h2>
-    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; line-height: 1.5;">
-        Upload a clear selfie. Our AI will scan the FAISS index and retrieve every photo you appear in.
-    </p>
+<div class="card" style="max-width: 580px; margin: 0 auto 3rem auto; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05); border: 1px solid rgba(99, 102, 241, 0.12);">
+    <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 0.5rem;">
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px -2px rgba(79, 70, 229, 0.4); flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+        </div>
+        <div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin: 0 0 2px 0; letter-spacing: -0.01em;">
+                Find Your Photos
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.84rem; margin: 0; line-height: 1.4;">
+                Upload a selfie or snap a photo to instantly retrieve your photos with AI.
+            </p>
+        </div>
+    </div>
 
     {% if error_message %}
-        <div style="background: rgba(244, 63, 94, 0.06); border: 1px solid rgba(244, 63, 94, 0.15); padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--accent-rose); font-size: 0.82rem; font-weight: 500; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px;">
-            <span>⚠️</span> {{ error_message }}
+        <div style="background: rgba(244, 63, 94, 0.06); border: 1px solid rgba(244, 63, 94, 0.2); padding: 0.85rem 1rem; border-radius: 12px; color: var(--accent-rose); font-size: 0.84rem; font-weight: 600; margin-top: 1.25rem; display: flex; align-items: center; gap: 10px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>{{ error_message }}</span>
         </div>
     {% endif %}
 
-    <form id="searchForm" method="post" enctype="multipart/form-data" action="{% url 'gallery:search' %}?event={{ selected_event.slug }}">
+    <form id="searchForm" method="post" enctype="multipart/form-data" action="{% url 'gallery:search' %}?event={{ selected_event.slug }}" style="margin-top: 1.5rem;">
         {% csrf_token %}
-        
-        <div style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); background: var(--bg-tertiary); border: 1px solid var(--border-light); display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 0.9rem;">📂</span>
+        <input type="hidden" name="event_slug" value="{{ selected_event.slug }}">
+        <input type="hidden" name="telemetry_session_id" id="telemetrySessionId">
+        <input type="file" id="selfieInput" name="selfie" accept="image/*" style="display: none;">
+
+        <!-- Active Event Badge -->
+        <div style="margin-bottom: 1.25rem; padding: 0.75rem 1rem; border-radius: 12px; background: rgba(99, 102, 241, 0.06); border: 1px solid rgba(99, 102, 241, 0.18); display: flex; align-items: center; gap: 10px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
             <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-primary);">
-                Searching inside Event: <span style="color: var(--accent-indigo);">{{ selected_event.name }}</span>
-            </div>
-            <input type="hidden" name="event_slug" value="{{ selected_event.slug }}">
-        </div>
-
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; background: var(--bg-secondary); padding: 0.35rem; border-radius: var(--radius-md);">
-            <button type="button" id="tabUpload" class="btn" style="flex: 1; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);" onclick="switchTab('upload')">📂 Upload Photo</button>
-            <button type="button" id="tabCamera" class="btn" style="flex: 1; background: transparent; color: var(--text-secondary); border: 1px solid transparent; box-shadow: none;" onclick="switchTab('camera')">📷 Take Selfie</button>
-        </div>
-
-        <div id="uploadSection">
-            <div class="dropzone" id="selfieDropzone" onclick="document.getElementById('selfieInput').click()" style="position: relative; overflow: hidden;">
-                <div id="previewContainer" style="display: none; position: absolute; inset: 0; background: var(--bg-secondary); z-index: 10; flex-direction: column; align-items: center; justify-content: center; padding: 1rem;">
-                    <img id="selfiePreview" src="" style="max-height: 120px; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); margin-bottom: 0.5rem; object-fit: contain;">
-                    <div id="selfieStatus" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-indigo);"></div>
-                </div>
-                
-                <div id="uploadPrompt" style="display: flex; flex-direction: column; align-items: center;">
-                    <div class="dropzone-icon">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                    </div>
-                    <p style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);">Drop your selfie here or click to select</p>
-                </div>
-                <input type="file" id="selfieInput" name="selfie" accept="image/*" style="width: 0.1px; height: 0.1px; opacity: 0; overflow: hidden; position: absolute; z-index: -1;" onchange="updateSelfieStatus(this.files)">
+                Searching inside Event: <span style="color: var(--accent-indigo); font-weight: 750;">{{ selected_event.name }}</span>
             </div>
         </div>
 
-        <div id="cameraSection" style="display: none; border-radius: var(--radius-md); overflow: hidden; border: 2px dashed var(--border-light); position: relative; background: #000; aspect-ratio: 4/3; flex-direction: column; align-items: center; justify-content: center;">
+        <!-- Client-Side Face Validation Alert -->
+        <div id="clientFaceError" style="display: none; margin-bottom: 1.25rem; background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 12px; padding: 12px 16px; font-size: 0.85rem; color: #be123c; font-weight: 600; align-items: flex-start; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <div style="flex: 1;">
+                <div style="font-weight: 750; margin-bottom: 2px;">Selfie Verification Failed</div>
+                <div id="clientFaceErrorText" style="font-size: 0.8rem; font-weight: 500; color: #9f1239; line-height: 1.4;"></div>
+            </div>
+            <button type="button" onclick="document.getElementById('clientFaceError').style.display='none'" style="background: none; border: none; color: #be123c; font-size: 16px; cursor: pointer; padding: 0 4px;">✕</button>
+        </div>
+
+        <!-- 2 Selection Cards: Upload Photo vs Take Selfie -->
+        <div id="selectionOptions" style="display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+            <!-- Upload from Device -->
+            <div style="flex: 1; min-width: 140px; border: 2px dashed rgba(99, 102, 241, 0.25); border-radius: 16px; text-align: center; padding: 1.75rem 1rem; cursor: pointer; transition: all 0.2s; background: var(--bg-secondary);" onclick="document.getElementById('selfieInput').click()" onmouseover="this.style.borderColor='var(--accent-indigo)'; this.style.background='rgba(99,102,241,0.05)';" onmouseout="this.style.borderColor='rgba(99, 102, 241, 0.25)'; this.style.background='var(--bg-secondary)';">
+                <div style="width: 46px; height: 46px; margin: 0 auto 0.75rem auto; border-radius: 12px; background: rgba(99, 102, 241, 0.1); color: var(--accent-indigo); display: flex; align-items: center; justify-content: center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </div>
+                <div style="font-weight: 750; color: var(--text-primary); font-size: 0.95rem;">Upload Photo</div>
+                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 3px;">Choose from device</div>
+            </div>
+
+            <!-- Take Selfie -->
+            <div style="flex: 1; min-width: 140px; border: 2px dashed rgba(99, 102, 241, 0.25); border-radius: 16px; text-align: center; padding: 1.75rem 1rem; cursor: pointer; transition: all 0.2s; background: var(--bg-secondary);" onclick="startLiveCamera()" onmouseover="this.style.borderColor='var(--accent-indigo)'; this.style.background='rgba(99,102,241,0.05)';" onmouseout="this.style.borderColor='rgba(99, 102, 241, 0.25)'; this.style.background='var(--bg-secondary)';">
+                <div style="width: 46px; height: 46px; margin: 0 auto 0.75rem auto; border-radius: 12px; background: rgba(168, 85, 247, 0.1); color: #9333ea; display: flex; align-items: center; justify-content: center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                </div>
+                <div style="font-weight: 750; color: var(--text-primary); font-size: 0.95rem;">Take Selfie</div>
+                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 3px;">Use camera directly</div>
+            </div>
+        </div>
+
+        <!-- Camera Viewfinder Section (Hidden initially) -->
+        <div id="cameraViewfinder" style="display: none; border-radius: 16px; overflow: hidden; border: 2px solid var(--border-medium); position: relative; background: #000; aspect-ratio: 4/3; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 1.25rem;">
             <video id="cameraStream" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
-            <button type="button" id="captureBtn" title="Take Photo" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10; border-radius: 50%; width: 64px; height: 64px; padding: 0; background: white; border: 4px solid rgba(255,255,255,0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.1s;" onmousedown="this.style.transform='translateX(-50%) scale(0.95)'" onmouseup="this.style.transform='translateX(-50%) scale(1)'" onclick="captureSelfie()">
-                <div style="width: 100%; height: 100%; border-radius: 50%; border: 2px solid #333;"></div>
-            </button>
+            
+            <!-- Camera Mode Badge -->
+            <div id="cameraModeBadge" style="position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; backdrop-filter: blur(4px); display: flex; align-items: center; gap: 6px; z-index: 10;">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                <span id="cameraModeText">Front Camera (Selfie)</span>
+            </div>
+
+            <!-- Cancel Button -->
+            <button type="button" onclick="cancelLiveCamera()" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.65); color: white; border: none; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; backdrop-filter: blur(4px); z-index: 10; transition: transform 0.15s;" title="Close Camera">✕</button>
+
+            <!-- Bottom Controls: Centered Shutter + Flip Button -->
+            <div style="position: absolute; bottom: 16px; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 20px; padding: 0 20px; z-index: 10;">
+                <!-- Placeholder spacer on left to keep shutter centered -->
+                <div style="width: 44px; height: 44px;"></div>
+
+                <!-- Shutter Capture Button -->
+                <button type="button" id="captureBtn" title="Capture Photo" onclick="captureLiveSelfie()" style="border-radius: 50%; width: 66px; height: 66px; padding: 0; background: white; border: 4px solid rgba(255,255,255,0.5); box-shadow: 0 4px 16px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 52px; height: 52px; border-radius: 50%; border: 3px solid #1e293b; background: #ffffff;"></div>
+                </button>
+
+                <!-- Flip Camera Button (Front / Back) -->
+                <button type="button" id="flipCameraBtn" title="Switch to Back Camera (Take photo of someone)" onclick="toggleCameraFacing()" style="background: rgba(0,0,0,0.65); color: white; border: 1.5px solid rgba(255,255,255,0.3); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.2s;" onmouseover="this.style.background='rgba(99,102,241,0.85)'" onmouseout="this.style.background='rgba(0,0,0,0.65)'">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
+                    </svg>
+                </button>
+            </div>
+
             <canvas id="cameraCanvas" style="display: none;"></canvas>
         </div>
 
-        <div style="margin-top: 1rem;">
-            <label class="form-label" for="searchPhone" style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
-                <span>WhatsApp Number</span>
-                <span style="color: var(--text-muted); font-size: 0.75rem; font-weight: normal;">(Optional - receive link on WhatsApp)</span>
-            </label>
-            <input type="tel" id="searchPhone" name="phone" class="form-input" placeholder="e.g., 9876543210" pattern="[0-9]{10}" maxlength="10" style="padding: 0.65rem 0.85rem; font-size: 0.88rem;">
+        <!-- Preview State (Shown when selfie is selected or captured) -->
+        <div id="previewContainer" style="display: none; background: var(--bg-secondary); border: 1.5px solid rgba(99, 102, 241, 0.2); border-radius: 16px; padding: 1.25rem; flex-direction: column; align-items: center; justify-content: center; position: relative; margin-bottom: 1.25rem;">
+            <button type="button" onclick="resetSelfieSelection()" style="position: absolute; top: 10px; right: 10px; background: white; border: 1px solid var(--border-light); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; box-shadow: var(--shadow-sm); z-index: 10;" title="Change Photo">✕</button>
+            <div style="position: relative; margin-bottom: 0.75rem;">
+                <img id="selfiePreview" src="" style="width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 3px solid #ffffff; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);">
+                <span id="selfieCheckmark" style="display: none; position: absolute; bottom: 2px; right: 2px; background: #10b981; color: white; width: 26px; height: 26px; border-radius: 50%; align-items: center; justify-content: center; font-size: 13px; border: 2.5px solid white;">✓</span>
+            </div>
+            <div id="selfieStatus" style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); word-break: break-all; text-align: center;"></div>
+            <div id="faceCheckStatus" style="font-size: 0.78rem; font-weight: 600; margin-top: 6px; display: flex; align-items: center; gap: 6px;"></div>
         </div>
 
-        <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Search Matches</button>
+        <!-- WhatsApp Number Field -->
+        <div style="margin-bottom: 1.25rem;">
+            <label class="form-label" for="searchPhone" style="font-size: 0.84rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                    <span>WhatsApp Number</span>
+                </span>
+                <span style="color: var(--text-muted); font-size: 0.74rem; font-weight: 500;">(Optional)</span>
+            </label>
+            <input type="tel" id="searchPhone" name="phone" class="form-input" placeholder="e.g., 9876543210 (WhatsApp Number)" pattern="[0-9]{10}" maxlength="10" style="padding: 0.75rem 1rem; font-size: 0.9rem; border-radius: 10px;">
+            <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 5px;">We'll send your personal photos gallery link directly to your WhatsApp.</div>
+        </div>
+
+        <button type="submit" class="btn" style="width: 100%; padding: 0.85rem; font-size: 0.95rem; font-weight: 750; border-radius: 12px; background: var(--gradient-primary); border: none; color: white; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(236, 72, 153, 0.25);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span>Search Matches</span>
+        </button>
     </form>
 </div>
 
@@ -87,8 +163,9 @@
         <div style="display: flex; align-items: center; gap: 8px;">
             <span class="badge badge-purple">{{ results|length }} results</span>
             {% if results %}
-                <a href="{% url 'gallery:download_images_zip' %}?ids={% for res in results %}{{ res.image.id }}{% if not forloop.last %},{% endif %}{% endfor %}" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 0.78rem;">
-                    📦 Download All
+                <a href="{% url 'gallery:download_images_zip' %}?ids={% for res in results %}{{ res.image.id }}{% if not forloop.last %},{% endif %}{% endfor %}" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 0.8rem; font-weight: 650; border-radius: 10px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Download All</span>
                 </a>
             {% endif %}
         </div>
@@ -98,8 +175,8 @@
         <!-- ═══ SHAREABLE PERSONAL LINK BANNER ═══ -->
         <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%); border: 1.5px solid rgba(99, 102, 241, 0.25); border-radius: 16px; padding: 1.1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);">
             <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 260px;">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
-                    🔗
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-indigo); flex-shrink: 0;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                 </div>
                 <div>
                     <div style="font-weight: 750; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -114,23 +191,33 @@
                         Access your photos anytime{% if personal_link.expires_at %} until <strong>{{ personal_link.expires_at|date:"M d, Y" }}</strong>{% endif %}. Bookmark or share this link directly!
                     </div>
                     {% if whatsapp_sent and phone %}
-                        <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #15803d; font-size: 0.76rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">
-                            <span>📲</span> Link sent to your WhatsApp (+{{ phone }})!
-                        </div>
+                        {% if whatsapp_enabled %}
+                            <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #15803d; font-size: 0.76rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                <span>Link sent to your WhatsApp (+{{ phone }})!</span>
+                            </div>
+                        {% else %}
+                            <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); color: #4338ca; font-size: 0.76rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;" title="Real WhatsApp sending is paused via ENABLE_WHATSAPP_LINK_SEND=False in .env">
+                                <span>🛠️</span> [Dev Mode] WhatsApp delivery simulated for +{{ phone }} (Active in Production)
+                            </div>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
 
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <a href="{{ personal_gallery_url }}" target="_blank" class="btn btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-light); border-radius: 20px; font-weight: 650; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
-                    👁️ Open Link
+                <a href="{{ personal_gallery_url }}" target="_blank" class="btn btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-light); border-radius: 20px; font-weight: 650; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <span>Open Link</span>
                 </a>
-                <button type="button" class="btn btn-sm" onclick="copyPersonalLink('{{ personal_gallery_url }}')" style="background: var(--accent-indigo); color: white; border: none; border-radius: 20px; font-weight: 700; padding: 6px 16px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);">
-                    📋 <span id="copyLinkBtnText">Copy Link</span>
+                <button type="button" class="btn btn-sm" onclick="copyPersonalLink('{{ personal_gallery_url }}')" style="background: var(--accent-indigo); color: white; border: none; border-radius: 20px; font-weight: 700; padding: 6px 16px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span id="copyLinkBtnText">Copy Link</span>
                 </button>
                 {% if whatsapp_share_text %}
-                    <a href="https://api.whatsapp.com/send?text={{ whatsapp_share_text }}" target="_blank" class="btn btn-sm" style="background: #25D366; color: white; border-radius: 20px; font-weight: 700; padding: 6px 16px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);">
-                        💬 WhatsApp
+                    <a href="https://api.whatsapp.com/send?text={{ whatsapp_share_text }}" target="_blank" class="btn btn-sm" style="background: #25D366; color: white; border-radius: 20px; font-weight: 700; padding: 6px 16px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                        <span>WhatsApp</span>
                     </a>
                 {% endif %}
             </div>
@@ -378,22 +465,28 @@
                                 {% if wm_event.watermark_type == 'image' and wm_event.watermark_image %}
                                     <img src="{{ wm_event.watermark_image.url }}" alt="Watermark" style="width: 70px; max-height: 40px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));">
                                 {% else %}
-                                    <div style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); border-radius: 6px; padding: 3px 8px; color: #ffffff; font-size: 11px; font-weight: 750; letter-spacing: 0.03em; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,0.8); display: flex; align-items: center; gap: 4px;">
-                                        <span>🛡️</span> <span>{{ wm_event.watermark_text|default:wm_event.name }}</span>
+                                    <div style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); border-radius: 6px; padding: 3px 8px; color: #ffffff; font-size: 11px; font-weight: 750; letter-spacing: 0.03em; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,0.8); display: flex; align-items: center; gap: 5px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                        <span>{{ wm_event.watermark_text|default:wm_event.name }}</span>
                                     </div>
                                 {% endif %}
                             </div>
                         {% endif %}
                         {% endwith %}
 
-                        <a href="{% url 'gallery:secure_image' res.image.get_secure_processed_token %}?download=1" download="{{ res.download_filename|default:res.image.filename }}" class="thumb-action-btn" title="Download Photo (Processed & Watermarked)" style="position: absolute; bottom: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(15, 23, 42, 0.75); color: white; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 0.9rem; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(15, 23, 42, 0.75)'" onclick="event.stopPropagation();">⬇</a>
+                        <a href="{% url 'gallery:secure_image' res.image.get_secure_processed_token %}?download=1" download="{{ res.download_filename|default:res.image.filename }}" class="thumb-action-btn" title="Download Photo (Processed & Watermarked)" style="position: absolute; bottom: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(15, 23, 42, 0.75); color: white; display: flex; align-items: center; justify-content: center; text-decoration: none; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(15, 23, 42, 0.75)'" onclick="if(typeof window.photonaTrackPhoto==='function') window.photonaTrackPhoto({{ res.image.id }}, 'download', 0); event.stopPropagation();">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        </a>
                     </div>
                     <div class="rich-gallery-info" style="padding: 0.85rem 1rem;">
                         <div class="rich-gallery-name" title="{{ res.image.event.name }} #{{ res.image.id }}" style="font-weight: 750; font-size: 0.85rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             {{ res.image.event.name }} <span style="color: var(--accent-indigo); font-size: 0.78rem;">#{{ res.image.id }}</span>
                         </div>
                         <div style="font-size: 0.75rem; color: #64748b; margin-top: 3px; display: flex; justify-content: space-between; align-items: center;">
-                            <span>👤 {{ res.image.total_faces }} faces</span>
+                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                <span>{{ res.image.total_faces }} faces</span>
+                            </span>
                             <span>{{ res.image.uploaded_at|date:"M d, H:i" }}</span>
                         </div>
                     </div>
@@ -411,7 +504,7 @@
                         <div class="search-lightbox-title" id="slbTitle">Photo</div>
                     </div>
                     <div class="search-lightbox-actions">
-                        <a id="slbDownloadBtn" href="#" class="slb-btn slb-btn-primary" download title="Download Photo">
+                        <a id="slbDownloadBtn" href="#" class="slb-btn slb-btn-primary" download title="Download Photo" onclick="onSlbDownloadClick()">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                             <span>Download</span>
                         </a>
@@ -451,6 +544,31 @@
                 {% endfor %}
             ];
             let currentSlbIndex = 0;
+            let currentSlbPhotoId = null;
+            let currentSlbViewStart = null;
+            let slbDwellHeartbeat = null;
+
+            function trackCurrentPhotoDwell() {
+                if (currentSlbPhotoId && currentSlbViewStart) {
+                    const elapsed = Math.max(1, Math.round((Date.now() - currentSlbViewStart) / 1000));
+                    if (typeof window.photonaTrackPhoto === 'function') {
+                        window.photonaTrackPhoto(currentSlbPhotoId, 'view', elapsed);
+                    }
+                }
+                currentSlbPhotoId = null;
+                currentSlbViewStart = null;
+                if (slbDwellHeartbeat) {
+                    clearInterval(slbDwellHeartbeat);
+                    slbDwellHeartbeat = null;
+                }
+            }
+
+            function onSlbDownloadClick() {
+                const photo = searchLightboxPhotos[currentSlbIndex];
+                if (photo && typeof window.photonaTrackPhoto === 'function') {
+                    window.photonaTrackPhoto(photo.id, 'download', 0);
+                }
+            }
 
             function openSearchLightbox(idx) {
                 if (!searchLightboxPhotos || searchLightboxPhotos.length === 0) return;
@@ -464,6 +582,7 @@
             }
 
             function closeSearchLightbox() {
+                trackCurrentPhotoDwell();
                 const modal = document.getElementById('searchPhotoLightbox');
                 if (modal) {
                     modal.style.display = 'none';
@@ -477,6 +596,7 @@
                 if (!searchLightboxPhotos || searchLightboxPhotos.length === 0) return;
                 const nextIdx = currentSlbIndex + dir;
                 if (nextIdx >= 0 && nextIdx < searchLightboxPhotos.length) {
+                    trackCurrentPhotoDwell();
                     currentSlbIndex = nextIdx;
                     renderSearchLightboxPhoto();
                 }
@@ -485,6 +605,24 @@
             function renderSearchLightboxPhoto() {
                 const photo = searchLightboxPhotos[currentSlbIndex];
                 if (!photo) return;
+
+                // Send initial lightbox zoom ping and start dwell timer
+                currentSlbPhotoId = photo.id;
+                currentSlbViewStart = Date.now();
+                if (typeof window.photonaTrackPhoto === 'function') {
+                    window.photonaTrackPhoto(photo.id, 'lightbox', 0);
+                }
+
+                // Heartbeat: accumulate dwell every 10 seconds
+                if (slbDwellHeartbeat) clearInterval(slbDwellHeartbeat);
+                slbDwellHeartbeat = setInterval(() => {
+                    if (currentSlbPhotoId && currentSlbViewStart) {
+                        const elapsed = Math.round((Date.now() - currentSlbViewStart) / 1000);
+                        if (typeof window.photonaTrackPhoto === 'function') {
+                            window.photonaTrackPhoto(currentSlbPhotoId, 'view', elapsed);
+                        }
+                    }
+                }, 10000);
 
                 const counter = document.getElementById('slbCounter');
                 const title = document.getElementById('slbTitle');
@@ -556,142 +694,243 @@
             }
         </script>
     {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">🔍</div>
-            <h3 class="empty-state-title">No matches found</h3>
-            <p class="empty-state-desc">We couldn't find any photos matching the uploaded face in the index.</p>
+        <div class="empty-state" style="text-align: center; padding: 3.5rem 1.5rem;">
+            <div style="width: 56px; height: 56px; margin: 0 auto 1rem auto; border-radius: 16px; background: rgba(99, 102, 241, 0.08); color: var(--accent-indigo); display: flex; align-items: center; justify-content: center;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
+            <h3 class="empty-state-title" style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">No matches found</h3>
+            <p class="empty-state-desc" style="color: var(--text-muted); font-size: 0.88rem; max-width: 360px; margin: 0 auto;">We couldn't find any photos matching the uploaded face in this event.</p>
         </div>
     {% endif %}
 </div>
 {% endif %}
 
+<style>
+    @keyframes spinPulse { to { transform: rotate(360deg); } }
+    .spin-icon { animation: spinPulse 0.8s linear infinite; }
+</style>
+
 <script>
-    const selfieDropzone = document.getElementById('selfieDropzone');
-    const selfieStatus = document.getElementById('selfieStatus');
     const searchForm = document.getElementById('searchForm');
-    
-    // Camera Elements
-    const tabUpload = document.getElementById('tabUpload');
-    const tabCamera = document.getElementById('tabCamera');
-    const uploadSection = document.getElementById('uploadSection');
-    const cameraSection = document.getElementById('cameraSection');
+    const mainSelfieInput = document.getElementById('selfieInput');
+    const selectionOptions = document.getElementById('selectionOptions');
+    const previewContainer = document.getElementById('previewContainer');
+    const selfiePreview = document.getElementById('selfiePreview');
+    const selfieStatus = document.getElementById('selfieStatus');
+    const cameraViewfinder = document.getElementById('cameraViewfinder');
     const cameraStream = document.getElementById('cameraStream');
     const cameraCanvas = document.getElementById('cameraCanvas');
     let mediaStream = null;
+    let currentFacingMode = 'user'; // 'user' (Front) or 'environment' (Back)
 
-    function switchTab(tab) {
-        if (tab === 'upload') {
-            tabUpload.style.background = 'var(--bg-tertiary)';
-            tabUpload.style.border = '1px solid var(--border-light)';
-            tabUpload.style.color = 'var(--text-primary)';
-            tabUpload.style.boxShadow = 'var(--shadow-sm)';
-            
-            tabCamera.style.background = 'transparent';
-            tabCamera.style.border = '1px solid transparent';
-            tabCamera.style.color = 'var(--text-secondary)';
-            tabCamera.style.boxShadow = 'none';
-            
-            uploadSection.style.display = 'block';
-            cameraSection.style.display = 'none';
-            stopCamera();
-        } else {
-            tabCamera.style.background = 'var(--bg-tertiary)';
-            tabCamera.style.border = '1px solid var(--border-light)';
-            tabCamera.style.color = 'var(--text-primary)';
-            tabCamera.style.boxShadow = 'var(--shadow-sm)';
-            
-            tabUpload.style.background = 'transparent';
-            tabUpload.style.border = '1px solid transparent';
-            tabUpload.style.color = 'var(--text-secondary)';
-            tabUpload.style.boxShadow = 'none';
-            
-            uploadSection.style.display = 'none';
-            cameraSection.style.display = 'flex';
-            startCamera();
-        }
+    function createFastThumbnail(file, maxDim = 320) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                let w = img.width;
+                let h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                canvas.toBlob((blob) => {
+                    resolve(blob || file);
+                }, 'image/jpeg', 0.85);
+            };
+            img.onerror = () => resolve(file);
+            img.src = url;
+        });
     }
 
-    async function startCamera() {
+    async function verifyAndApplySelfie(file, label = "Selfie Ready") {
+        const errDiv = document.getElementById('clientFaceError');
+        const errText = document.getElementById('clientFaceErrorText');
+        if (errDiv) errDiv.style.display = 'none';
+
+        selectionOptions.style.display = 'none';
+        cameraViewfinder.style.display = 'none';
+        previewContainer.style.display = 'flex';
+        
+        const checkmark = document.getElementById('selfieCheckmark');
+        if (checkmark) checkmark.style.display = 'none';
+
+        selfieStatus.innerText = label;
+        selfiePreview.src = URL.createObjectURL(file);
+
+        const statusEl = document.getElementById('faceCheckStatus');
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color:var(--accent-indigo); display:flex; align-items:center; gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin-icon"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+                <span>Verifying face...</span>
+            </span>`;
+        }
+
+        const thumbBlob = await createFastThumbnail(file);
+        const fd = new FormData();
+        fd.append('selfie', thumbBlob, 'thumb.jpg');
+
         try {
-            mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-            cameraStream.srcObject = mediaStream;
+            const resp = await fetch('{% url "gallery:check_selfie_face" %}', {
+                method: 'POST',
+                body: fd
+            });
+            const data = await resp.json();
+
+            if (data.valid) {
+                // Success: 1 face verified!
+                if (checkmark) checkmark.style.display = 'flex';
+                if (statusEl) {
+                    statusEl.innerHTML = `<span style="color:#059669; background:rgba(16,185,129,0.12); padding:3px 10px; border-radius:12px; font-weight:700;">✓ 1 Face Verified</span>`;
+                }
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                mainSelfieInput.files = dt.files;
+            } else {
+                // Failed: 0 or multiple faces!
+                resetSelfieSelection();
+                if (errDiv && errText) {
+                    errText.innerText = data.error || 'Please select a photo showing only one face.';
+                    errDiv.style.display = 'flex';
+                    errDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    alert(data.error);
+                }
+            }
         } catch (err) {
-            alert("Unable to access camera: " + err.message);
-            switchTab('upload');
+            // Graceful network fallback
+            if (checkmark) checkmark.style.display = 'flex';
+            if (statusEl) statusEl.innerHTML = `<span style="color:#64748b; font-size:0.75rem;">Photo ready</span>`;
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            mainSelfieInput.files = dt.files;
         }
     }
 
-    function stopCamera() {
+    async function handleFileSelected(files) {
+        if (!files || files.length === 0) return;
+        const file = files[0];
+        if (!file.type.startsWith('image/')) {
+            alert('Please select a valid image file.');
+            return;
+        }
+        await verifyAndApplySelfie(file, file.name || "Selfie Selected");
+    }
+
+    async function startLiveCamera(facing = 'user') {
+        currentFacingMode = facing;
+        try {
+            selectionOptions.style.display = 'none';
+            previewContainer.style.display = 'none';
+            cameraViewfinder.style.display = 'flex';
+            stopLiveCamera();
+
+            const constraints = { 
+                video: { 
+                    facingMode: { ideal: currentFacingMode }, 
+                    width: { ideal: 1280 }, 
+                    height: { ideal: 960 } 
+                },
+                audio: false
+            };
+            mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+            cameraStream.srcObject = mediaStream;
+
+            const modeText = document.getElementById('cameraModeText');
+            const flipBtn = document.getElementById('flipCameraBtn');
+            if (currentFacingMode === 'user') {
+                cameraStream.style.transform = 'scaleX(-1)';
+                if (modeText) modeText.innerText = 'Front Camera (Selfie)';
+                if (flipBtn) flipBtn.title = 'Switch to Back Camera (Take photo of someone)';
+            } else {
+                cameraStream.style.transform = 'none';
+                if (modeText) modeText.innerText = 'Back Camera (Photo of Someone)';
+                if (flipBtn) flipBtn.title = 'Switch to Front Camera (Selfie)';
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Camera access denied or unavailable: " + err.message);
+            cancelLiveCamera();
+        }
+    }
+
+    function stopLiveCamera() {
         if (mediaStream) {
-            mediaStream.getTracks().forEach(track => track.stop());
+            mediaStream.getTracks().forEach(t => t.stop());
             mediaStream = null;
         }
     }
 
-    function captureSelfie() {
-        if (!mediaStream) return;
+    function cancelLiveCamera() {
+        stopLiveCamera();
+        cameraViewfinder.style.display = 'none';
+        selectionOptions.style.display = 'flex';
+    }
+
+    async function toggleCameraFacing() {
+        const nextFacing = (currentFacingMode === 'user' ? 'environment' : 'user');
+        await startLiveCamera(nextFacing);
+    }
+
+    function captureLiveSelfie() {
+        if (!mediaStream || !cameraStream.videoWidth) return;
         cameraCanvas.width = cameraStream.videoWidth;
         cameraCanvas.height = cameraStream.videoHeight;
         const ctx = cameraCanvas.getContext('2d');
         
-        // Handle horizontal flip for front-facing camera display matching
-        ctx.translate(cameraCanvas.width, 0);
-        ctx.scale(-1, 1);
+        if (currentFacingMode === 'user') {
+            ctx.translate(cameraCanvas.width, 0);
+            ctx.scale(-1, 1);
+        }
         ctx.drawImage(cameraStream, 0, 0);
-        
-        cameraCanvas.toBlob((blob) => {
-            const file = new File([blob], "camera-selfie.jpg", { type: "image/jpeg" });
-            
-            // Create a new FileList-like object (DataTransfer)
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            document.getElementById('selfieInput').files = dataTransfer.files;
-            
-            // Show preview and switch tab
-            updateSelfieStatus(dataTransfer.files);
-            switchTab('upload');
-        }, 'image/jpeg', 0.9);
+
+        cameraCanvas.toBlob(async (blob) => {
+            const filename = currentFacingMode === 'user' ? 'camera-selfie.jpg' : 'camera-photo.jpg';
+            const label = currentFacingMode === 'user' ? 'Front Selfie Captured' : 'Photo of Someone Captured';
+            const file = new File([blob], filename, { type: "image/jpeg" });
+            stopLiveCamera();
+            await verifyAndApplySelfie(file, label);
+        }, 'image/jpeg', 0.92);
     }
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        selfieDropzone.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            selfieDropzone.classList.add('dragover');
-        }, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        selfieDropzone.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            selfieDropzone.classList.remove('dragover');
-        }, false);
-    });
-
-    selfieDropzone.addEventListener('drop', (e) => {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        document.getElementById('selfieInput').files = files;
-        updateSelfieStatus(files);
-    });
-
-    function updateSelfieStatus(files) {
-        if (files.length > 0) {
-            const file = files[0];
-            document.getElementById('uploadPrompt').style.display = 'none';
-            document.getElementById('previewContainer').style.display = 'flex';
-            document.getElementById('selfieStatus').innerText = file.name;
-            document.getElementById('selfiePreview').src = URL.createObjectURL(file);
-        }
+    function resetSelfieSelection() {
+        stopLiveCamera();
+        mainSelfieInput.value = '';
+        selfiePreview.src = '';
+        const checkmark = document.getElementById('selfieCheckmark');
+        if (checkmark) checkmark.style.display = 'none';
+        previewContainer.style.display = 'none';
+        cameraViewfinder.style.display = 'none';
+        selectionOptions.style.display = 'flex';
     }
 
     searchForm.addEventListener('submit', (e) => {
-        const fileInput = document.getElementById('selfieInput');
-        if (!fileInput.files || fileInput.files.length === 0) {
+        if (!mainSelfieInput.files || mainSelfieInput.files.length === 0) {
             e.preventDefault();
-            alert('Please select or capture a selfie photo first!');
+            alert('Please upload a photo or capture a selfie first!');
             return;
         }
-        showLoading('Searching with FAISS AI engine...');
+        const sidInput = document.getElementById('telemetrySessionId');
+        if (sidInput) sidInput.value = localStorage.getItem('photona_sid') || '';
+        if (typeof showAISearchLoader === 'function') {
+            showAISearchLoader();
+        } else if (typeof showLoading === 'function') {
+            showLoading('Searching photos with AI face recognition...');
+        }
     });
 
     function copyPersonalLink(url) {
@@ -699,8 +938,8 @@
             const btnText = document.getElementById('copyLinkBtnText');
             if (btnText) {
                 const old = btnText.innerText;
-                btnText.innerText = "Copied! ✓";
-                setTimeout(() => { btnText.innerText = old; }, 2500);
+                btnText.innerText = "Copied!";
+                setTimeout(() => { btnText.innerText = old; }, 2200);
             }
             if (typeof showToast === 'function') {
                 showToast("Personal photos link copied to clipboard!", "success");
@@ -712,4 +951,6 @@
         });
     }
 </script>
+
+{% include 'gallery/_ai_search_loader.html' %}
 {% endblock %}

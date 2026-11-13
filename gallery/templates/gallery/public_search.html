@@ -30,7 +30,9 @@
         {% csrf_token %}
         
         <div style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); background: var(--bg-tertiary); border: 1px solid var(--border-light); display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 0.9rem;">📂</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
             <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-primary);">
                 Searching inside Event: <span style="color: var(--accent-indigo);">{{ selected_event.name }}</span>
             </div>
@@ -39,31 +41,98 @@
 
         <!-- The main hidden input that gets submitted -->
         <input type="file" id="mainSelfieInput" name="selfie" style="display:none;" accept="image/*">
+        <input type="hidden" name="telemetry_session_id" id="telemetrySessionId">
+
+        <!-- Client-Side Face Validation Alert -->
+        <div id="clientFaceError" style="display: none; margin-bottom: 1.25rem; background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 12px; padding: 12px 16px; font-size: 0.85rem; color: #be123c; font-weight: 600; align-items: flex-start; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <div style="flex: 1;">
+                <div style="font-weight: 750; margin-bottom: 2px;" id="clientFaceErrorHeading">Selfie Check Failed</div>
+                <div id="clientFaceErrorText" style="font-size: 0.8rem; font-weight: 500; color: #9f1239; line-height: 1.4;"></div>
+            </div>
+            <button type="button" onclick="document.getElementById('clientFaceError').style.display='none'" style="background: none; border: none; color: #be123c; font-size: 16px; cursor: pointer; padding: 0 4px;">✕</button>
+        </div>
 
         <!-- Selection Options -->
-        <div id="selectionOptions" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <div id="selectionOptions" style="display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+            {% if allow_upload %}
             <!-- Upload from Device -->
-            <div style="flex: 1; border: 2px dashed var(--border-medium); border-radius: var(--radius-lg); text-align: center; padding: 2rem 1rem; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('selfieUpload').click()" onmouseover="this.style.borderColor='var(--accent-indigo)'; this.style.background='var(--bg-secondary)';" onmouseout="this.style.borderColor='var(--border-medium)'; this.style.background='transparent';">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
-                <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Upload Photo</div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Choose from your device</div>
+            <div style="flex: 1; min-width: 140px; border: 2px dashed rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg); text-align: center; padding: 1.75rem 1rem; cursor: pointer; transition: all 0.2s; background: var(--bg-secondary);" onclick="document.getElementById('selfieUpload').click()" onmouseover="this.style.borderColor='var(--accent-indigo)'; this.style.background='rgba(99, 102, 241, 0.05)';" onmouseout="this.style.borderColor='rgba(99, 102, 241, 0.25)'; this.style.background='var(--bg-secondary)';">
+                <div style="width: 44px; height: 44px; margin: 0 auto 0.5rem auto; border-radius: 12px; background: rgba(99, 102, 241, 0.1); color: var(--accent-indigo); display: flex; align-items: center; justify-content: center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </div>
+                <div style="font-weight: 750; color: var(--text-primary); font-size: 0.95rem;">Upload Photo</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Choose from device</div>
             </div>
             <input type="file" id="selfieUpload" accept="image/*" style="display:none;" onchange="updateSelfieStatus(this)">
+            {% endif %}
             
-            <!-- Take a Selfie -->
-            <div style="flex: 1; border: 2px dashed var(--border-medium); border-radius: var(--radius-lg); text-align: center; padding: 2rem 1rem; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('selfieCamera').click()" onmouseover="this.style.borderColor='var(--accent-indigo)'; this.style.background='var(--bg-secondary)';" onmouseout="this.style.borderColor='var(--border-medium)'; this.style.background='transparent';">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📷</div>
-                <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Take Selfie</div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Use your camera directly</div>
+            <!-- Take Selfie / Photo (Single Combined Camera Option) -->
+            <div style="flex: 1; min-width: 140px; border: 2px dashed rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg); text-align: center; padding: 1.75rem 1rem; cursor: pointer; transition: all 0.2s; background: var(--bg-secondary);" onclick="startLiveCamera()" onmouseover="this.style.borderColor='var(--accent-indigo)'; this.style.background='rgba(99, 102, 241, 0.05)';" onmouseout="this.style.borderColor='rgba(99, 102, 241, 0.25)'; this.style.background='var(--bg-secondary)';">
+                <div style="width: 44px; height: 44px; margin: 0 auto 0.5rem auto; border-radius: 12px; background: rgba(168, 85, 247, 0.1); color: #9333ea; display: flex; align-items: center; justify-content: center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                </div>
+                <div style="font-weight: 750; color: var(--text-primary); font-size: 0.95rem;">Take Selfie</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Use camera directly</div>
             </div>
-            <input type="file" id="selfieCamera" accept="image/*" capture="user" style="display:none;" onchange="updateSelfieStatus(this)">
+            <!-- Fallback hidden input for devices where getUserMedia is unavailable -->
+            <input type="file" id="fallbackCameraInput" accept="image/*" capture="user" style="display:none;" onchange="updateSelfieStatus(this)">
+        </div>
+
+        <!-- Camera Viewfinder Section (Hidden initially) -->
+        <div id="cameraViewfinder" style="display: none; border-radius: var(--radius-lg); overflow: hidden; border: 2px solid var(--border-medium); position: relative; background: #000; aspect-ratio: 4/3; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 1.25rem;">
+            <video id="cameraStream" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+            
+            <!-- Camera Mode Badge -->
+            <div id="cameraModeBadge" style="position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; backdrop-filter: blur(4px); display: flex; align-items: center; gap: 6px; z-index: 10;">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                <span id="cameraModeText">Front Camera (Selfie)</span>
+            </div>
+
+            <!-- Cancel Button -->
+            <button type="button" onclick="cancelLiveCamera()" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.65); color: white; border: none; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; backdrop-filter: blur(4px); z-index: 10; transition: transform 0.15s;" title="Close Camera">✕</button>
+
+            <!-- Bottom Controls: Centered Shutter + Flip Button (if Back Camera Allowed) -->
+            <div style="position: absolute; bottom: 16px; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 20px; padding: 0 20px; z-index: 10;">
+                <!-- Placeholder spacer on left to keep shutter centered -->
+                <div style="width: 44px; height: 44px; {% if not allow_back_camera %}visibility: hidden;{% endif %}"></div>
+
+                <!-- Shutter Capture Button -->
+                <button type="button" id="captureBtn" title="Capture Photo" onclick="captureLiveSelfie()" style="border-radius: 50%; width: 66px; height: 66px; padding: 0; background: white; border: 4px solid rgba(255,255,255,0.5); box-shadow: 0 4px 16px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 52px; height: 52px; border-radius: 50%; border: 3px solid #1e293b; background: #ffffff;"></div>
+                </button>
+
+                {% if allow_back_camera %}
+                <!-- Flip Camera Button (Front / Back) -->
+                <button type="button" id="flipCameraBtn" title="Switch to Back Camera (Take photo of someone)" onclick="toggleCameraFacing()" style="background: rgba(0,0,0,0.65); color: white; border: 1.5px solid rgba(255,255,255,0.3); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.2s;" onmouseover="this.style.background='rgba(99,102,241,0.85)'" onmouseout="this.style.background='rgba(0,0,0,0.65)'">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
+                    </svg>
+                </button>
+                {% else %}
+                <div style="width: 44px; height: 44px; visibility: hidden;"></div>
+                {% endif %}
+            </div>
+
+            <canvas id="cameraCanvas" style="display: none;"></canvas>
         </div>
 
         <!-- Preview State (Hidden by default) -->
-        <div id="previewContainer" style="display: none; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.5rem; flex-direction: column; align-items: center; justify-content: center; position: relative;">
-            <button type="button" onclick="resetSelection()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.8); border: 1px solid var(--border-light); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; box-shadow: var(--shadow-sm); z-index: 10;">✕</button>
-            <img id="selfiePreview" src="" style="max-height: 160px; max-width: 100%; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); margin-bottom: 0.75rem; object-fit: contain;">
-            <div id="selfieStatus" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-indigo); word-break: break-all; text-align: center;"></div>
+        <div id="previewContainer" style="display: none; background: var(--bg-secondary); border: 1.5px solid rgba(99, 102, 241, 0.2); border-radius: var(--radius-lg); padding: 1.5rem; flex-direction: column; align-items: center; justify-content: center; position: relative; margin-bottom: 1.25rem;">
+            <button type="button" onclick="resetSelection()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9); border: 1px solid var(--border-light); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; box-shadow: var(--shadow-sm); z-index: 10;" title="Change Photo">✕</button>
+            <div style="position: relative; margin-bottom: 0.75rem;">
+                <img id="selfiePreview" src="" style="width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 3px solid #ffffff; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);">
+                <span id="selfieCheckmark" style="display: none; position: absolute; bottom: 2px; right: 2px; background: #10b981; color: white; width: 26px; height: 26px; border-radius: 50%; align-items: center; justify-content: center; font-size: 13px; border: 2.5px solid white;">✓</span>
+            </div>
+            <div id="selfieStatus" style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); word-break: break-all; text-align: center;"></div>
+            <div id="faceCheckStatus" style="font-size: 0.78rem; font-weight: 600; margin-top: 6px; display: flex; align-items: center; gap: 6px;"></div>
         </div>
 
         <!-- Lead Generation Form (Hidden initially) -->
@@ -83,9 +152,9 @@
                     <input type="number" id="guest_age" name="guest_age" class="form-input" required placeholder="25" min="1" max="120">
                 </div>
                 <div>
-                    <label class="form-label" for="guest_phone">Phone Number <span style="color: var(--accent-rose);">*</span></label>
-                    <input type="tel" id="guest_phone" name="guest_phone" class="form-input" required placeholder="e.g., 9876543210" pattern="[0-9]{10}" maxlength="10" oninput="validatePhone(this)">
-                    <div id="phoneError" style="color: var(--accent-rose); font-size: 0.75rem; margin-top: 4px; display: none;">Must be exactly 10 digits.</div>
+                    <label class="form-label" for="guest_phone">WhatsApp Number <span style="color: var(--accent-rose);">*</span></label>
+                    <input type="tel" id="guest_phone" name="guest_phone" class="form-input" required placeholder="e.g., 9876543210 (WhatsApp Number)" pattern="[0-9]{10}" maxlength="10" oninput="validatePhone(this)">
+                    <div id="phoneError" style="color: var(--accent-rose); font-size: 0.75rem; margin-top: 4px; display: none;">WhatsApp number must be exactly 10 digits.</div>
                     <script>
                         function validatePhone(input) {
                             input.value = input.value.replace(/\D/g, ''); // Allow only digits
@@ -100,7 +169,7 @@
                                     input.style.borderColor = 'var(--accent-rose)'; // Red
                                     input.style.boxShadow = '0 0 0 3px rgba(225, 29, 72, 0.1)';
                                     errorDiv.style.display = 'block';
-                                    input.setCustomValidity("Phone number must be exactly 10 digits.");
+                                    input.setCustomValidity("WhatsApp number must be exactly 10 digits.");
                                 } else {
                                     input.style.borderColor = '';
                                     input.style.boxShadow = '';
@@ -162,9 +231,15 @@
                         Access your photos anytime{% if personal_link.expires_at %} until <strong>{{ personal_link.expires_at|date:"M d, Y" }}</strong>{% endif %}. Bookmark or share this link directly!
                     </div>
                     {% if whatsapp_sent and guest_phone %}
-                        <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #15803d; font-size: 0.76rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">
-                            <span>📲</span> Link sent to your WhatsApp (+{{ guest_phone }})!
-                        </div>
+                        {% if whatsapp_enabled %}
+                            <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #15803d; font-size: 0.76rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">
+                                <span>📲</span> Link sent to your WhatsApp (+{{ guest_phone }})!
+                            </div>
+                        {% else %}
+                            <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); color: #4338ca; font-size: 0.76rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;" title="Real WhatsApp sending is paused via ENABLE_WHATSAPP_LINK_SEND=False in .env">
+                                <span>🛠️</span> [Dev Mode] WhatsApp delivery simulated for +{{ guest_phone }} (Active in Production)
+                            </div>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -433,7 +508,7 @@
                         {% endif %}
                         {% endwith %}
 
-                        <a href="{% url 'gallery:secure_image' res.image.get_secure_processed_token %}?download=1" download="{{ res.download_filename|default:res.image.filename }}" class="thumb-action-btn" title="Download Photo (Processed & Watermarked)" style="position: absolute; bottom: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(15, 23, 42, 0.75); color: white; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 0.9rem; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(15, 23, 42, 0.75)'" onclick="event.stopPropagation();">⬇</a>
+                        <a href="{% url 'gallery:secure_image' res.image.get_secure_processed_token %}?download=1" download="{{ res.download_filename|default:res.image.filename }}" class="thumb-action-btn" title="Download Photo (Processed & Watermarked)" style="position: absolute; bottom: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(15, 23, 42, 0.75); color: white; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 0.9rem; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(15, 23, 42, 0.75)'" onclick="if(typeof window.photonaTrackPhoto==='function') window.photonaTrackPhoto({{ res.image.id }}, 'download', 0); event.stopPropagation();">⬇</a>
                     </div>
                     <div class="rich-gallery-info" style="padding: 0.85rem 1rem;">
                         <div class="rich-gallery-name" title="{{ res.image.event.name }} #{{ res.image.id }}" style="font-weight: 750; font-size: 0.85rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -458,7 +533,7 @@
                         <div class="search-lightbox-title" id="slbTitle">Photo</div>
                     </div>
                     <div class="search-lightbox-actions">
-                        <a id="slbDownloadBtn" href="#" class="slb-btn slb-btn-primary" download title="Download Photo">
+                        <a id="slbDownloadBtn" href="#" class="slb-btn slb-btn-primary" download title="Download Photo" onclick="onSlbDownloadClick()">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                             <span>Download</span>
                         </a>
@@ -498,6 +573,31 @@
                 {% endfor %}
             ];
             let currentSlbIndex = 0;
+            let currentSlbPhotoId = null;
+            let currentSlbViewStart = null;
+            let slbDwellHeartbeat = null;
+
+            function trackCurrentPhotoDwell() {
+                if (currentSlbPhotoId && currentSlbViewStart) {
+                    const elapsed = Math.max(1, Math.round((Date.now() - currentSlbViewStart) / 1000));
+                    if (typeof window.photonaTrackPhoto === 'function') {
+                        window.photonaTrackPhoto(currentSlbPhotoId, 'view', elapsed);
+                    }
+                }
+                currentSlbPhotoId = null;
+                currentSlbViewStart = null;
+                if (slbDwellHeartbeat) {
+                    clearInterval(slbDwellHeartbeat);
+                    slbDwellHeartbeat = null;
+                }
+            }
+
+            function onSlbDownloadClick() {
+                const photo = searchLightboxPhotos[currentSlbIndex];
+                if (photo && typeof window.photonaTrackPhoto === 'function') {
+                    window.photonaTrackPhoto(photo.id, 'download', 0);
+                }
+            }
 
             function openSearchLightbox(idx) {
                 if (!searchLightboxPhotos || searchLightboxPhotos.length === 0) return;
@@ -511,6 +611,7 @@
             }
 
             function closeSearchLightbox() {
+                trackCurrentPhotoDwell();
                 const modal = document.getElementById('searchPhotoLightbox');
                 if (modal) {
                     modal.style.display = 'none';
@@ -524,6 +625,7 @@
                 if (!searchLightboxPhotos || searchLightboxPhotos.length === 0) return;
                 const nextIdx = currentSlbIndex + dir;
                 if (nextIdx >= 0 && nextIdx < searchLightboxPhotos.length) {
+                    trackCurrentPhotoDwell();
                     currentSlbIndex = nextIdx;
                     renderSearchLightboxPhoto();
                 }
@@ -532,6 +634,24 @@
             function renderSearchLightboxPhoto() {
                 const photo = searchLightboxPhotos[currentSlbIndex];
                 if (!photo) return;
+
+                // Send initial lightbox zoom ping and start dwell timer
+                currentSlbPhotoId = photo.id;
+                currentSlbViewStart = Date.now();
+                if (typeof window.photonaTrackPhoto === 'function') {
+                    window.photonaTrackPhoto(photo.id, 'lightbox', 0);
+                }
+
+                // Heartbeat to accumulate viewing time every 10 seconds
+                if (slbDwellHeartbeat) clearInterval(slbDwellHeartbeat);
+                slbDwellHeartbeat = setInterval(() => {
+                    if (currentSlbPhotoId && currentSlbViewStart) {
+                        const elapsed = Math.round((Date.now() - currentSlbViewStart) / 1000);
+                        if (typeof window.photonaTrackPhoto === 'function') {
+                            window.photonaTrackPhoto(currentSlbPhotoId, 'view', elapsed);
+                        }
+                    }
+                }, 10000);
 
                 const counter = document.getElementById('slbCounter');
                 const title = document.getElementById('slbTitle');
@@ -601,6 +721,11 @@
                     }
                 }, { passive: true });
             }
+
+            // Clean history so page refresh performs a GET without re-posting 0-byte selfie
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.href);
+            }
         </script>
     {% else %}
         <div class="empty-state">
@@ -612,41 +737,233 @@
 </div>
 {% endif %}
 
+<style>
+    @keyframes spinPulse { to { transform: rotate(360deg); } }
+    .spin-icon { animation: spinPulse 0.8s linear infinite; }
+</style>
+
 <script>
     const searchForm = document.getElementById('searchForm');
     const mainInput = document.getElementById('mainSelfieInput');
+    const cameraViewfinder = document.getElementById('cameraViewfinder');
+    const cameraStream = document.getElementById('cameraStream');
+    const cameraCanvas = document.getElementById('cameraCanvas');
+    const selectionOptions = document.getElementById('selectionOptions');
+    const previewContainer = document.getElementById('previewContainer');
+    let mediaStream = null;
+    let currentFacingMode = 'user'; // 'user' (Front) or 'environment' (Back)
+    const BACK_CAMERA_ALLOWED = {{ allow_back_camera|yesno:"true,false" }};
 
-    function updateSelfieStatus(inputElement) {
-        if (inputElement.files && inputElement.files.length > 0) {
-            const file = inputElement.files[0];
-            
-            if (!file.type.startsWith('image/')) {
-                alert('Please select a valid image file. Videos and other formats are not allowed.');
-                inputElement.value = '';
-                return;
+    function createFastThumbnail(file, maxDim = 320) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                let w = img.width;
+                let h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                canvas.toBlob((blob) => {
+                    resolve(blob || file);
+                }, 'image/jpeg', 0.85);
+            };
+            img.onerror = () => resolve(file);
+            img.src = url;
+        });
+    }
+
+    async function startLiveCamera(facing = 'user') {
+        currentFacingMode = facing;
+        try {
+            if (selectionOptions) selectionOptions.style.display = 'none';
+            if (previewContainer) previewContainer.style.display = 'none';
+            if (cameraViewfinder) cameraViewfinder.style.display = 'flex';
+            stopLiveCamera();
+
+            const constraints = {
+                video: {
+                    facingMode: { ideal: currentFacingMode },
+                    width: { ideal: 1280 },
+                    height: { ideal: 960 }
+                },
+                audio: false
+            };
+            mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+            cameraStream.srcObject = mediaStream;
+
+            const modeText = document.getElementById('cameraModeText');
+            const flipBtn = document.getElementById('flipCameraBtn');
+            if (currentFacingMode === 'user') {
+                cameraStream.style.transform = 'scaleX(-1)';
+                if (modeText) modeText.innerText = 'Front Camera (Selfie)';
+                if (flipBtn) flipBtn.title = 'Switch to Back Camera (Take photo of someone)';
+            } else {
+                cameraStream.style.transform = 'none';
+                if (modeText) modeText.innerText = 'Back Camera (Photo of Someone)';
+                if (flipBtn) flipBtn.title = 'Switch to Front Camera (Selfie)';
             }
+        } catch (err) {
+            console.warn("Live camera getUserMedia failed:", err);
+            // Fallback to native capture input if getUserMedia fails
+            cancelLiveCamera();
+            const fallbackInput = document.getElementById('fallbackCameraInput');
+            if (fallbackInput) {
+                fallbackInput.setAttribute('capture', currentFacingMode === 'user' ? 'user' : 'environment');
+                fallbackInput.click();
+            } else {
+                alert("Could not access camera: " + err.message);
+            }
+        }
+    }
 
-            document.getElementById('selectionOptions').style.display = 'none';
-            document.getElementById('previewContainer').style.display = 'flex';
+    function stopLiveCamera() {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(t => t.stop());
+            mediaStream = null;
+        }
+    }
+
+    function cancelLiveCamera() {
+        stopLiveCamera();
+        if (cameraViewfinder) cameraViewfinder.style.display = 'none';
+        if (selectionOptions) selectionOptions.style.display = 'flex';
+    }
+
+    async function toggleCameraFacing() {
+        if (!BACK_CAMERA_ALLOWED) return;
+        const nextFacing = (currentFacingMode === 'user' ? 'environment' : 'user');
+        await startLiveCamera(nextFacing);
+    }
+
+    function captureLiveSelfie() {
+        if (!mediaStream || !cameraStream.videoWidth) return;
+        cameraCanvas.width = cameraStream.videoWidth;
+        cameraCanvas.height = cameraStream.videoHeight;
+        const ctx = cameraCanvas.getContext('2d');
+
+        if (currentFacingMode === 'user') {
+            ctx.translate(cameraCanvas.width, 0);
+            ctx.scale(-1, 1);
+        }
+        ctx.drawImage(cameraStream, 0, 0);
+
+        cameraCanvas.toBlob(async (blob) => {
+            const filename = currentFacingMode === 'user' ? 'camera-selfie.jpg' : 'camera-photo.jpg';
+            const label = currentFacingMode === 'user' ? 'Front Selfie Captured' : 'Photo of Someone Captured';
+            const file = new File([blob], filename, { type: 'image/jpeg' });
+            stopLiveCamera();
+            if (cameraViewfinder) cameraViewfinder.style.display = 'none';
+            await processSelectedFile(file, label);
+        }, 'image/jpeg', 0.92);
+    }
+
+    async function updateSelfieStatus(inputElement) {
+        if (!inputElement.files || inputElement.files.length === 0) return;
+        const file = inputElement.files[0];
+
+        if (!file.type.startsWith('image/')) {
+            alert('Please select a valid image file. Videos and other formats are not allowed.');
+            inputElement.value = '';
+            return;
+        }
+        await processSelectedFile(file, file.name || "Photo Selected");
+        inputElement.value = '';
+    }
+
+    async function processSelectedFile(file, displayName) {
+        const errDiv = document.getElementById('clientFaceError');
+        const errText = document.getElementById('clientFaceErrorText');
+        if (errDiv) errDiv.style.display = 'none';
+
+        if (selectionOptions) selectionOptions.style.display = 'none';
+        if (cameraViewfinder) cameraViewfinder.style.display = 'none';
+        document.getElementById('previewContainer').style.display = 'flex';
+        document.getElementById('leadFormContainer').style.display = 'none';
+        
+        const checkmark = document.getElementById('selfieCheckmark');
+        if (checkmark) checkmark.style.display = 'none';
+
+        document.getElementById('selfieStatus').innerText = displayName;
+        document.getElementById('selfiePreview').src = URL.createObjectURL(file);
+
+        const statusEl = document.getElementById('faceCheckStatus');
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color:var(--accent-indigo); display:flex; align-items:center; gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin-icon"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+                <span>Verifying face...</span>
+            </span>`;
+        }
+
+        // Fast client micro-thumbnail (only ~15KB, takes ~5ms)
+        const thumbBlob = await createFastThumbnail(file);
+
+        // Pre-flight face verification API
+        const fd = new FormData();
+        fd.append('selfie', thumbBlob, 'thumb.jpg');
+
+        try {
+            const resp = await fetch('{% url "gallery:check_selfie_face" %}', {
+                method: 'POST',
+                body: fd
+            });
+            const data = await resp.json();
+
+            if (data.valid) {
+                // Success: 1 face detected!
+                if (checkmark) checkmark.style.display = 'flex';
+                if (statusEl) {
+                    statusEl.innerHTML = `<span style="color:#059669; background:rgba(16,185,129,0.12); padding:3px 10px; border-radius:12px; font-weight:700;">✓ 1 Face Verified</span>`;
+                }
+                document.getElementById('leadFormContainer').style.display = 'block';
+
+                // Transfer file to main form input
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                mainInput.files = dt.files;
+            } else {
+                // Failed: 0 faces or 2+ faces!
+                resetSelection();
+                if (errDiv && errText) {
+                    errText.innerText = data.error || 'Please upload a photo showing only one face.';
+                    errDiv.style.display = 'flex';
+                    errDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    alert(data.error);
+                }
+            }
+        } catch (err) {
+            // Graceful fallback on network failure
+            if (checkmark) checkmark.style.display = 'flex';
+            if (statusEl) statusEl.innerHTML = `<span style="color:#64748b; font-size:0.75rem;">Photo ready</span>`;
             document.getElementById('leadFormContainer').style.display = 'block';
-            document.getElementById('selfieStatus').innerText = file.name || "Selfie Captured";
-            document.getElementById('selfiePreview').src = URL.createObjectURL(file);
-
-            // Transfer the file to the main hidden input
             const dt = new DataTransfer();
             dt.items.add(file);
             mainInput.files = dt.files;
-            
-            // Clear the original input so it can trigger 'change' again if needed
-            inputElement.value = ''; 
         }
     }
 
     function resetSelection() {
+        stopLiveCamera();
+        if (cameraViewfinder) cameraViewfinder.style.display = 'none';
         document.getElementById('selectionOptions').style.display = 'flex';
         document.getElementById('previewContainer').style.display = 'none';
         document.getElementById('leadFormContainer').style.display = 'none';
         document.getElementById('selfiePreview').src = '';
+        const checkmark = document.getElementById('selfieCheckmark');
+        if (checkmark) checkmark.style.display = 'none';
         mainInput.value = '';
     }
 
@@ -674,7 +991,15 @@
             alert('Please select a photo or take a selfie first!');
             return;
         }
-        showLoading('Scanning event photos...');
+        const sidInput = document.getElementById('telemetrySessionId');
+        if (sidInput) sidInput.value = localStorage.getItem('photona_sid') || '';
+        if (typeof showAISearchLoader === 'function') {
+            showAISearchLoader();
+        } else {
+            showLoading('Scanning event photos...');
+        }
     });
 </script>
+
+{% include 'gallery/_ai_search_loader.html' %}
 {% endblock %}

@@ -243,15 +243,25 @@ def get_event_embedding_matrix(event_id):
     return image_ids, matrix
 
 
-def search_person_by_selfie(selfie_path, event_id=None, tenant_user=None, return_vector=False):
+def search_person_by_selfie(selfie_path_or_bytes, event_id=None, tenant_user=None, return_vector=False):
     """
     Query the database of face embeddings using a query selfie.
+    Accepts file path, bytes, or file-like object (S3 safe).
     Optionally returns (matching_images, query_vector_list) if return_vector=True.
     """
-    # Read query selfie
-    img = cv2.imread(selfie_path)
+    img = None
+    if isinstance(selfie_path_or_bytes, (bytes, bytearray)):
+        arr = np.asarray(bytearray(selfie_path_or_bytes), dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    elif hasattr(selfie_path_or_bytes, 'read'):
+        raw = selfie_path_or_bytes.read()
+        arr = np.asarray(bytearray(raw), dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    elif isinstance(selfie_path_or_bytes, str) and os.path.exists(selfie_path_or_bytes):
+        img = cv2.imread(selfie_path_or_bytes)
+    
     if img is None:
-        raise ValueError("Could not read query selfie image.")
+        raise ValueError("Unable to read the selfie image. Please select and upload a clear photo of your face.")
         
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = _downscale_rgb(img)
@@ -305,10 +315,20 @@ def search_person_by_selfie(selfie_path, event_id=None, tenant_user=None, return
     return (results, query_vector_list) if return_vector else results
 
 
-def extract_face_embedding_from_image(image_path):
-    """Extract normalized 512-d face embedding list from an image file, or None."""
+def extract_face_embedding_from_image(image_input):
+    """Extract normalized 512-d face embedding list from file path, bytes, or file-like object (S3 safe)."""
     try:
-        img = cv2.imread(image_path)
+        img = None
+        if isinstance(image_input, (bytes, bytearray)):
+            arr = np.asarray(bytearray(image_input), dtype=np.uint8)
+            img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        elif hasattr(image_input, 'read'):
+            raw = image_input.read()
+            arr = np.asarray(bytearray(raw), dtype=np.uint8)
+            img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        elif isinstance(image_input, str) and os.path.exists(image_input):
+            img = cv2.imread(image_input)
+
         if img is None:
             return None
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -374,37 +394,57 @@ def sync_personal_gallery_matches(personal_link):
     """
     Sync newly uploaded event photos into this personal gallery link.
     Runs in <5ms using cached FAISS/numpy vector dot-product.
-    Auto-backfills query_embedding if missing on older links.
+    Auto-backfills query_embedding if missing on older links (100% S3 & local storage safe).
     Returns list of newly added GalleryImage objects.
     """
     try:
         from django.utils import timezone
         query_vector = personal_link.query_embedding
 
-        # 1. Backfill query_vector if missing
+        # 1. Backfill query_vector if missing (S3 safe)
         if not query_vector:
-            # Try from selfie file
-            if personal_link.selfie_image:
+            # 1a. Try from selfie_image (S3/local safe)
+            if personal_link.selfie_image and personal_link.selfie_image.name:
                 try:
-                    s_path = getattr(personal_link.selfie_image, 'path', None)
-                    if s_path and os.path.exists(s_path):
-                        query_vector = extract_face_embedding_from_image(s_path)
-                except Exception:
-                    pass
+                    with personal_link.selfie_image.open('rb') as f:
+                        query_vector = extract_face_embedding_from_image(f)
+                except Exception as se:
+                    print(f"[SyncPersonalGallery] Error reading selfie_image: {se}")
 
-            # Try from existing photos' face embeddings
+            # 1b. Try from guest_lead.selfie if attached
+            if not query_vector and personal_link.guest_lead and personal_link.guest_lead.selfie and personal_link.guest_lead.selfie.name:
+                try:
+                    with personal_link.guest_lead.selfie.open('rb') as f:
+                        query_vector = extract_face_embedding_from_image(f)
+                except Exception as le:
+                    print(f"[SyncPersonalGallery] Error reading guest_lead selfie: {le}")
+
+            # 1c. Try from base64 thumbnail if available
+            if not query_vector and personal_link.selfie_thumbnail_b64:
+                try:
+                    import base64
+                    b64_data = personal_link.selfie_thumbnail_b64
+                    if ',' in b64_data:
+                        b64_data = b64_data.split(',', 1)[1]
+                    raw_bytes = base64.b64decode(b64_data)
+                    query_vector = extract_face_embedding_from_image(raw_bytes)
+                except Exception as be:
+                    print(f"[SyncPersonalGallery] Error extracting from b64: {be}")
+
+            # 1d. Try from existing photos' face embeddings (centroid of matched faces)
             if not query_vector:
                 existing_img_ids = list(personal_link.images.values_list('id', flat=True))
                 if existing_img_ids:
                     sample_embeddings = FaceEmbedding.objects.filter(
                         image_id__in=existing_img_ids
-                    ).values_list('embedding_data', flat=True)[:5]
+                    ).values_list('embedding_data', flat=True)[:10]
                     if sample_embeddings:
                         mat = np.asarray(list(sample_embeddings), dtype=np.float32)
                         mean_vec = np.mean(mat, axis=0, keepdims=True)
                         faiss.normalize_L2(mean_vec)
                         query_vector = mean_vec[0].tolist()
 
+            # Save query_vector back to model so we NEVER have to compute it again!
             if query_vector:
                 personal_link.query_embedding = query_vector
                 personal_link.save(update_fields=['query_embedding'])
@@ -412,7 +452,7 @@ def sync_personal_gallery_matches(personal_link):
         if not query_vector:
             return []
 
-        # 2. Find any newly added photos not yet in personal_link.images
+        # 2. Sub-5ms vector dot product search across ALL photos in this event!
         current_img_ids = set(personal_link.images.values_list('id', flat=True))
         new_matches = find_matching_images_for_embedding(
             query_vector,
@@ -494,10 +534,15 @@ def find_or_create_personal_gallery_link(event, query_vector, results, searcher_
             target_link.query_embedding = query_vector
         if not target_link.selfie_thumbnail_b64 and selfie_thumbnail_b64:
             target_link.selfie_thumbnail_b64 = selfie_thumbnail_b64
-        if searcher_name and (not target_link.searcher_name or target_link.searcher_name == 'Guest'):
+        if searcher_name and searcher_name != 'Guest':
             target_link.searcher_name = searcher_name
-        if guest_lead and not target_link.guest_lead:
+        if guest_lead:
             target_link.guest_lead = guest_lead
+            try:
+                guest_lead.personal_gallery_link = target_link
+                guest_lead.save(update_fields=['personal_gallery_link'])
+            except Exception as e_gl:
+                print(f"Error linking guest lead to target personal gallery link: {e_gl}")
         target_link.last_viewed_at = timezone.now()
         target_link.save()
         return target_link, False
@@ -513,6 +558,12 @@ def find_or_create_personal_gallery_link(event, query_vector, results, searcher_
         expires_at=expires_at,
         match_scores={str(r['image'].id): r['score'] for r in results} if results else {}
     )
+    if guest_lead:
+        try:
+            guest_lead.personal_gallery_link = new_link
+            guest_lead.save(update_fields=['personal_gallery_link'])
+        except Exception as e_gl:
+            print(f"Error linking guest lead to new personal gallery link: {e_gl}")
     if selfie_path and os.path.exists(selfie_path):
         try:
             with open(selfie_path, 'rb') as f_selfie:

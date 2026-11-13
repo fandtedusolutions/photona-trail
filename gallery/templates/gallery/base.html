@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Photona - Face Recognition{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    {% if GOOGLE_ANALYTICS_ID %}
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ GOOGLE_ANALYTICS_ID }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ GOOGLE_ANALYTICS_ID }}');
+    </script>
+    {% endif %}
     <style>
         /* Custom Alert & Toast Inline Styles */
         .custom-toast-container {
@@ -321,10 +331,20 @@
     </div>
 
     <!-- Global Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay" style="display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); z-index: 10000015; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;">
-        <div class="spinner" style="width: 36px; height: 36px; border: 3px solid rgba(79,70,229,0.15); border-top-color: var(--accent-indigo); border-radius: 50%; animation: spin 0.7s linear infinite;"></div>
-        <div id="loadingText" style="font-size: 0.9rem; font-weight: 600; color: var(--text-secondary);">Processing...</div>
+    <div id="loadingOverlay" class="loading-overlay" style="display: none; position: fixed; inset: 0; background: rgba(8, 12, 22, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); z-index: 10000015; align-items: center; justify-content: center; flex-direction: column;">
+        <div style="background: rgba(15, 23, 42, 0.88); border: 1px solid rgba(255, 255, 255, 0.12); padding: 2.25rem 2.5rem; border-radius: 24px; box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 40px rgba(99,102,241,0.25); text-align: center; max-width: 360px; width: 90%;">
+            <div style="position: relative; width: 68px; height: 68px; margin: 0 auto 1.25rem auto;">
+                <div style="position: absolute; inset: 0; border-radius: 50%; border: 2px dashed rgba(99, 102, 241, 0.4); animation: spin 8s linear infinite;"></div>
+                <div style="position: absolute; inset: 6px; border-radius: 50%; border: 2.5px solid transparent; border-top-color: #ec4899; border-left-color: #6366f1; animation: spin 1.4s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;"></div>
+                <div style="position: absolute; inset: 18px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #ec4899); box-shadow: 0 0 18px rgba(236,72,153,0.7); animation: pulseGlow 1.8s ease-in-out infinite alternate;"></div>
+            </div>
+            <div id="loadingText" style="font-size: 0.98rem; font-weight: 750; color: #ffffff; letter-spacing: -0.01em;">Processing...</div>
+            <div style="font-size: 0.76rem; color: #94a3b8; margin-top: 6px;">Please hold on a moment</div>
+        </div>
     </div>
+    <style>
+        @keyframes pulseGlow { 0% { transform: scale(0.85); opacity: 0.7; } 100% { transform: scale(1.1); opacity: 1; } }
+    </style>
 
     <!-- Custom Toast Container -->
     <div id="toastContainer" class="custom-toast-container"></div>
@@ -346,6 +366,11 @@
 
     <script>
         function showLoading(text) {
+            const isAISearch = text && (text.toLowerCase().includes('face') || text.toLowerCase().includes('scanning') || text.toLowerCase().includes('search'));
+            if (isAISearch && typeof window.showAISearchLoader === 'function') {
+                window.showAISearchLoader();
+                return;
+            }
             const overlay = document.getElementById('loadingOverlay');
             const txt = document.getElementById('loadingText');
             if (text) txt.innerText = text;
@@ -353,7 +378,11 @@
         }
 
         function hideLoading() {
-            document.getElementById('loadingOverlay').style.display = 'none';
+            if (typeof window.hideAISearchLoader === 'function') {
+                window.hideAISearchLoader();
+            }
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = 'none';
         }
 
         // Custom Toast Notification System
@@ -540,5 +569,159 @@
         });
     </script>
     {% endif %}
+
+    <!-- 📊 Photona Zero-Lag Real-Time Telemetry Tracker -->
+    <script>
+    (function() {
+        try {
+            const path = window.location.pathname;
+
+            // 🛑 NEVER track admin panels, studio consoles, or internal staff actions as "Guests"
+            if (path.startsWith('/super-admin') || path.startsWith('/admin') || path.startsWith('/preview-error')) {
+                return;
+            }
+            {% if request.user.is_authenticated and request.user.is_staff %}
+            // If logged-in studio owner/admin is browsing, don't pollute guest analytics
+            if (!path.includes('/share/') && !path.includes('/my-photos/')) {
+                return;
+            }
+            {% endif %}
+
+            // 1. Session Persistence
+            let sid = localStorage.getItem('photona_sid');
+            if (!sid) {
+                sid = 'psess_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+                localStorage.setItem('photona_sid', sid);
+            }
+            // Sync cookie so direct image downloads link to visitor session
+            try {
+                document.cookie = "photona_sid=" + sid + "; path=/; max-age=31536000; SameSite=Lax";
+            } catch(e) {}
+
+            // 2. Identify Page Type & Event
+            let pageType = 'other';
+            let eventSlug = null;
+
+            if (path === '/' || path === '/dashboard/') {
+                pageType = 'landing';
+            } else if (path.includes('/share/') && path.includes('/search/')) {
+                pageType = 'search';
+            } else if (path.includes('/share/')) {
+                pageType = 'event_gallery';
+            } else if (path.startsWith('/event/')) {
+                pageType = 'event_gallery';
+            } else if (path.includes('/search/')) {
+                pageType = 'search';
+            } else if (path.includes('/my-photos/')) {
+                pageType = 'personal_gallery';
+            } else if (path.includes('/download/')) {
+                pageType = 'zip_download';
+            }
+
+            // Extract event slug for guest-facing pages
+            {% if event and event.slug %}
+            eventSlug = "{{ event.slug }}";
+            {% endif %}
+
+            // Extract traffic source param (e.g. ?src=qr)
+            const urlParams = new URLSearchParams(window.location.search);
+            const trafficSrc = urlParams.get('src') || urlParams.get('source') || '';
+
+            let currentViewId = null;
+            let activeSeconds = 0;
+            let isTabActive = !document.hidden;
+
+            // 3. Send Initial Page View
+            const initData = {
+                session_id: sid,
+                url_path: path,
+                page_type: pageType,
+                page_title: document.title,
+                event_slug: eventSlug,
+                traffic_src: trafficSrc
+            };
+            {% if personal_link and personal_link.guest_lead %}
+            initData.lead_id = {{ personal_link.guest_lead.id }};
+            {% elif created_lead %}
+            initData.lead_id = {{ created_lead.id }};
+            {% endif %}
+
+            fetch('{% url "gallery:analytics_track_page" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(initData)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.view_id) {
+                    currentViewId = data.view_id;
+                }
+            })
+            .catch(() => {});
+
+            // 4. Track Active Dwell Time (Heartbeat)
+            document.addEventListener('visibilitychange', function() {
+                isTabActive = !document.hidden;
+                if (document.hidden) {
+                    sendHeartbeat();
+                }
+            });
+
+            // Increment active time every second if user is viewing tab
+            setInterval(function() {
+                if (isTabActive) {
+                    activeSeconds++;
+                }
+            }, 1000);
+
+            function sendHeartbeat() {
+                if (!currentViewId) return;
+                const scrollDepth = Math.round(((window.scrollY + window.innerHeight) / (document.documentElement.scrollHeight || 1)) * 100);
+                const payload = JSON.stringify({
+                    view_id: currentViewId,
+                    session_id: sid,
+                    duration_seconds: activeSeconds,
+                    scroll_depth: Math.min(scrollDepth, 100)
+                });
+
+                if (navigator.sendBeacon) {
+                    const blob = new Blob([payload], { type: 'application/json' });
+                    navigator.sendBeacon('{% url "gallery:analytics_heartbeat" %}', blob);
+                } else {
+                    fetch('{% url "gallery:analytics_heartbeat" %}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: payload,
+                        keepalive: true
+                    }).catch(() => {});
+                }
+            }
+
+            // Periodic ping every 15s to keep live counters accurate
+            setInterval(sendHeartbeat, 15000);
+            window.addEventListener('beforeunload', sendHeartbeat);
+
+            // Expose helper for tracking photo views & downloads
+            window.photonaTrackPhoto = function(photoId, action, dwellSec) {
+                const photoData = JSON.stringify({
+                    photo_id: photoId,
+                    session_id: sid,
+                    action: action || 'view',
+                    dwell_seconds: dwellSec || 0
+                });
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon('{% url "gallery:analytics_photo_interaction" %}', new Blob([photoData], { type: 'application/json' }));
+                } else {
+                    fetch('{% url "gallery:analytics_photo_interaction" %}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: photoData,
+                        keepalive: true
+                    }).catch(() => {});
+                }
+            };
+        } catch(e) {}
+    })();
+    </script>
 </body>
 </html>

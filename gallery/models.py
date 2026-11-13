@@ -236,6 +236,8 @@ class EventShareLink(models.Model):
     password    = models.CharField(max_length=255, blank=True, null=True, help_text='Hashed password (blank = no protection)')
     is_active   = models.BooleanField(default=True)
     search_only = models.BooleanField(default=False, help_text='If true, guests can only upload a selfie to find their photos, and cannot browse the full gallery.')
+    allow_upload = models.BooleanField(default=True, help_text='Allow guests to upload a selfie photo from gallery/storage')
+    allow_back_camera = models.BooleanField(default=True, help_text='Allow guests to use back camera')
     created_at  = models.DateTimeField(auto_now_add=True)
     expires_at  = models.DateTimeField(null=True, blank=True, help_text='Optional expiry. Leave blank for no expiry.')
 
@@ -256,6 +258,7 @@ class EventShareLink(models.Model):
 class GuestLead(models.Model):
     """Lead generated from a guest performing a selfie search."""
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='leads')
+    personal_gallery_link = models.ForeignKey('PersonalGalleryLink', on_delete=models.SET_NULL, null=True, blank=True, related_name='guest_leads')
     name = models.CharField(max_length=255)
     age = models.IntegerField()
     phone = models.CharField(max_length=50)
@@ -269,6 +272,8 @@ class GuestLead(models.Model):
 
     @property
     def personal_link(self):
+        if self.personal_gallery_link:
+            return self.personal_gallery_link
         pl = self.personal_links.first()
         if pl:
             return pl
@@ -331,6 +336,7 @@ class PersonalGalleryLink(models.Model):
 
     view_count = models.IntegerField(default=0)
     last_viewed_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -356,7 +362,7 @@ class PersonalGalleryLink(models.Model):
 
     @property
     def is_accessible(self):
-        return not self.is_expired
+        return self.is_active and not self.is_expired
 
     def get_effective_expires_at(self):
         """Return the nearest expiry datetime among link, event, and share_link."""
@@ -368,5 +374,183 @@ class PersonalGalleryLink(models.Model):
         if self.share_link and self.share_link.expires_at:
             candidates.append(self.share_link.expires_at)
         return min(candidates) if candidates else None
+
+
+# ═════════════════════════════════════════════════════════════════
+# 📊 PHOTONA REAL-TIME ANALYTICS MODELS
+# ═════════════════════════════════════════════════════════════════
+
+class VisitorSession(models.Model):
+    """
+    Tracks an individual unique visitor session across their visit.
+    Records device, OS, browser, geolocation, and total dwell time.
+    """
+    session_id = models.CharField(max_length=64, unique=True, db_index=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    country = models.CharField(max_length=100, default='India')
+    city = models.CharField(max_length=100, default='Unknown')
+    device_type = models.CharField(max_length=30, default='Mobile')  # Mobile, Desktop, Tablet
+    os_name = models.CharField(max_length=50, default='Unknown')     # iOS, Android, macOS, Windows
+    browser_name = models.CharField(max_length=50, default='Unknown')# Safari, Chrome, etc.
+    traffic_source = models.CharField(max_length=50, default='Direct')# QR Code, WhatsApp, Instagram, Direct
+    
+    # Linked GuestLead if visitor submitted the selfie search form
+    guest_lead = models.ForeignKey(GuestLead, on_delete=models.SET_NULL, null=True, blank=True, related_name='visitor_sessions')
+    
+    first_seen = models.DateTimeField(auto_now_add=True, db_index=True)
+    last_seen = models.DateTimeField(auto_now=True, db_index=True)
+    total_time_seconds = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-last_seen']
+
+    @property
+    def total_time_display(self):
+        from gallery.analytics import format_duration_display
+        return format_duration_display(self.total_time_seconds)
+
+    def __str__(self):
+        lead_str = f" ({self.guest_lead.name})" if self.guest_lead else ""
+        return f"Visitor {self.session_id[:8]}{lead_str} - {self.device_type} ({self.city}, {self.country})"
+
+
+class PageViewEvent(models.Model):
+    """
+    Tracks each page view with exact time spent (dwell time), scroll depth, and associated event.
+    """
+    PAGE_TYPE_CHOICES = [
+        ('landing', 'Home / Landing Page'),
+        ('event_gallery', 'Event Public Gallery'),
+        ('search', 'AI Selfie Search Page'),
+        ('personal_gallery', 'Personal Photos Gallery'),
+        ('zip_download', 'ZIP Download'),
+        ('other', 'Other Page'),
+    ]
+    session = models.ForeignKey(VisitorSession, on_delete=models.CASCADE, related_name='page_views')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True, related_name='analytics_views')
+    page_type = models.CharField(max_length=40, choices=PAGE_TYPE_CHOICES, db_index=True)
+    url_path = models.CharField(max_length=500)
+    page_title = models.CharField(max_length=255, blank=True, default='')
+    duration_seconds = models.PositiveIntegerField(default=0)
+    scroll_depth = models.PositiveSmallIntegerField(default=0)
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    @property
+    def exact_page_name(self):
+        """
+        Intelligently resolves and returns the human-friendly exact page name
+        instead of a vague 'Other Page' label.
+        """
+        if self.page_type == 'search':
+            return 'AI Selfie Search Page'
+        elif self.page_type == 'personal_gallery':
+            return 'Personal Photos Gallery'
+        elif self.page_type == 'event_gallery':
+            return 'Event Public Gallery'
+        elif self.page_type == 'zip_download':
+            return 'ZIP Photo Download'
+        elif self.page_type == 'landing':
+            if self.url_path and self.url_path.strip('/') == 'dashboard':
+                return 'Studio Dashboard'
+            return 'Home / Landing Page'
+
+        # If page_type is 'other' or custom, resolve from page_title or url_path
+        clean_title = (self.page_title or '').strip()
+        for suffix in [' - Photona Studio', ' - Photona', ' | Photona']:
+            if clean_title.endswith(suffix):
+                clean_title = clean_title[:-len(suffix)].strip()
+
+        if clean_title and clean_title.lower() not in ('other', 'unknown', 'untitled'):
+            return clean_title
+
+        # Fallback: parse clean readable name from url_path
+        path = (self.url_path or '').strip('/')
+        if not path:
+            return 'Home Page'
+
+        known_paths = {
+            'plans': 'Pricing & Plans',
+            'pricing': 'Pricing & Plans',
+            'login': 'Sign In Page',
+            'register': 'Registration Page',
+            'signup': 'Sign Up Page',
+            'events': 'Events Directory',
+            'about': 'About Us',
+            'contact': 'Contact Page',
+            'privacy': 'Privacy Policy',
+            'terms': 'Terms of Service',
+            'faq': 'FAQ Page',
+            'qr': 'QR Code Landing',
+        }
+        for segment, label in known_paths.items():
+            if segment in path.lower():
+                return label
+
+        # Clean fallback: e.g. "/guest-welcome/" -> "Guest Welcome Page"
+        clean_seg = path.split('/')[0].replace('-', ' ').replace('_', ' ').title()
+        return f"{clean_seg} Page"
+
+    @property
+    def url_description(self):
+        """
+        Human-friendly explanation of what the URL link actually represents.
+        """
+        path = (self.url_path or '').strip()
+        if '/my-photos/' in path or '/share/personal/' in path:
+            return 'Guest Personal AI Photos (Private WhatsApp Link)'
+        elif '/search/' in path and '/share/' in path:
+            return 'Event AI Selfie Search (Guest QR Scan Link)'
+        elif path.startswith('/event/'):
+            return 'Event Public Gallery (All Guest Photos)'
+        elif '/pricing' in path or '/plans' in path:
+            return 'Pricing & Subscription Plans Page'
+        elif '/dashboard' in path:
+            return 'Studio Management Dashboard'
+        elif path == '/' or path == '':
+            return 'Main Website Home / Landing Page'
+        elif '/login' in path:
+            return 'Studio Admin Sign In'
+        return 'App Section'
+
+    @property
+    def duration_display(self):
+        from gallery.analytics import format_duration_display
+        return format_duration_display(self.duration_seconds)
+
+    def __str__(self):
+        event_name = self.event.name if self.event else "Global"
+        return f"{self.exact_page_name} on {event_name} ({self.duration_seconds}s)"
+
+
+class PhotoInteraction(models.Model):
+    """
+    Tracks engagement with individual photos (grid views, full-screen lightbox zoom, downloads).
+    """
+    ACTION_CHOICES = [
+        ('view', 'Grid View'),
+        ('lightbox', 'Lightbox Fullscreen Zoom'),
+        ('download', 'Photo Download'),
+    ]
+    image = models.ForeignKey(GalleryImage, on_delete=models.CASCADE, related_name='analytics_interactions')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='analytics_photo_interactions')
+    session = models.ForeignKey(VisitorSession, on_delete=models.CASCADE, null=True, blank=True, related_name='photo_interactions')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES, db_index=True)
+    dwell_seconds = models.PositiveIntegerField(default=0)
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    @property
+    def dwell_display(self):
+        from gallery.analytics import format_duration_display
+        return format_duration_display(self.dwell_seconds)
+
+    def __str__(self):
+        return f"{self.action} on Image #{self.image_id} ({self.dwell_seconds}s)"
+
 
 

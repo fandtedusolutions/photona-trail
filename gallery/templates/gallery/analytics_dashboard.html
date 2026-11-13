@@ -1,0 +1,840 @@
+{% extends 'gallery/base.html' %}
+{% load static %}
+
+{% block title %}Analytics & Telemetry - Photona Studio{% endblock %}
+
+{% block content %}
+<style>
+    .analytics-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .kpi-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        padding: 1.25rem 1.5rem;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    .kpi-label {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .kpi-value {
+        font-size: 1.85rem;
+        font-weight: 850;
+        color: var(--text-primary);
+        font-family: 'Outfit', sans-serif;
+        line-height: 1.1;
+        margin-bottom: 0.25rem;
+    }
+    .kpi-sub {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Table styling */
+    .analytics-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.84rem;
+    }
+    .analytics-table th {
+        text-align: left;
+        padding: 10px 14px;
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+        font-weight: 750;
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--border-medium);
+    }
+    .analytics-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border-light);
+        color: var(--text-primary);
+        vertical-align: middle;
+    }
+    .analytics-table tr:hover {
+        background: rgba(99, 102, 241, 0.02);
+    }
+
+    /* Pulse dot for live visitors */
+    .pulse-dot {
+        width: 9px;
+        height: 9px;
+        background: #10b981;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        animation: pulseLive 1.8s infinite;
+    }
+    @keyframes pulseLive {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* Modal / Drawer */
+    .timeline-drawer {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(8px);
+        z-index: 1000000;
+        justify-content: flex-end;
+    }
+    .timeline-content {
+        background: var(--bg-secondary);
+        width: 520px;
+        max-width: 92vw;
+        height: 100%;
+        padding: 1.75rem;
+        overflow-y: auto;
+        box-shadow: -10px 0 30px rgba(0,0,0,0.25);
+    }
+</style>
+
+<div style="max-width: 1350px; margin: 0 auto; padding: 1.5rem 1rem 4rem 1rem;">
+    <!-- ══ HEADER & CONTROLS ══ -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <a href="{% url 'gallery:super_admin_dashboard' %}" style="text-decoration: none; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px;">
+                    ← Super Console
+                </a>
+            </div>
+            <h1 style="font-family: 'Outfit', sans-serif; font-size: 1.85rem; font-weight: 850; color: var(--text-primary); margin: 0; letter-spacing: -0.02em;">
+                Analytics & Telemetry
+            </h1>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 4px 0 0 0;">
+                Clear, real-time insights on guest traffic, page browsing time, photo engagement, and conversion rates.
+            </p>
+        </div>
+
+        <!-- Filter Controls -->
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <!-- Hierarchical Filter Form: Organizer ➔ Event ➔ Time Range -->
+            <form method="GET" id="analyticsFilterForm" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <!-- 1. Organizer Dropdown -->
+                <select name="organizer_id" id="organizerSelect" class="form-input" style="padding: 7px 12px; font-size: 0.82rem; font-weight: 650; border-radius: 8px; width: auto; min-width: 160px; background: var(--bg-secondary);" onchange="onOrganizerFilterChange()">
+                    <option value="all" {% if not selected_organizer_id or selected_organizer_id == 'all' %}selected{% endif %}>
+                        👥 All Organizers
+                    </option>
+                    {% for org in all_organizers %}
+                        <option value="{{ org.id }}" {% if selected_organizer_id == org.id|stringformat:"s" %}selected{% endif %}>
+                            👤 {{ org.username }}{% if org.get_full_name %} ({{ org.get_full_name }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <!-- 2. Event Dropdown -->
+                <select name="event_id" id="eventSelect" class="form-input" style="padding: 7px 12px; font-size: 0.82rem; font-weight: 650; border-radius: 8px; width: auto; min-width: 190px; background: var(--bg-secondary);" onchange="document.getElementById('analyticsFilterForm').submit()">
+                    <option value="all" {% if not selected_event_id or selected_event_id == 'all' %}selected{% endif %}>
+                        📁 All Events {% if selected_organizer %}({{ selected_organizer.username }}){% endif %}
+                    </option>
+                    {% for evt in available_events %}
+                        <option value="{{ evt.id }}" {% if selected_event_id == evt.id|stringformat:"s" %}selected{% endif %}>
+                            📁 {{ evt.name }}{% if not selected_organizer %} ({{ evt.owner.username }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <!-- 3. Time Range Selector -->
+                <select name="range" class="form-input" style="padding: 7px 12px; font-size: 0.82rem; font-weight: 650; border-radius: 8px; width: auto; background: var(--bg-secondary);" onchange="document.getElementById('analyticsFilterForm').submit()">
+                    <option value="today" {% if time_range == 'today' %}selected{% endif %}>Today</option>
+                    <option value="7d" {% if time_range == '7d' or not time_range %}selected{% endif %}>Last 7 Days</option>
+                    <option value="30d" {% if time_range == '30d' %}selected{% endif %}>Last 30 Days</option>
+                    <option value="all" {% if time_range == 'all' %}selected{% endif %}>All Time</option>
+                </select>
+            </form>
+
+            <!-- Export CSV Button (Preserves Selected Filters) -->
+            <a href="{% url 'gallery:export_analytics_csv' %}?organizer_id={{ selected_organizer_id|default:'all' }}&event_id={{ selected_event_id|default:'all' }}&range={{ time_range|default:'7d' }}" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-weight: 700; border-radius: 8px; font-size: 0.82rem; text-decoration: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Export CSV</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ══ EXECUTIVE KPI CARDS ══ -->
+    <div class="analytics-kpi-grid">
+        <!-- 1. Total Visitors -->
+        <div class="kpi-card">
+            <div class="kpi-label">
+                <span>Unique Visitors</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-indigo)" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <div class="kpi-value" id="kpiUniqueVisitors">{{ unique_visitors|default:"0" }}</div>
+            <div class="kpi-sub">
+                <span>Unique guests who opened links</span>
+            </div>
+        </div>
+
+        <!-- 2. Total Pageviews -->
+        <div class="kpi-card">
+            <div class="kpi-label">
+                <span>Total Pageviews</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </div>
+            <div class="kpi-value" id="kpiTotalPageviews">{{ total_pageviews|default:"0" }}</div>
+            <div class="kpi-sub">
+                <span>Total screens loaded</span>
+            </div>
+        </div>
+
+        <!-- 3. Average Browsing Time -->
+        <div class="kpi-card">
+            <div class="kpi-label">
+                <span>Avg. Browsing Time</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <div class="kpi-value" id="kpiAvgBrowsingTime" style="color: #059669;">{{ avg_time_str|default:"0s" }}</div>
+            <div class="kpi-sub">
+                <span>Average active dwell time per guest</span>
+            </div>
+        </div>
+
+        <!-- 4. Live Visitors Now -->
+        <div class="kpi-card" style="border-left: 3px solid #10b981;">
+            <div class="kpi-label">
+                <span style="display: flex; align-items: center; gap: 6px;">
+                    <span class="pulse-dot"></span>
+                    <span>Live Guests Now</span>
+                </span>
+                <span style="font-size: 0.72rem; color: #10b981; font-weight: 750;">ACTIVE</span>
+            </div>
+            <div class="kpi-value" id="kpiLiveGuests" style="color: #10b981;">{{ live_visitors|default:"0" }}</div>
+            <div class="kpi-sub">
+                <span>Browsing site in last 5 minutes</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ CONVERSION FUNNEL BAR ══ -->
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.75rem; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
+            <div>
+                <div style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">
+                    Guest Conversion Funnel
+                </div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">
+                    Tracks how guests transition from opening the event link to downloading their photos.
+                </div>
+            </div>
+            {% if selected_event %}
+            <span style="font-size: 0.75rem; font-weight: 700; background: rgba(99, 102, 241, 0.1); color: var(--accent-indigo); padding: 3px 10px; border-radius: 12px;">
+                Filtered for: {{ selected_event.name }}
+            </span>
+            {% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+            <!-- Step 1: Event Views -->
+            <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-light);">
+                <div style="font-size: 0.72rem; font-weight: 750; color: var(--text-muted); text-transform: uppercase;">1. Opened Event</div>
+                <div style="font-size: 1.45rem; font-weight: 800; color: var(--text-primary); margin: 4px 0;" id="kpiFunnelVisits">{{ funnel.visits|default:"0" }}</div>
+                <div style="font-size: 0.72rem; color: var(--accent-indigo); font-weight: 700;">100% Entry Rate</div>
+            </div>
+
+            <!-- Step 2: AI Searches -->
+            <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-light);">
+                <div style="font-size: 0.72rem; font-weight: 750; color: var(--text-muted); text-transform: uppercase;">2. Selfie Searches</div>
+                <div style="font-size: 1.45rem; font-weight: 800; color: #2563eb; margin: 4px 0;" id="kpiFunnelSearches">{{ funnel.searches|default:"0" }}</div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary);">Searched with face</div>
+            </div>
+
+            <!-- Step 3: Matches Found -->
+            <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-light);">
+                <div style="font-size: 0.72rem; font-weight: 750; color: var(--text-muted); text-transform: uppercase;">3. Matched Galleries</div>
+                <div style="font-size: 1.45rem; font-weight: 800; color: #7c3aed; margin: 4px 0;" id="kpiFunnelMatches">{{ funnel.matches|default:"0" }}</div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary);">Photos found for guest</div>
+            </div>
+
+            <!-- Step 4: Downloads -->
+            <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-light);">
+                <div style="font-size: 0.72rem; font-weight: 750; color: var(--text-muted); text-transform: uppercase;">4. Photo Downloads</div>
+                <div style="font-size: 1.45rem; font-weight: 800; color: #059669; margin: 4px 0;" id="kpiFunnelDownloads">{{ funnel.downloads|default:"0" }}</div>
+                <div style="font-size: 0.72rem; color: #059669; font-weight: 700;">Completed Downloads</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MAIN 2-COLUMN SECTION: PER-PAGE DWELL TIME & LIVE ACTIVITY ══ -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.75rem;">
+        <!-- Left: Per-Page Time Spent Breakdown -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm); height: 490px; display: flex; flex-direction: column;">
+            <div style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.25rem;">
+                Exact Per-Page Time Spent (Dwell Time)
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1rem;">
+                Shows exact browsing duration and visit volume for each section of the app.
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; overflow-x: auto; border-radius: 8px;">
+                <table class="analytics-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                    <thead style="position: sticky; top: 0; background: var(--bg-secondary); z-index: 2; box-shadow: 0 1px 0 var(--border-light);">
+                        <tr>
+                            <th style="background: var(--bg-secondary);">Page / Section</th>
+                            <th style="text-align: center; background: var(--bg-secondary);">Total Views</th>
+                            <th style="text-align: center; background: var(--bg-secondary);">Unique Guests</th>
+                            <th style="text-align: right; background: var(--bg-secondary);">Avg. Time Spent</th>
+                            <th style="text-align: right; background: var(--bg-secondary);">Total Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ps in page_stats %}
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span style="font-weight: 700; color: var(--text-primary);">{{ ps.label }}</span>
+                                    {% if ps.url_description %}
+                                    <span style="font-size: 0.68rem; font-weight: 650; background: rgba(99, 102, 241, 0.08); color: var(--accent-indigo); padding: 1px 7px; border-radius: 4px; border: 1px solid rgba(99, 102, 241, 0.18);">
+                                        {{ ps.url_description }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% if ps.url_path %}
+                                <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; margin-top: 2px;">{{ ps.url_path }}</div>
+                                {% else %}
+                                <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; margin-top: 2px;">{{ ps.page_type }}</div>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: center; font-weight: 700;">{{ ps.views_count }}</td>
+                            <td style="text-align: center; color: var(--text-secondary);">{{ ps.visitors_count }}</td>
+                            <td style="text-align: right; font-weight: 750; color: #059669;">{{ ps.avg_time_display }}</td>
+                            <td style="text-align: right; color: var(--text-muted); font-size: 0.78rem;">{{ ps.total_time_display }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                No page view activity recorded yet. Open an event link or search page to start seeing dwell time!
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right: Real-time Live Activity Stream -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm); height: 490px; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                <div style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">
+                    Live Activity Stream
+                </div>
+                <span class="pulse-dot" title="Live Streaming"></span>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>Live stream of guest actions (updates automatically)</span>
+                <span id="livePollerStatus" style="font-size: 0.7rem; color: #10b981; font-weight: 700;">STREAMING</span>
+            </div>
+
+            <div id="liveActivityContainer" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+                {% for act in recent_activities %}
+                <div data-activity-id="{{ act.id }}" style="background: var(--bg-tertiary); border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; {% if act.badge_text == 'DOWNLOAD' %}border-left: 3px solid #10b981;{% elif act.badge_text == 'ZOOM' %}border-left: 3px solid #f59e0b;{% endif %}">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-weight: 750; color: var(--text-primary);">
+                                {{ act.lead_name }}
+                            </span>
+                            {% if act.is_lead %}
+                                <span style="font-size: 0.65rem; font-weight: 700; background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); padding: 1px 6px; border-radius: 4px; text-transform: uppercase;">Lead</span>
+                            {% endif %}
+                            <span style="font-size: 0.65rem; font-weight: 700; background: {{ act.badge_bg }}; color: {{ act.badge_color }}; padding: 1px 6px; border-radius: 4px;">{{ act.badge_text }}</span>
+                        </div>
+                        <span style="font-size: 0.7rem; color: var(--text-muted);">{{ act.time_ago }}</span>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 4px;">
+                        <span style="font-weight: 700; color: var(--text-primary);">{{ act.title }}</span>
+                        {% if act.event_name %}• <span style="color: var(--accent-indigo); font-weight: 600;">{{ act.event_name }}</span>{% endif %}
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+                        <span>📱 {{ act.device }}</span>
+                        {% if act.city %}<span>📍 {{ act.city }}</span>{% endif %}
+                        {% if act.duration_str %}<span>⏱️ {{ act.duration_str }}</span>{% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div id="liveActivityEmpty" style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.82rem;">
+                    No live activity in this period. As guests browse and download photos, actions will appear here live!
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ VIRAL / TOP VIEWED PHOTOS LEADERBOARD ══ -->
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.75rem; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">
+                    Most Popular & Viral Photos Leaderboard
+                </div>
+                <span style="font-size: 0.7rem; font-weight: 650; background: rgba(99, 102, 241, 0.08); color: var(--accent-indigo); padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(99, 102, 241, 0.2);">
+                    ↔️ Horizontal Scroll
+                </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Ranked by guest views and downloads</span>
+                <div style="display: inline-flex; gap: 4px;">
+                    <button type="button" class="btn btn-sm" onclick="document.getElementById('viralPhotosGrid').scrollBy({left: -280, behavior: 'smooth'})" style="padding: 3px 9px; font-size: 0.75rem; border-radius: 6px; background: var(--bg-tertiary); border: 1px solid var(--border-light); color: var(--text-primary); cursor: pointer;" title="Scroll Left">◀</button>
+                    <button type="button" class="btn btn-sm" onclick="document.getElementById('viralPhotosGrid').scrollBy({left: 280, behavior: 'smooth'})" style="padding: 3px 9px; font-size: 0.75rem; border-radius: 6px; background: var(--bg-tertiary); border: 1px solid var(--border-light); color: var(--text-primary); cursor: pointer;" title="Scroll Right">▶</button>
+                </div>
+            </div>
+        </div>
+        <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            See which wedding moments received the highest engagement and zoom time from guests.
+        </div>
+
+        <div id="viralPhotosGrid" style="display: flex; gap: 1.1rem; overflow-x: auto; padding-bottom: 0.85rem; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+            {% for tp in top_photos %}
+            <div style="flex: 0 0 210px; max-width: 210px; background: var(--bg-tertiary); border: 1px solid var(--border-light); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-sm);">
+                <div style="position: relative; aspect-ratio: 4/3; background: #000; overflow: hidden;">
+                    {% if tp.image.thumbnail %}
+                        <img src="{{ tp.image.thumbnail.url }}" style="width: 100%; height: 100%; object-fit: cover;" alt="Photo #{{ tp.image.id }}">
+                    {% else %}
+                        <img src="{{ tp.image.file.url }}" style="width: 100%; height: 100%; object-fit: cover;" alt="Photo #{{ tp.image.id }}">
+                    {% endif %}
+                    <span style="position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.68rem; font-weight: 750; padding: 2px 6px; border-radius: 4px; backdrop-filter: blur(4px);">
+                        #{{ forloop.counter }}
+                    </span>
+                </div>
+                <div style="padding: 10px; font-size: 0.76rem; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ tp.image.filename }}">
+                        {{ tp.image.filename }}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                        <span style="color: #2563eb; font-weight: 750;">👁️ {{ tp.views }} views</span>
+                        <span style="color: #059669; font-weight: 750;">⬇️ {{ tp.downloads }} dl</span>
+                    </div>
+                    {% if tp.dwell_sec > 0 %}
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">
+                        ⏱️ {{ tp.dwell_display }} spent viewing
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div style="width: 100%; text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.84rem;">
+                No photo view interactions recorded for this selection yet. Guests viewing photos in gallery will populate this leaderboard automatically!
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ══ VISITOR JOURNEY & SESSION TIMELINES ══ -->
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.75rem; box-shadow: var(--shadow-sm);">
+        <div style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.25rem;">
+            Individual Visitor Sessions & Breadcrumb Journeys
+        </div>
+        <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Click on any visitor row to open their exact step-by-step browsing history.
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Visitor / Lead</th>
+                        <th>Device & OS</th>
+                        <th>Browser</th>
+                        <th>Location</th>
+                        <th>Traffic Source</th>
+                        <th style="text-align: right;">Total Time</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in recent_sessions %}
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-weight: 750; color: var(--text-primary); font-size: 0.9rem;">
+                                    {% if s.guest_lead %}{{ s.guest_lead.name }}{% else %}<span style="color: var(--text-muted); font-weight: 500;">Anonymous Guest</span>{% endif %}
+                                </span>
+                                {% if s.guest_lead %}
+                                    <span style="font-size: 0.65rem; font-weight: 700; background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); padding: 1px 6px; border-radius: 4px; text-transform: uppercase;">Lead</span>
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace;">
+                                {{ s.session_id|slice:":12" }}
+                                {% if s.guest_lead and s.guest_lead.phone %} &bull; {{ s.guest_lead.phone }}{% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span style="font-weight: 600; font-size: 0.8rem;">📱 {{ s.device_type }}</span>
+                            <div style="font-size: 0.72rem; color: var(--text-muted);">{{ s.os_name }}</div>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.8rem;">{{ s.browser_name }}</span>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.8rem;">📍 {{ s.city }}</span>
+                            <div style="font-size: 0.72rem; color: var(--text-muted);">{{ s.country }}</div>
+                        </td>
+                        <td>
+                            <span class="badge" style="background: rgba(99, 102, 241, 0.08); color: var(--accent-indigo); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px;">
+                                {{ s.traffic_source }}
+                            </span>
+                        </td>
+                        <td style="text-align: right; font-weight: 750; color: #059669;">
+                            {{ s.total_time_display }}
+                        </td>
+                        <td style="text-align: right;">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="openSessionDrawer('{{ s.session_id }}')" style="font-size: 0.72rem; padding: 4px 10px; border-radius: 6px; font-weight: 700;">
+                                View Journey
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            No sessions recorded yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ══ DEVICE, OS & LOCATION BREAKDOWN ══ -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+        <!-- Devices & OS -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.75rem;">
+                Devices & Operating Systems
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                {% for d in device_breakdown %}
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                    <span style="font-weight: 600; color: var(--text-secondary);">📱 {{ d.device_type }}</span>
+                    <span style="font-weight: 750; color: var(--text-primary);">{{ d.count }}</span>
+                </div>
+                {% endfor %}
+                <div style="border-top: 1px solid var(--border-light); margin: 6px 0;"></div>
+                {% for o in os_breakdown %}
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
+                    <span style="color: var(--text-muted);">💻 {{ o.os_name }}</span>
+                    <span style="font-weight: 600; color: var(--text-secondary);">{{ o.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Traffic Acquisition Sources -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.75rem;">
+                Acquisition Sources (How Guests Arrived)
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                {% for src in sources_breakdown %}
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                    <span style="font-weight: 600; color: var(--text-secondary);">
+                        {% if 'QR' in src.traffic_source %}📱 QR Code Scan
+                        {% elif 'WhatsApp' in src.traffic_source %}💬 WhatsApp Direct
+                        {% elif 'Instagram' in src.traffic_source %}📸 Instagram Link
+                        {% else %}🌐 Direct Web Link{% endif %}
+                    </span>
+                    <span style="font-weight: 750; color: var(--text-primary);">{{ src.count }}</span>
+                </div>
+                {% empty %}
+                <div style="color: var(--text-muted); font-size: 0.78rem;">No source data yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Top Cities -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.75rem;">
+                Top Cities & Geographic Reach
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                {% for city in top_cities %}
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                    <span style="font-weight: 600; color: var(--text-secondary);">📍 {{ city.city }}, {{ city.country }}</span>
+                    <span style="font-weight: 750; color: var(--text-primary);">{{ city.count }}</span>
+                </div>
+                {% empty %}
+                <div style="color: var(--text-muted); font-size: 0.78rem;">Location data will populate automatically as visitors browse.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ VISITOR JOURNEY TIMELINE SLIDE-OVER DRAWER ══ -->
+<div id="sessionDrawer" class="timeline-drawer" onclick="closeSessionDrawer(event)">
+    <div class="timeline-content" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
+            <div>
+                <div style="font-family: 'Outfit', sans-serif; font-size: 1.15rem; font-weight: 850; color: var(--text-primary);" id="drawerTitle">
+                    Visitor Session Timeline
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);" id="drawerSubtitle">
+                    Chronological breadcrumb trail of pages viewed
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('sessionDrawer').style.display='none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--text-muted); padding: 4px 8px;">✕</button>
+        </div>
+
+        <div id="drawerTimelineList" style="display: flex; flex-direction: column; gap: 12px; margin-top: 1rem;">
+            <!-- Populated dynamically via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Cache sessions data in JS for instant timeline rendering -->
+<script>
+    function formatDuration(sec) {
+        if (!sec || sec <= 0) return '0s';
+        sec = parseInt(sec, 10);
+        if (isNaN(sec) || sec <= 0) return '0s';
+        const h = Math.floor(sec / 3600);
+        const rem = sec % 3600;
+        const m = Math.floor(rem / 60);
+        const s = rem % 60;
+        if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+        if (m > 0) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+        return `${s}s`;
+    }
+
+    const SESSIONS_DATA = {
+        {% for s in recent_sessions %}
+        "{{ s.session_id }}": {
+            id: "{{ s.session_id }}",
+            leadName: "{% if s.guest_lead %}{{ s.guest_lead.name|escapejs }}{% else %}Anonymous Guest{% endif %}",
+            device: "{{ s.device_type }} ({{ s.os_name }})",
+            browser: "{{ s.browser_name }}",
+            city: "{{ s.city }}",
+            country: "{{ s.country }}",
+            totalTime: "{{ s.total_time_display }}",
+            pages: [
+                {% for pv in s.page_views.all %}
+                {
+                    pageType: "{{ pv.exact_page_name|escapejs }}",
+                    url: "{{ pv.url_path|escapejs }}",
+                    desc: "{{ pv.url_description|escapejs }}",
+                    time: "{{ pv.timestamp|date:'H:i:s' }}",
+                    duration: "{{ pv.duration_display }}",
+                    event: "{% if pv.event %}{{ pv.event.name|escapejs }}{% else %}Global{% endif %}"
+                },
+                {% endfor %}
+            ]
+        },
+        {% endfor %}
+    };
+
+    function openSessionDrawer(sessionId) {
+        const s = SESSIONS_DATA[sessionId];
+        if (!s) return;
+
+        document.getElementById('drawerTitle').innerText = `${s.leadName}'s Journey`;
+        document.getElementById('drawerSubtitle').innerText = `${s.device} • ${s.city}, ${s.country} • Total Time: ${s.totalTime}`;
+
+        const container = document.getElementById('drawerTimelineList');
+        if (s.pages.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-muted); font-size:0.82rem; text-align:center; padding:2rem;">No page views logged for this session.</div>';
+        } else {
+            container.innerHTML = s.pages.map((p, idx) => `
+                <div style="display: flex; gap: 12px; position: relative;">
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--accent-indigo); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 750;">
+                            ${idx + 1}
+                        </div>
+                        ${idx < s.pages.length - 1 ? '<div style="width: 2px; flex: 1; background: var(--border-medium); margin: 4px 0;"></div>' : ''}
+                    </div>
+                    <div style="flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                            <span style="font-weight: 750; color: var(--text-primary); font-size: 0.84rem;">${p.pageType}</span>
+                            <span style="font-size: 0.72rem; color: var(--text-muted);">${p.time}</span>
+                        </div>
+                        ${p.desc ? `
+                            <div style="margin-bottom: 5px;">
+                                <span style="font-size: 0.7rem; font-weight: 650; color: #4338ca; background: #e0e7ff; padding: 2px 7px; border-radius: 5px; border: 1px solid #c7d2fe; display: inline-flex; align-items: center; gap: 4px;">
+                                    📌 ${p.desc}
+                                </span>
+                            </div>
+                        ` : ''}
+                        ${p.url ? `
+                            <div style="margin-bottom: 6px;">
+                                <a href="${p.url}" target="_blank" style="font-size: 0.7rem; color: var(--accent-indigo); font-family: monospace; text-decoration: underline; word-break: break-all; display: inline-flex; align-items: center; gap: 4px;" title="Open this page in a new tab">
+                                    <span>${p.url}</span>
+                                    <span style="font-size: 0.65rem; background: rgba(79, 70, 229, 0.1); padding: 1px 4px; border-radius: 3px; font-weight: 600;">Open ↗</span>
+                                </a>
+                            </div>
+                        ` : ''}
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; color: var(--text-secondary); margin-top: 4px;">
+                            <span>Event: <strong>${p.event}</strong></span>
+                            <span style="color: #059669; font-weight: 700;">⏱️ Time Spent: ${p.duration}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('sessionDrawer').style.display = 'flex';
+    }
+
+    function closeSessionDrawer(e) {
+        if (e.target.id === 'sessionDrawer') {
+            document.getElementById('sessionDrawer').style.display = 'none';
+        }
+    }
+
+    function onOrganizerFilterChange() {
+        const evtSelect = document.getElementById('eventSelect');
+        if (evtSelect) evtSelect.value = 'all';
+        document.getElementById('analyticsFilterForm').submit();
+    }
+
+    // ⚡ Real-Time Live Activity & KPI Stream Poller (Updates without manual page reloads)
+    (function() {
+        const liveContainer = document.getElementById('liveActivityContainer');
+        if (!liveContainer) return;
+
+        let knownIds = new Set();
+        document.querySelectorAll('[data-activity-id]').forEach(el => {
+            const actId = el.getAttribute('data-activity-id');
+            if (actId) knownIds.add(actId);
+        });
+
+        const params = new URLSearchParams(window.location.search);
+        const liveApiUrl = "{% url 'gallery:analytics_live_feed' %}?" + params.toString();
+
+        function pollLiveFeed() {
+            fetch(liveApiUrl)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || data.status !== 'ok') return;
+
+                    // 1. Update live KPI cards
+                    const kpiLive = document.getElementById('kpiLiveGuests');
+                    if (kpiLive && data.live_visitors !== undefined) kpiLive.innerText = data.live_visitors;
+
+                    const kpiViews = document.getElementById('kpiTotalPageviews');
+                    if (kpiViews && data.total_pageviews !== undefined) kpiViews.innerText = data.total_pageviews;
+
+                    const kpiUnique = document.getElementById('kpiUniqueVisitors');
+                    if (kpiUnique && data.unique_visitors !== undefined) kpiUnique.innerText = data.unique_visitors;
+
+                    const kpiDl = document.getElementById('kpiFunnelDownloads');
+                    if (kpiDl && data.funnel_downloads !== undefined) kpiDl.innerText = data.funnel_downloads;
+
+                    const kpiVisits = document.getElementById('kpiFunnelVisits');
+                    if (kpiVisits && data.funnel_visits !== undefined) kpiVisits.innerText = data.funnel_visits;
+
+                    const kpiSearches = document.getElementById('kpiFunnelSearches');
+                    if (kpiSearches && data.funnel_searches !== undefined) kpiSearches.innerText = data.funnel_searches;
+
+                    const kpiMatches = document.getElementById('kpiFunnelMatches');
+                    if (kpiMatches && data.funnel_matches !== undefined) kpiMatches.innerText = data.funnel_matches;
+
+                    // 2. Stream incoming activities live
+                    if (data.activities && data.activities.length > 0) {
+                        const emptyEl = document.getElementById('liveActivityEmpty');
+                        if (emptyEl) emptyEl.remove();
+
+                        const newItems = data.activities.filter(a => !knownIds.has(a.id));
+                        newItems.reverse().forEach(act => {
+                            knownIds.add(act.id);
+                            const card = document.createElement('div');
+                            card.setAttribute('data-activity-id', act.id);
+                            card.style.cssText = "background: var(--bg-tertiary); border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; transition: background 2.5s ease; animation: slideDownFlash 0.35s ease;";
+                            
+                            if (act.badge_text === 'DOWNLOAD') {
+                                card.style.borderLeft = "3px solid #10b981";
+                                card.style.background = "rgba(16, 185, 129, 0.12)";
+                            } else if (act.badge_text === 'ZOOM') {
+                                card.style.borderLeft = "3px solid #f59e0b";
+                                card.style.background = "rgba(245, 158, 11, 0.12)";
+                            }
+
+                            card.innerHTML = `
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px;">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span style="font-weight: 750; color: var(--text-primary);">${act.lead_name}</span>
+                                        ${act.is_lead ? '<span style="font-size: 0.65rem; font-weight: 700; background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); padding: 1px 6px; border-radius: 4px; text-transform: uppercase;">Lead</span>' : ''}
+                                        <span style="font-size: 0.65rem; font-weight: 700; background: ${act.badge_bg}; color: ${act.badge_color}; padding: 1px 6px; border-radius: 4px;">${act.badge_text}</span>
+                                    </div>
+                                    <span style="font-size: 0.7rem; color: var(--text-muted);">${act.time_ago}</span>
+                                </div>
+                                <div style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 4px;">
+                                    <span style="font-weight: 700; color: var(--text-primary);">${act.title}</span>
+                                    ${act.event_name ? `• <span style="color: var(--accent-indigo); font-weight: 600;">${act.event_name}</span>` : ''}
+                                </div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+                                    <span>📱 ${act.device}</span>
+                                    ${act.city ? `<span>📍 ${act.city}</span>` : ''}
+                                    ${act.duration_str ? `<span>⏱️ ${act.duration_str}</span>` : ''}
+                                </div>
+                            `;
+
+                            liveContainer.insertBefore(card, liveContainer.firstChild);
+
+                            setTimeout(() => {
+                                card.style.background = "var(--bg-tertiary)";
+                            }, 2500);
+                        });
+
+                        while (liveContainer.children.length > 35) {
+                            liveContainer.removeChild(liveContainer.lastChild);
+                        }
+                    }
+
+                    // 3. Update Top Photos Leaderboard live
+                    if (data.top_photos && data.top_photos.length > 0) {
+                        const grid = document.getElementById('viralPhotosGrid');
+                        if (grid) {
+                            grid.innerHTML = data.top_photos.map((tp, idx) => `
+                                <div style="flex: 0 0 210px; max-width: 210px; background: var(--bg-tertiary); border: 1px solid var(--border-light); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-sm);">
+                                    <div style="position: relative; aspect-ratio: 4/3; background: #000; overflow: hidden;">
+                                        <img src="${tp.thumbnail_url}" style="width: 100%; height: 100%; object-fit: cover;" alt="Photo #${tp.id}">
+                                        <span style="position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.68rem; font-weight: 750; padding: 2px 6px; border-radius: 4px; backdrop-filter: blur(4px);">
+                                            #${idx + 1}
+                                        </span>
+                                    </div>
+                                    <div style="padding: 10px; font-size: 0.76rem; display: flex; flex-direction: column; gap: 4px;">
+                                        <div style="font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${tp.filename}">
+                                            ${tp.filename}
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                                            <span style="color: #2563eb; font-weight: 750;">👁️ ${tp.views} views</span>
+                                            <span style="color: #059669; font-weight: 750;">⬇️ ${tp.downloads} dl</span>
+                                        </div>
+                                        ${tp.dwell_sec > 0 ? `<div style="font-size: 0.7rem; color: var(--text-muted);">⏱️ ${tp.dwell_display || formatDuration(tp.dwell_sec)} spent viewing</div>` : ''}
+                                    </div>
+                                </div>
+                            `).join('');
+                        }
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // Auto-poll live stream every 3.5 seconds
+        setInterval(pollLiveFeed, 3500);
+    })();
+</script>
+{% endblock %}
+

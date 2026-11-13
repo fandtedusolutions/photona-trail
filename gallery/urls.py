@@ -17,6 +17,8 @@ urlpatterns = [
     path('super-admin/studio-admins/', views.super_admin_studio_admins, name='super_admin_studio_admins'),
     path('super-admin/guest-leads/', views.super_admin_guest_leads, name='super_admin_guest_leads'),
     path('super-admin/plans/', views.super_admin_manage_plans, name='super_admin_manage_plans'),
+    path('super-admin/analytics/', views.super_admin_analytics_dashboard, name='super_admin_analytics'),
+    path('super-admin/analytics/export/', views.export_analytics_csv, name='export_analytics_csv'),
     
     # Super Admin Actions
     path('super-admin/create-admin/', views.create_admin, name='create_admin'),
@@ -33,6 +35,7 @@ urlpatterns = [
     # Guest Leads Management
     path('super-admin/lead/edit/<int:lead_id>/', views.edit_lead, name='edit_lead'),
     path('super-admin/lead/delete/<int:lead_id>/', views.delete_lead, name='delete_lead'),
+    path('super-admin/lead/toggle-link/<int:lead_id>/', views.toggle_lead_link_status, name='toggle_lead_link_status'),
 
     # Event CRUD (Tenant)
     path('event/create/', views.create_event, name='create_event'),
@@ -83,4 +86,15 @@ urlpatterns = [
     path('download-zip/', views.download_images_zip, name='download_images_zip'),
     path('download/image/<int:image_id>/', views.download_single_image, name='download_single_image'),
     path('api/apply-preset/', views.apply_preset_api, name='apply_preset_api'),
+    path('api/check-selfie-face/', views.check_selfie_face, name='check_selfie_face'),
+    # Real-Time Telemetry & Analytics
+    path('api/analytics/track/', views.analytics_track_page, name='analytics_track_page'),
+    path('api/analytics/ping/', views.analytics_heartbeat, name='analytics_heartbeat'),
+    path('api/analytics/photo/', views.analytics_photo_interaction, name='analytics_photo_interaction'),
+    path('api/analytics/live-feed/', views.analytics_live_feed, name='analytics_live_feed'),
+    # Error Page Previews
+    path('preview-error/400/', views.preview_error_400, name='preview_error_400'),
+    path('preview-error/403/', views.preview_error_403, name='preview_error_403'),
+    path('preview-error/404/', views.preview_error_404, name='preview_error_404'),
+    path('preview-error/500/', views.preview_error_500, name='preview_error_500'),
 ]

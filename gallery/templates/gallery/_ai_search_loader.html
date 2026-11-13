@@ -1,0 +1,268 @@
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- Photona Classic Standard Luxury Search Loader                       -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<style>
+    .classic-loader-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 11, 18, 0.88);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        z-index: 10000030;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .classic-loader-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    /* Minimal Elegant Card */
+    .classic-loader-card {
+        background: rgba(14, 18, 28, 0.85);
+        border: 1px solid rgba(212, 175, 55, 0.22);
+        box-shadow: 
+            0 25px 60px -10px rgba(0, 0, 0, 0.75),
+            0 0 35px rgba(212, 175, 55, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        border-radius: 24px;
+        padding: 2.75rem 2.25rem;
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+        position: relative;
+        transform: scale(0.95);
+        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .classic-loader-overlay.active .classic-loader-card {
+        transform: scale(1);
+    }
+
+    /* Circular Portrait Frame */
+    .classic-avatar-wrapper {
+        position: relative;
+        width: 110px;
+        height: 110px;
+        margin: 0 auto 1.5rem auto;
+    }
+
+    /* Subtle Gold Breathing Aura */
+    .classic-avatar-aura {
+        position: absolute;
+        inset: -6px;
+        border-radius: 50%;
+        border: 1px solid rgba(212, 175, 55, 0.35);
+        box-shadow: 0 0 25px rgba(212, 175, 55, 0.2);
+        animation: classicAuraPulse 2.8s ease-in-out infinite alternate;
+    }
+    @keyframes classicAuraPulse {
+        0% { transform: scale(0.96); opacity: 0.5; border-color: rgba(212, 175, 55, 0.25); }
+        100% { transform: scale(1.04); opacity: 0.9; border-color: rgba(212, 175, 55, 0.55); box-shadow: 0 0 32px rgba(212, 175, 55, 0.3); }
+    }
+
+    /* Portrait Image Container */
+    .classic-avatar-circle {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        overflow: hidden;
+        position: relative;
+        background: #0d121e;
+        border: 2px solid rgba(212, 175, 55, 0.6);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .classic-user-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none;
+    }
+
+    .classic-camera-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, rgba(10, 14, 23, 0.85) 100%);
+        color: #f3e5ab;
+    }
+
+    /* Smooth Lens Shimmer Glint */
+    .classic-lens-glint {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            135deg, 
+            transparent 35%, 
+            rgba(243, 229, 171, 0.35) 48%, 
+            rgba(255, 255, 255, 0.65) 50%, 
+            rgba(243, 229, 171, 0.35) 52%, 
+            transparent 65%
+        );
+        transform: translateX(-150%) translateY(-150%);
+        animation: lensGlint 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        pointer-events: none;
+    }
+    @keyframes lensGlint {
+        0% { transform: translateX(-150%) translateY(-150%); }
+        60%, 100% { transform: translateX(150%) translateY(150%); }
+    }
+
+    /* Typography */
+    .classic-loader-title {
+        font-family: 'Cormorant Garamond', Georgia, serif;
+        font-size: 1.65rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: #ffffff;
+        margin-bottom: 0.35rem;
+    }
+
+    .classic-loader-sub {
+        font-family: 'Outfit', -apple-system, sans-serif;
+        font-size: 0.88rem;
+        color: #94a3b8;
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+        min-height: 20px;
+    }
+
+    /* Razor-thin Champagne Gold Progress Bar */
+    .classic-bar-track {
+        height: 3px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+        max-width: 220px;
+        margin: 0 auto;
+    }
+    .classic-bar-fill {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background: linear-gradient(90deg, #aa7c11 0%, #f3e5ab 50%, #d4af37 100%);
+        animation: classicProgress 1.8s infinite ease-in-out;
+        background-size: 200% 100%;
+    }
+    @keyframes classicProgress {
+        0% { transform: translateX(-100%); }
+        50% { transform: translateX(0%); }
+        100% { transform: translateX(100%); }
+    }
+</style>
+
+<div id="aiSearchLoadingOverlay" class="classic-loader-overlay" role="dialog" aria-modal="true" aria-label="Searching photos">
+    <div class="classic-loader-card">
+        <!-- Circular Avatar Viewfinder -->
+        <div class="classic-avatar-wrapper">
+            <div class="classic-avatar-aura"></div>
+            
+            <div class="classic-avatar-circle">
+                <!-- User photo if captured/selected -->
+                <img id="aiUserPhotoPreview" class="classic-user-img" src="" alt="Searching Photo">
+                
+                <!-- Classic Camera Icon if no photo preview -->
+                <div id="aiDefaultMeshGraphic" class="classic-camera-placeholder">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                </div>
+
+                <!-- Smooth Lens Glint -->
+                <div class="classic-lens-glint"></div>
+            </div>
+        </div>
+
+        <!-- Clean Luxury Headline -->
+        <h3 class="classic-loader-title">Finding Your Moments</h3>
+
+        <!-- Clear, Non-Jargon Subtext -->
+        <p id="aiDynamicStepText" class="classic-loader-sub">
+            Searching event photos with AI...
+        </p>
+
+        <!-- Minimalist Gold Progress Line -->
+        <div class="classic-bar-track">
+            <div class="classic-bar-fill"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const overlay = document.getElementById('aiSearchLoadingOverlay');
+        const userImg = document.getElementById('aiUserPhotoPreview');
+        const defaultMesh = document.getElementById('aiDefaultMeshGraphic');
+        const stepText = document.getElementById('aiDynamicStepText');
+
+        // Classic, clear, non-over status messages
+        const CLASSIC_STEPS = [
+            "Scanning event gallery...",
+            "Matching faces with AI...",
+            "Preparing your personal photos..."
+        ];
+
+        let stepIndex = 0;
+        let stepInterval = null;
+
+        window.showAISearchLoader = function(customImgSrc) {
+            if (!overlay) return;
+
+            let imgSrc = customImgSrc;
+            if (!imgSrc) {
+                const previewImg = document.getElementById('selfiePreview') || document.querySelector('.selfie-preview-img');
+                if (previewImg && previewImg.src && !previewImg.src.endsWith('/')) {
+                    imgSrc = previewImg.src;
+                }
+            }
+
+            if (imgSrc && userImg && defaultMesh) {
+                userImg.src = imgSrc;
+                userImg.style.display = 'block';
+                defaultMesh.style.display = 'none';
+            } else if (userImg && defaultMesh) {
+                userImg.style.display = 'none';
+                defaultMesh.style.display = 'flex';
+            }
+
+            stepIndex = 0;
+            if (stepText) stepText.innerText = CLASSIC_STEPS[0];
+
+            if (stepInterval) clearInterval(stepInterval);
+            stepInterval = setInterval(() => {
+                stepIndex = (stepIndex + 1) % CLASSIC_STEPS.length;
+                if (stepText) {
+                    stepText.style.opacity = '0.4';
+                    setTimeout(() => {
+                        stepText.innerText = CLASSIC_STEPS[stepIndex];
+                        stepText.style.opacity = '1';
+                    }, 200);
+                }
+            }, 1800);
+
+            overlay.classList.add('active');
+        };
+
+        window.hideAISearchLoader = function() {
+            if (!overlay) return;
+            overlay.classList.remove('active');
+            if (stepInterval) {
+                clearInterval(stepInterval);
+                stepInterval = null;
+            }
+        };
+    })();
+</script>

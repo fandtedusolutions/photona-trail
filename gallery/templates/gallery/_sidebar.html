@@ -146,6 +146,15 @@
             </span>
             Events
         </a>
+        {% if request.user.is_superuser or request.user.is_staff %}
+        <a href="{% url 'gallery:super_admin_analytics' %}" class="dash-nav-item {% if request.resolver_match.url_name == 'super_admin_analytics' %}active{% endif %}">
+            <span class="dash-nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </span>
+            Analytics
+            <span style="font-size: 0.65rem; font-weight: 800; background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; line-height: 1; margin-left: auto; text-transform: uppercase;">Live</span>
+        </a>
+        {% endif %}
         <a href="{% url 'gallery:plans' %}" class="dash-nav-item {% if request.resolver_match.url_name == 'plans' %}active{% endif %}">
             <span class="dash-nav-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
