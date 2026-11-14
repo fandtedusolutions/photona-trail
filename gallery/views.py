@@ -1275,6 +1275,19 @@ def upload_single_photo(request):
         # Fast Stream Save directly to storage (S3 / disk) without synchronous image decoding
         file.seek(0)
         gallery_image.file.save(safe_filename, file, save=False)
+
+        # Pre-generate lightweight WebP thumbnail from uploaded file stream so Celery never needs to re-download 20MB raw file from S3
+        file.seek(0)
+        try:
+            from .tasks import create_thumbnail
+            from django.core.files import File
+            thumb_io, ext = create_thumbnail(file)
+            if thumb_io:
+                thumb_name = os.path.splitext(safe_filename)[0] + "_thumb" + ext
+                gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+        except Exception as te:
+            print(f"[Upload] Thumbnail pre-generation error: {te}")
+
         gallery_image.save()
         
         # Enqueue background thumbnail generation, InsightFace AI face detection, and auto-sync
