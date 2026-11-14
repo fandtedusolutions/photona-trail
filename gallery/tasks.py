@@ -145,6 +145,84 @@ def process_single_image_task(gallery_image_id, local_path=None):
         except:
             pass
 
+def trigger_event_fair_indexing(event_id):
+    """
+    Ensures that a fair round-robin indexing worker loop is running for this event.
+    Uses atomic cache lock to prevent duplicate Celery tasks for the same event.
+    """
+    if not event_id:
+        return
+    from django.core.cache import cache
+    lock_key = f"ai_indexing_active_{event_id}"
+    if cache.add(lock_key, True, timeout=300):
+        try:
+            process_event_fair_chunk_task.delay(event_id)
+        except Exception as e:
+            cache.delete(lock_key)
+            print(f"[FairIndexer] Celery dispatch error: {e}")
+
+@shared_task
+def process_event_fair_chunk_task(event_id, chunk_size=5):
+    """
+    Fair Round-Robin AI Indexing Task.
+    Processes a small chunk of pending images for this event (default 5 photos),
+    then re-enqueues itself at the end of the Celery queue if more photos remain.
+    This ensures that even if 10 events are uploading in parallel, all 10 events
+    make continuous, fair progress without any event being starved or stuck at 0%!
+    """
+    import os
+    from django.core.cache import cache
+    from django.core.files import File
+    from .models import GalleryImage, Event
+    from .utils import process_gallery_image
+
+    event = Event.objects.filter(id=event_id).first()
+    if not event:
+        cache.delete(f"ai_indexing_active_{event_id}")
+        return
+
+    # Grab the next batch of pending photos for this event
+    pending_images = list(
+        GalleryImage.objects.filter(event_id=event_id, total_faces=-1)
+        .order_by('id')[:chunk_size]
+    )
+
+    if not pending_images:
+        cache.delete(f"ai_indexing_active_{event_id}")
+        from .clustering import run_clustering_on_upload
+        run_clustering_on_upload(event)
+        return
+
+    for gallery_image in pending_images:
+        raw_thumb_bytes = None
+        if not gallery_image.thumbnail and gallery_image.file:
+            try:
+                gallery_image.file.open('rb')
+                thumb_io, ext = create_thumbnail(gallery_image.file)
+                if thumb_io:
+                    raw_thumb_bytes = thumb_io.getvalue()
+                    thumb_name = os.path.splitext(gallery_image.filename)[0] + "_thumb" + ext
+                    gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
+                    gallery_image.save(update_fields=['thumbnail'])
+                gallery_image.file.close()
+            except Exception as te:
+                print(f"[FairChunk] Thumbnail generation fallback: {te}")
+
+        num_faces = process_gallery_image(gallery_image, raw_bytes=raw_thumb_bytes)
+        gallery_image.total_faces = num_faces
+        gallery_image.save(update_fields=['total_faces'])
+
+    # Check if more pending photos remain for this event
+    remaining_count = GalleryImage.objects.filter(event_id=event_id, total_faces=-1).count()
+    if remaining_count > 0:
+        # Extend the lock and yield worker to the back of the queue so other parallel events get their turn!
+        cache.set(f"ai_indexing_active_{event_id}", True, timeout=300)
+        process_event_fair_chunk_task.apply_async(args=[event_id, chunk_size], countdown=0)
+    else:
+        cache.delete(f"ai_indexing_active_{event_id}")
+        from .clustering import run_clustering_on_upload
+        run_clustering_on_upload(event)
+
 @shared_task
 def process_image_upload_task(temp_paths, event_id, original_filenames):
     event = Event.objects.filter(id=event_id).first()
@@ -167,9 +245,10 @@ def process_image_upload_task(temp_paths, event_id, original_filenames):
                     gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
                     
                 gallery_image.save()
-                
-            process_single_image_task.delay(gallery_image.id, None)
             os.remove(temp_path)
+
+    if event_id:
+        trigger_event_fair_indexing(event_id)
 
 @shared_task
 def process_zip_upload_task(temp_zip_path, event_id=None, job_id=None):
@@ -241,7 +320,6 @@ def process_zip_upload_task(temp_zip_path, event_id=None, job_id=None):
                             gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
                             
                         gallery_image.save()
-                        process_single_image_task.delay(gallery_image.id, None)
 
                         with counter_lock:
                             processed_counter[0] += 1
@@ -276,9 +354,9 @@ def process_zip_upload_task(temp_zip_path, event_id=None, job_id=None):
                         'message': f"All {total_files} photos extracted successfully!"
                     })
 
-                # Trigger AI face clustering now that all images are saved
+                # Trigger Fair Round-Robin AI face indexing now that all images are extracted
                 if event:
-                    run_clustering_on_upload(event)
+                    trigger_event_fair_indexing(event.id)
 
     except Exception as e:
         print(f"[ERROR] Celery ZIP processing error: {e}")

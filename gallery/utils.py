@@ -72,6 +72,14 @@ def _ai_background_worker():
 
 def enqueue_image_for_ai(image_id, event_id=None):
     """Enqueue an image for background AI face detection and indexing."""
+    if event_id:
+        try:
+            from .tasks import trigger_event_fair_indexing
+            trigger_event_fair_indexing(event_id)
+            return
+        except Exception as e:
+            print(f"[FairIndexer] Dispatch fallback: {e}")
+
     try:
         from .tasks import process_single_image_task
         process_single_image_task.delay(image_id, None)

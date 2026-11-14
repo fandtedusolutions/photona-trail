@@ -1324,9 +1324,17 @@ def trigger_clustering(request, slug):
     else:
         event = get_object_or_404(Event, slug=slug, owner=request.user)
         
-    import threading
-    from .clustering import run_clustering_on_upload
     try:
+        from .tasks import trigger_event_fair_indexing
+        from .clustering import run_clustering_on_upload
+
+        # If event has pending unindexed images, kick off fair round-robin indexing!
+        if event.images.filter(total_faces=-1).exists():
+            trigger_event_fair_indexing(event.id)
+            return JsonResponse({'success': True, 'message': 'AI face indexing active.'})
+
+        # Otherwise trigger clustering directly
+        import threading
         def async_cluster(evt_id):
             try:
                 from .models import Event
