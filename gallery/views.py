@@ -1773,6 +1773,12 @@ def event_ai_status(request, slug):
         })
 
     is_indexing = is_importing or (pending > 0)
+    if pending > 0 and not is_importing:
+        try:
+            from .tasks import trigger_event_fair_indexing
+            trigger_event_fair_indexing(event.id)
+        except Exception:
+            pass
     percent = int((processed / expected_total) * 100) if expected_total > 0 else 100
     if is_indexing and percent >= 100:
         percent = 99
