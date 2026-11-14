@@ -1463,6 +1463,8 @@ def search_person(request):
         finally:
             if os.path.exists(full_temp_path):
                 os.remove(full_temp_path)
+            import gc
+            gc.collect()
                 
     return render(request, 'gallery/search.html', {
         'results': results,
@@ -2219,6 +2221,8 @@ def group_by_face(request):
         finally:
             if os.path.exists(full_temp_path):
                 os.remove(full_temp_path)
+            import gc
+            gc.collect()
                 
     return render(request, 'gallery/group_by_face.html', {
         'results': results,
@@ -2847,6 +2851,8 @@ def public_search_person(request, token):
         finally:
             if os.path.exists(full_temp_path):
                 os.remove(full_temp_path)
+            import gc
+            gc.collect()
 
     return render(request, 'gallery/public_search.html', {
         'results': results,

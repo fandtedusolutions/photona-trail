@@ -212,7 +212,7 @@ from collections import OrderedDict
 
 # Per-process LRU cache of normalized embedding matrices per event.
 # Rebuilt only when the event's embeddings change (see _event_embeddings_version).
-_EMBED_CACHE_MAX_EVENTS = int(os.environ.get('EMBED_CACHE_MAX_EVENTS', '8'))
+_EMBED_CACHE_MAX_EVENTS = int(os.environ.get('EMBED_CACHE_MAX_EVENTS', '2'))
 _embed_cache = OrderedDict()
 _embed_cache_lock = threading.Lock()
 
@@ -245,13 +245,46 @@ def normalize_selfie_file(path, max_dim=SELFIE_MAX_DIM):
         print(f"[Search] Could not normalize selfie {path}: {e}")
 
 
-def _build_embedding_matrix(queryset):
-    rows = list(queryset.values_list('image_id', 'embedding_data'))
-    if not rows:
+def _build_embedding_matrix(queryset, expected_count=None):
+    """
+    Memory-lean, pre-allocated embedding matrix construction.
+    Streams through DB records in batches of 1000 instead of materializing
+    millions of Python float objects into heap RAM.
+    """
+    import gc
+    if expected_count is None:
+        total = queryset.count()
+    else:
+        total = expected_count
+
+    if total == 0:
         return np.empty((0,), dtype=np.int64), np.empty((0, 512), dtype=np.float32)
-    image_ids = np.fromiter((r[0] for r in rows), dtype=np.int64, count=len(rows))
-    matrix = np.asarray([r[1] for r in rows], dtype=np.float32)
-    faiss.normalize_L2(matrix)
+
+    image_ids = np.empty((total,), dtype=np.int64)
+    matrix = np.empty((total, 512), dtype=np.float32)
+
+    idx = 0
+    # Stream in chunks of 1000 to keep intermediate Python object allocation minimal (<15MB)
+    for row in queryset.values_list('image_id', 'embedding_data').iterator(chunk_size=1000):
+        if idx >= total:
+            image_ids = np.resize(image_ids, (idx + 1000,))
+            matrix = np.resize(matrix, (idx + 1000, 512))
+            total = len(image_ids)
+        img_id, emb = row
+        image_ids[idx] = img_id
+        matrix[idx] = emb
+        idx += 1
+
+    if idx < total:
+        image_ids = image_ids[:idx]
+        matrix = matrix[:idx]
+
+    if idx > 0:
+        faiss.normalize_L2(matrix)
+
+    del queryset
+    gc.collect()
+
     return image_ids, matrix
 
 
@@ -270,7 +303,8 @@ def get_event_embedding_matrix(event_id):
         if cached and cached[0] == version:
             _embed_cache.move_to_end(event_id)
             return cached[1], cached[2]
-    image_ids, matrix = _build_embedding_matrix(queryset)
+    expected_count = version[0] or 0
+    image_ids, matrix = _build_embedding_matrix(queryset, expected_count=expected_count)
     with _embed_cache_lock:
         _embed_cache[event_id] = (version, image_ids, matrix)
         _embed_cache.move_to_end(event_id)
@@ -285,6 +319,7 @@ def search_person_by_selfie(selfie_path_or_bytes, event_id=None, tenant_user=Non
     Accepts file path, bytes, or file-like object (S3 safe).
     Optionally returns (matching_images, query_vector_list) if return_vector=True.
     """
+    import gc
     img = None
     if isinstance(selfie_path_or_bytes, (bytes, bytearray)):
         arr = np.asarray(bytearray(selfie_path_or_bytes), dtype=np.uint8)
@@ -304,8 +339,12 @@ def search_person_by_selfie(selfie_path_or_bytes, event_id=None, tenant_user=Non
     faces = detect_faces(img)
     
     if len(faces) == 0:
+        del img, faces
+        gc.collect()
         raise ValueError("No face detected in the uploaded selfie.")
     if len(faces) > 1:
+        del img, faces
+        gc.collect()
         raise ValueError("Selfie contains more than one face. Please upload a clear photo of yourself only.")
         
     query_embedding = faces[0].embedding.astype(np.float32)
@@ -313,6 +352,10 @@ def search_person_by_selfie(selfie_path_or_bytes, event_id=None, tenant_user=Non
     faiss.normalize_L2(query_embedding)
     query_vector_list = query_embedding[0].tolist()
     
+    # Promptly free camera/selfie image data and face bounding structures from RAM
+    del faces, img
+    gc.collect()
+
     # Load (cached) face embeddings matching filters
     if event_id:
         image_ids, matrix = get_event_embedding_matrix(event_id)
@@ -320,6 +363,8 @@ def search_person_by_selfie(selfie_path_or_bytes, event_id=None, tenant_user=Non
         query = FaceEmbedding.objects.all()
         if tenant_user and not tenant_user.is_superuser:
             query = query.filter(image__event__owner=tenant_user)
+        elif not tenant_user:
+            return ([], query_vector_list) if return_vector else []
         image_ids, matrix = _build_embedding_matrix(query)
 
     if matrix.shape[0] == 0:
@@ -518,7 +563,7 @@ def find_or_create_personal_gallery_link(event, query_vector, results, searcher_
     if not target_link and results and existing_links:
         current_res_ids = set(r['image'].id for r in results)
         for plink in existing_links:
-            existing_ids = set(plink.images.values_list('id', flat=True))
+            existing_ids = set(img.id for img in plink.images.all())
             if existing_ids and current_res_ids:
                 overlap = len(existing_ids & current_res_ids)
                 overlap_ratio = overlap / max(1, min(len(existing_ids), len(current_res_ids)))
