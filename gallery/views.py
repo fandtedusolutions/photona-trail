@@ -1136,7 +1136,7 @@ def photos_api(request):
             'url': reverse('gallery:secure_image', args=[thumb_token]),
             'full_url': reverse('gallery:secure_image', args=[file_token]),
             'total_faces': img.total_faces,
-            'uploaded_at': img.uploaded_at.strftime("%b %d, %H:%M"),
+            'uploaded_at': timezone.localtime(img.uploaded_at).strftime("%b %d, %I:%M %p"),
             'preset_name': img.preset_name or 'original',
             'preset_settings': img.preset_settings or {},
         })
@@ -1294,7 +1294,7 @@ def upload_single_photo(request):
                 'url': request.build_absolute_uri(reverse('gallery:secure_image', args=[thumb_token])),
                 'full_url': request.build_absolute_uri(reverse('gallery:secure_image', args=[file_token])),
                 'total_faces': gallery_image.total_faces,
-                'uploaded_at': gallery_image.uploaded_at.strftime("%b %d, %H:%M"),
+                'uploaded_at': timezone.localtime(gallery_image.uploaded_at).strftime("%b %d, %I:%M %p"),
                 'preset_name': gallery_image.preset_name or 'original',
                 'preset_settings': gallery_image.preset_settings or {},
             }
@@ -2950,7 +2950,7 @@ def public_photos_api(request):
                 'filename': img.filename,
                 'preset_name': img.preset_name or 'original',
                 'preset_settings': img.preset_settings or {},
-                'uploaded_at': img.uploaded_at.strftime('%b %d, %H:%M') if img.uploaded_at else '',
+                'uploaded_at': timezone.localtime(img.uploaded_at).strftime('%b %d, %I:%M %p') if img.uploaded_at else '',
             })
         return JsonResponse({
             'images': data,
@@ -3771,7 +3771,7 @@ def export_analytics_csv(request):
         lead_name = sess.guest_lead.name if sess.guest_lead else ''
         organizer_name = v.event.owner.username if v.event and v.event.owner else 'Global'
         writer.writerow([
-            v.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            timezone.localtime(v.timestamp).strftime('%Y-%m-%d %H:%M:%S'),
             sess.session_id[:12],
             organizer_name,
             v.event.name if v.event else 'Global',

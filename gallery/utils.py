@@ -30,6 +30,7 @@ def _ai_background_worker():
             from .models import GalleryImage
             g_img = GalleryImage.objects.filter(id=image_id).first()
             if g_img:
+                raw_thumb = None
                 if not g_img.thumbnail and g_img.file:
                     try:
                         from io import BytesIO
@@ -48,6 +49,7 @@ def _ai_background_worker():
                             t_io = BytesIO()
                             t_img.save(t_io, format='WEBP', quality=80)
                             t_io.seek(0)
+                            raw_thumb = t_io.getvalue()
                             t_name = os.path.splitext(g_img.filename)[0] + "_thumb.webp"
                             g_img.thumbnail.save(t_name, File(t_io), save=False)
                             g_img.save(update_fields=['thumbnail'])
@@ -56,7 +58,7 @@ def _ai_background_worker():
                         print(f"[AI_WORKER] Background thumbnail error: {te}")
 
                 if g_img.total_faces == -1:
-                    num_f = process_gallery_image(g_img)
+                    num_f = process_gallery_image(g_img, raw_bytes=raw_thumb)
                     g_img.total_faces = num_f
                     g_img.save(update_fields=['total_faces'])
         except Exception as ex:
