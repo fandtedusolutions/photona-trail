@@ -552,19 +552,10 @@
         });
     }
 
-    // Silent background sync: check after 8s, then every 30s for 4 cycles
-    let syncCycles = 0;
+    // Optional single background sync check after page load (non-polling to protect server)
     setTimeout(() => {
         autoSyncNow(false);
-        const syncInterval = setInterval(() => {
-            syncCycles++;
-            if (syncCycles >= 4) {
-                clearInterval(syncInterval);
-                return;
-            }
-            autoSyncNow(false);
-        }, 30000);
-    }, 8000);
+    }, 12000);
 
     // Lightbox items data
     const lightboxItems = [

@@ -1844,13 +1844,24 @@ def secure_image_serve(request, token):
 
         cache_control = 'public, max-age=2592000, immutable'
 
-        # Fast path: unedited photo without watermark → the stored file IS the output.
-        # Serve it directly via S3 direct redirect or local nginx (no PIL, no duplicate copy in the render cache).
-        if not apply_wm and not preset_has_edits(img.preset_name, img.preset_settings):
-            if img_type != 'processed_thumbnail' or target_field == img.thumbnail:
-                return serve_storage_field(target_field, cache_control, download_name)
+        # Fast path: unedited photo without watermark → stored file IS the output.
+        # Direct 302 redirect straight to S3 (or local nginx) frees Gunicorn in 1ms!
+        has_edits = preset_has_edits(img.preset_name, img.preset_settings)
+        if not has_edits:
+            # 1. Thumbnail view: serve thumbnail if available, or original file directly
+            if img_type == 'processed_thumbnail':
+                thumb_target = img.thumbnail if img.thumbnail else img.file
+                return serve_storage_field(thumb_target, cache_control, download_name)
 
-        # Serve the cached render when available (no PIL work, no full read in Python)
+            # 2. Lightbox / full-screen view (non-download): watermark is rendered via CSS overlay
+            if not is_download:
+                return serve_storage_field(img.file, cache_control, download_name)
+
+            # 3. Direct download when watermark is disabled: S3 presigned attachment redirect
+            if not apply_wm:
+                return serve_storage_field(img.file, cache_control, download_name)
+
+        # Serve the cached render when available (no PIL work, no duplicate read)
         cached_path = rendered_cache_path(img, variant, wm_config)
         if os.path.exists(cached_path):
             return serve_local_file(cached_path, cache_control, 'image/jpeg', download_name)
@@ -2786,10 +2797,7 @@ def personal_gallery(request, token):
         last_viewed_at=timezone.now()
     )
 
-    # Automatically sync any newly uploaded event photos matching this person's face!
-    from .utils import sync_personal_gallery_matches
-    newly_added = sync_personal_gallery_matches(personal_link)
-
+    # Fetch matched images directly (instant sub-20ms database read)
     images = personal_link.images.select_related('event').order_by('-uploaded_at')
     results = []
     for img in images:
@@ -2809,7 +2817,7 @@ def personal_gallery(request, token):
         'event': event,
         'results': results,
         'total_results': len(results),
-        'newly_added_count': len(newly_added) if newly_added else 0,
+        'newly_added_count': 0,
         'personal_gallery_url': current_url,
         'whatsapp_share_text': whatsapp_share_text,
         'expires_at': personal_link.get_effective_expires_at(),

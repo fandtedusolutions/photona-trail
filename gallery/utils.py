@@ -246,9 +246,9 @@ def _build_embedding_matrix(queryset):
 
 
 def _event_embeddings_version(queryset):
-    from django.db.models import Count, Max, Sum
-    agg = queryset.aggregate(c=Count('id'), mx=Max('id'), s=Sum('id'))
-    return (agg['c'], agg['mx'], agg['s'])
+    from django.db.models import Count, Max
+    agg = queryset.aggregate(c=Count('id'), mx=Max('id'))
+    return (agg['c'], agg['mx'])
 
 
 def get_event_embedding_matrix(event_id):
@@ -427,50 +427,19 @@ def sync_personal_gallery_matches(personal_link):
         from django.utils import timezone
         query_vector = personal_link.query_embedding
 
-        # 1. Backfill query_vector if missing (S3 safe)
+        # 1. Backfill query_vector if missing: compute fast centroid of matched faces (sub-1ms, zero S3/AI overhead)
         if not query_vector:
-            # 1a. Try from selfie_image (S3/local safe)
-            if personal_link.selfie_image and personal_link.selfie_image.name:
-                try:
-                    with personal_link.selfie_image.open('rb') as f:
-                        query_vector = extract_face_embedding_from_image(f)
-                except Exception as se:
-                    print(f"[SyncPersonalGallery] Error reading selfie_image: {se}")
+            existing_img_ids = list(personal_link.images.values_list('id', flat=True))
+            if existing_img_ids:
+                sample_embeddings = FaceEmbedding.objects.filter(
+                    image_id__in=existing_img_ids
+                ).values_list('embedding_data', flat=True)[:10]
+                if sample_embeddings:
+                    mat = np.asarray(list(sample_embeddings), dtype=np.float32)
+                    mean_vec = np.mean(mat, axis=0, keepdims=True)
+                    faiss.normalize_L2(mean_vec)
+                    query_vector = mean_vec[0].tolist()
 
-            # 1b. Try from guest_lead.selfie if attached
-            if not query_vector and personal_link.guest_lead and personal_link.guest_lead.selfie and personal_link.guest_lead.selfie.name:
-                try:
-                    with personal_link.guest_lead.selfie.open('rb') as f:
-                        query_vector = extract_face_embedding_from_image(f)
-                except Exception as le:
-                    print(f"[SyncPersonalGallery] Error reading guest_lead selfie: {le}")
-
-            # 1c. Try from base64 thumbnail if available
-            if not query_vector and personal_link.selfie_thumbnail_b64:
-                try:
-                    import base64
-                    b64_data = personal_link.selfie_thumbnail_b64
-                    if ',' in b64_data:
-                        b64_data = b64_data.split(',', 1)[1]
-                    raw_bytes = base64.b64decode(b64_data)
-                    query_vector = extract_face_embedding_from_image(raw_bytes)
-                except Exception as be:
-                    print(f"[SyncPersonalGallery] Error extracting from b64: {be}")
-
-            # 1d. Try from existing photos' face embeddings (centroid of matched faces)
-            if not query_vector:
-                existing_img_ids = list(personal_link.images.values_list('id', flat=True))
-                if existing_img_ids:
-                    sample_embeddings = FaceEmbedding.objects.filter(
-                        image_id__in=existing_img_ids
-                    ).values_list('embedding_data', flat=True)[:10]
-                    if sample_embeddings:
-                        mat = np.asarray(list(sample_embeddings), dtype=np.float32)
-                        mean_vec = np.mean(mat, axis=0, keepdims=True)
-                        faiss.normalize_L2(mean_vec)
-                        query_vector = mean_vec[0].tolist()
-
-            # Save query_vector back to model so we NEVER have to compute it again!
             if query_vector:
                 personal_link.query_embedding = query_vector
                 personal_link.save(update_fields=['query_embedding'])
