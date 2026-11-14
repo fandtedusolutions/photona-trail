@@ -2875,7 +2875,7 @@
                     </div>
                     <div style="font-size: 0.9rem; font-weight: 800; color: #0f172a; margin-bottom: 3px;">Drag & Drop Photos or <span style="color: #4f46e5; text-decoration: underline;">Browse Files</span></div>
                     <div style="font-size: 0.74rem; color: #64748b; font-weight: 500;">Supports JPG, PNG, WebP & ZIP Archives</div>
-                    <input type="file" id="fileInput" name="photos" multiple accept="image/*,.zip" style="display: none;" onchange="handleFiles(this.files)">
+                    <input type="file" id="fileInput" name="photos" multiple accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.cr2,.nef,.arw,.dng,.zip" style="display: none;" onchange="handleFiles(this.files)">
                 </div>
                 <div id="fileList" style="margin-top: 0.6rem; max-height: 80px; overflow-y: auto;"></div>
                 <button type="submit" class="btn" id="uploadBtn" style="display: none; margin-top: 0.75rem; width: 100%; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; font-weight: 800; padding: 0.75rem; border-radius: 12px; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
@@ -3280,7 +3280,23 @@
     let lastDetectedZipCount = null;
 
     function handleFiles(files) {
-        selectedFiles = Array.from(files);
+        const rawFiles = Array.from(files);
+        const videoExts = ['.mp4', '.mov', '.avi', '.mkv', '.m4v', '.webm', '.3gp', '.flv', '.wmv', '.mts', '.m2ts', '.ts'];
+        let skippedVideos = 0;
+
+        selectedFiles = rawFiles.filter(f => {
+            const ext = '.' + f.name.split('.').pop().toLowerCase();
+            if (videoExts.includes(ext)) {
+                skippedVideos++;
+                return false;
+            }
+            return true;
+        });
+
+        if (skippedVideos > 0) {
+            showToast(`⚠️ ${skippedVideos} video file${skippedVideos > 1 ? 's were' : ' was'} skipped. Only photos are supported!`, 'warning');
+        }
+
         fileList.innerHTML = '';
         if (selectedFiles.length > 0) {
             uploadBtn.style.display = 'block';
@@ -3881,6 +3897,7 @@
                 </label>
                 ` : ''}
                 <img class="rich-thumb" src="${thumbSrc}" alt="${eventName}" style="${cropStyles.imgStyle}" ${onloadAttr} loading="lazy" decoding="async">
+                ${img.is_video ? '<span style="position: absolute; bottom: 8px; left: 8px; z-index: 10; background: rgba(15, 23, 42, 0.85); color: #818cf8; font-size: 0.65rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; backdrop-filter: blur(4px); border: 1px solid rgba(129, 140, 248, 0.3);">🎥 VIDEO</span>' : ''}
                 <div class="card-wm-wrap" style="position: absolute; inset: 0; pointer-events: none; z-index: 6;">${buildWatermarkHtml(eventWatermark)}</div>
                 <div class="rich-thumb-hint">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>

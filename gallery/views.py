@@ -1131,6 +1131,7 @@ def photos_api(request):
         data.append({
             'id': img.id,
             'filename': img.filename,
+            'is_video': is_video_filename(img.filename),
             'event_name': evt_name,
             'organiser_name': org_name,
             'url': reverse('gallery:secure_image', args=[thumb_token]),
@@ -1189,6 +1190,8 @@ def upload_photos(request):
         
         for file in files:
             ext = os.path.splitext(file.name)[1].lower()
+            if is_video_filename(file.name):
+                continue
             
             if ext == '.zip':
                 has_zip = True
@@ -1254,6 +1257,14 @@ def upload_single_photo(request):
             event = get_object_or_404(Event, id=event_id)
         else:
             event = get_object_or_404(Event, id=event_id, owner=request.user)
+
+        import os
+        safe_filename = os.path.basename(file.name)
+        if is_video_filename(safe_filename):
+            return JsonResponse({
+                'success': False,
+                'message': f"Video files ('{safe_filename}') cannot be uploaded. Photona is optimized for photos only."
+            }, status=400)
 
         # Handle user profile & storage check
         if hasattr(request.user, 'profile') and request.user.profile and not request.user.is_superuser:
@@ -1807,6 +1818,63 @@ def cancel_gdrive_import(request):
 # ------------------------------------------------------------------
 from django.core.signing import Signer, BadSignature
 from django.http import FileResponse
+# -------------------------------------------------------------
+# Video helper definitions & placeholder SVG
+# -------------------------------------------------------------
+VIDEO_EXTENSIONS = ('.mp4', '.mov', '.avi', '.mkv', '.m4v', '.webm', '.3gp', '.flv', '.wmv', '.mts', '.m2ts', '.ts')
+
+def is_video_filename(filename):
+    if not filename:
+        return False
+    return os.path.splitext(filename)[1].lower() in VIDEO_EXTENSIONS
+
+VIDEO_PLACEHOLDER_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="vidbg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="vidbtn" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="600" fill="url(#vidbg)"/>
+  <rect x="0" y="0" width="600" height="30" fill="#1e293b" opacity="0.8"/>
+  <rect x="0" y="570" width="600" height="30" fill="#1e293b" opacity="0.8"/>
+  <g fill="#0f172a">
+    <rect x="20" y="7" width="24" height="16" rx="3"/>
+    <rect x="70" y="7" width="24" height="16" rx="3"/>
+    <rect x="120" y="7" width="24" height="16" rx="3"/>
+    <rect x="170" y="7" width="24" height="16" rx="3"/>
+    <rect x="220" y="7" width="24" height="16" rx="3"/>
+    <rect x="270" y="7" width="24" height="16" rx="3"/>
+    <rect x="320" y="7" width="24" height="16" rx="3"/>
+    <rect x="370" y="7" width="24" height="16" rx="3"/>
+    <rect x="420" y="7" width="24" height="16" rx="3"/>
+    <rect x="470" y="7" width="24" height="16" rx="3"/>
+    <rect x="520" y="7" width="24" height="16" rx="3"/>
+    <rect x="570" y="7" width="24" height="16" rx="3"/>
+    <rect x="20" y="577" width="24" height="16" rx="3"/>
+    <rect x="70" y="577" width="24" height="16" rx="3"/>
+    <rect x="120" y="577" width="24" height="16" rx="3"/>
+    <rect x="170" y="577" width="24" height="16" rx="3"/>
+    <rect x="220" y="577" width="24" height="16" rx="3"/>
+    <rect x="270" y="577" width="24" height="16" rx="3"/>
+    <rect x="320" y="577" width="24" height="16" rx="3"/>
+    <rect x="370" y="577" width="24" height="16" rx="3"/>
+    <rect x="420" y="577" width="24" height="16" rx="3"/>
+    <rect x="470" y="577" width="24" height="16" rx="3"/>
+    <rect x="520" y="577" width="24" height="16" rx="3"/>
+    <rect x="570" y="577" width="24" height="16" rx="3"/>
+  </g>
+  <circle cx="300" cy="265" r="68" fill="url(#vidbtn)" opacity="0.95"/>
+  <polygon points="282,233 336,265 282,297" fill="#ffffff"/>
+  <text x="300" y="380" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1">VIDEO CLIP</text>
+  <text x="300" y="415" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600" fill="#94a3b8" text-anchor="middle">No Preview Available</text>
+</svg>"""
+
 from .media_cache import rendered_cache_path, write_atomic, serve_local_file, local_path_of, serve_storage_field
 
 def secure_image_serve(request, token):
@@ -1821,6 +1889,13 @@ def secure_image_serve(request, token):
     
     is_processed = (img_type in ('processed', 'processed_thumbnail')) or (request.GET.get('processed') == '1')
     is_download = bool(request.GET.get('download'))
+
+    # Clean Fallback for Video Thumbnails:
+    # If a thumbnail is requested for a video file, serve the clean SVG placeholder instead of crashing or returning a broken image
+    if img_type in ('thumbnail', 'processed_thumbnail') and not is_download and is_video_filename(img.filename):
+        response = HttpResponse(VIDEO_PLACEHOLDER_SVG, content_type='image/svg+xml')
+        response['Cache-Control'] = 'public, max-age=2592000, immutable'
+        return response
     
     if is_processed:
         # Determine source field

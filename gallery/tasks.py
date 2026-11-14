@@ -194,6 +194,13 @@ def process_event_fair_chunk_task(event_id, chunk_size=5):
         return
 
     for gallery_image in pending_images:
+        # If this image is a video file, skip InsightFace face detection and mark total_faces = 0
+        video_exts = ('.mp4', '.mov', '.avi', '.mkv', '.m4v', '.webm', '.3gp', '.flv', '.wmv', '.mts', '.m2ts', '.ts')
+        if gallery_image.filename and any(gallery_image.filename.lower().endswith(vext) for vext in video_exts):
+            gallery_image.total_faces = 0
+            gallery_image.save(update_fields=['total_faces'])
+            continue
+
         raw_thumb_bytes = None
         if not gallery_image.thumbnail and gallery_image.file:
             try:
