@@ -98,7 +98,6 @@ def process_single_image_task(gallery_image_id, local_path=None):
     from .utils import process_gallery_image
     gallery_image = GalleryImage.objects.filter(id=gallery_image_id).first()
     if gallery_image:
-        raw_thumb_bytes = None
         # 1. Background Thumbnail Generation (if not already generated)
         if not gallery_image.thumbnail and gallery_image.file:
             try:
@@ -117,7 +116,6 @@ def process_single_image_task(gallery_image_id, local_path=None):
                 if src_stream:
                     thumb_io, ext = create_thumbnail(src_stream)
                     if thumb_io:
-                        raw_thumb_bytes = thumb_io.getvalue()
                         thumb_name = os.path.splitext(gallery_image.filename)[0] + "_thumb" + ext
                         gallery_image.thumbnail.save(thumb_name, File(thumb_io), save=False)
                         gallery_image.save(update_fields=['thumbnail'])
@@ -129,7 +127,7 @@ def process_single_image_task(gallery_image_id, local_path=None):
             except Exception as te:
                 print(f"[Celery] Background thumbnail generation error: {te}")
 
-        num_faces = process_gallery_image(gallery_image, local_path=local_path, raw_bytes=raw_thumb_bytes)
+        num_faces = process_gallery_image(gallery_image, local_path=local_path)
         gallery_image.total_faces = num_faces
         gallery_image.save(update_fields=['total_faces'])
         
