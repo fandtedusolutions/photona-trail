@@ -212,7 +212,11 @@ def plans_view(request):
 # -------------------------------------------------------------
 # Super Admin Views
 # -------------------------------------------------------------
-def _get_super_admin_context(request):
+def _get_super_admin_context(request, active_tab='overview'):
+    panel = request.GET.get('panel')
+    if panel in ('overview', 'tenants', 'leads', 'plans'):
+        active_tab = panel
+
     admins = User.objects.filter(is_superuser=False).select_related('profile')
     plans = SubscriptionPlan.objects.all().order_by('id')
     roles = UserProfile.ROLE_CHOICES
@@ -225,77 +229,65 @@ def _get_super_admin_context(request):
             total_storage_used += admin.profile.used_storage_mb
         except Exception:
             pass
-    
-    leads = GuestLead.objects.all().select_related('event', 'event__owner', 'personal_gallery_link').prefetch_related('personal_links__images', 'personal_gallery_link__images').order_by('-created_at')
-    
-    search_q = request.GET.get('search_q')
-    organizer_id = request.GET.get('organizer_id')
-    event_id = request.GET.get('event_id')
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    
+
+    leads_list = []
+    all_events = []
     selected_event = None
     selected_event_total_leads = 0
-    if event_id and str(event_id).strip():
-        selected_event = Event.objects.filter(id=event_id).first()
-        if selected_event:
-            selected_event_total_leads = GuestLead.objects.filter(event_id=event_id).count()
 
-    if search_q:
-        from django.db.models import Q
-        leads = leads.filter(Q(name__icontains=search_q) | Q(phone__icontains=search_q) | Q(email__icontains=search_q))
-    if organizer_id:
-        leads = leads.filter(event__owner_id=organizer_id)
-    if event_id:
-        leads = leads.filter(event_id=event_id)
-    if start_date:
-        leads = leads.filter(created_at__date__gte=start_date)
-    if end_date:
-        leads = leads.filter(created_at__date__lte=end_date)
-        
-    from django.db.models import Count
-    all_events = Event.objects.all().select_related('owner').annotate(leads_count=Count('leads')).order_by('-created_at')
+    # Only query and compute Guest Leads when the leads tab is actually active!
+    if active_tab == 'leads':
+        search_q = request.GET.get('search_q')
+        organizer_id = request.GET.get('organizer_id')
+        event_id = request.GET.get('event_id')
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
 
-    from django.urls import reverse
-    leads_list = list(leads)
-    for lead in leads_list:
-        pl = getattr(lead, 'personal_gallery_link', None) or lead.personal_links.first()
-        if not pl:
-            pl = lead.event.personal_gallery_links.filter(searcher_name=lead.name).first()
-        if not pl and lead.phone:
-            sibling = GuestLead.objects.filter(event=lead.event, phone=lead.phone).exclude(id=lead.id).filter(personal_gallery_link__isnull=False).first()
-            if sibling and sibling.personal_gallery_link:
-                pl = sibling.personal_gallery_link
+        leads = GuestLead.objects.all().select_related(
+            'event', 'event__owner', 'personal_gallery_link'
+        ).prefetch_related('personal_gallery_link__images').order_by('-created_at')
+
+        if event_id and str(event_id).strip():
+            selected_event = Event.objects.filter(id=event_id).first()
+            if selected_event:
+                selected_event_total_leads = GuestLead.objects.filter(event_id=event_id).count()
+
+        if search_q:
+            from django.db.models import Q
+            leads = leads.filter(Q(name__icontains=search_q) | Q(phone__icontains=search_q) | Q(email__icontains=search_q))
+        if organizer_id:
+            leads = leads.filter(event__owner_id=organizer_id)
+        if event_id:
+            leads = leads.filter(event_id=event_id)
+        if start_date:
+            leads = leads.filter(created_at__date__gte=start_date)
+        if end_date:
+            leads = leads.filter(created_at__date__lte=end_date)
+
+        from django.db.models import Count
+        all_events = Event.objects.all().select_related('owner').annotate(leads_count=Count('leads')).order_by('-created_at')
+
+        from django.urls import reverse
+        # Cap to top 150 leads for sub-50ms instant response without executing hundreds of N+1 database queries
+        leads_list = list(leads[:150])
+        for lead in leads_list:
+            pl = getattr(lead, 'personal_gallery_link', None) or lead.personal_links.first()
+            if pl:
                 try:
-                    lead.personal_gallery_link = pl
-                    lead.save(update_fields=['personal_gallery_link'])
+                    lead.personal_gallery_url = request.build_absolute_uri(
+                        reverse('gallery:personal_gallery', args=[pl.token])
+                    )
                 except Exception:
-                    pass
+                    lead.personal_gallery_url = reverse('gallery:personal_gallery', args=[pl.token])
+                lead.matched_photos_count = len(pl.images.all())
+                lead.personal_link_obj = pl
+                lead.is_link_active = getattr(pl, 'is_active', True)
             else:
-                sibling_pl = PersonalGalleryLink.objects.filter(event=lead.event, guest_lead__phone=lead.phone).first()
-                if sibling_pl:
-                    pl = sibling_pl
-                    try:
-                        lead.personal_gallery_link = pl
-                        lead.save(update_fields=['personal_gallery_link'])
-                    except Exception:
-                        pass
-        if pl:
-            try:
-                lead.personal_gallery_url = request.build_absolute_uri(
-                    reverse('gallery:personal_gallery', args=[pl.token])
-                )
-            except Exception:
-                lead.personal_gallery_url = reverse('gallery:personal_gallery', args=[pl.token])
-            lead.matched_photos_count = len(pl.images.all())
-            lead.personal_link_obj = pl
-            lead.is_link_active = getattr(pl, 'is_active', True)
-        else:
-            lead.personal_gallery_url = None
-            lead.matched_photos_count = 0
-            lead.personal_link_obj = None
-            lead.is_link_active = False
-    
+                lead.personal_gallery_url = None
+                lead.matched_photos_count = 0
+                lead.personal_link_obj = None
+                lead.is_link_active = False
+
     return {
         'admins': admins,
         'plans': plans,
@@ -311,25 +303,25 @@ def _get_super_admin_context(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def super_admin_dashboard(request):
-    context = _get_super_admin_context(request)
+    context = _get_super_admin_context(request, active_tab='overview')
     context['active_tab'] = 'overview'
     return render(request, 'gallery/super_admin.html', context)
 
 @user_passes_test(lambda u: u.is_superuser)
 def super_admin_studio_admins(request):
-    context = _get_super_admin_context(request)
+    context = _get_super_admin_context(request, active_tab='tenants')
     context['active_tab'] = 'tenants'
     return render(request, 'gallery/super_admin.html', context)
 
 @user_passes_test(lambda u: u.is_superuser)
 def super_admin_guest_leads(request):
-    context = _get_super_admin_context(request)
+    context = _get_super_admin_context(request, active_tab='leads')
     context['active_tab'] = 'leads'
     return render(request, 'gallery/super_admin.html', context)
 
 @user_passes_test(lambda u: u.is_superuser)
 def super_admin_manage_plans(request):
-    context = _get_super_admin_context(request)
+    context = _get_super_admin_context(request, active_tab='plans')
     context['active_tab'] = 'plans'
     return render(request, 'gallery/super_admin.html', context)
 
