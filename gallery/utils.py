@@ -95,6 +95,10 @@ def enqueue_image_for_ai(image_id, event_id=None):
             _ai_worker_started = True
     _ai_queue.put((image_id, event_id))
 
+def create_thumbnail(image_path, max_size=(600, 600)):
+    from .tasks import create_thumbnail as _ct
+    return _ct(image_path, max_size)
+
 _model_lock = threading.Lock()
 
 # Cap concurrent InsightFace inferences per process. With threaded gunicorn

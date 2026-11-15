@@ -176,7 +176,7 @@ def process_event_fair_chunk_task(event_id, chunk_size=30):
     from django.core.cache import cache
     from django.core.files import File
     from .models import GalleryImage, Event
-    from .utils import process_gallery_image, create_thumbnail
+    from .utils import process_gallery_image
 
     lock_key = f"ai_indexing_active_{event_id}"
     event = Event.objects.filter(id=event_id).first()
