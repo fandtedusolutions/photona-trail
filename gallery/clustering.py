@@ -109,7 +109,8 @@ def get_cached_clusters_for_event(event):
         pass
 
     # 1. Single aggregated DB query to get all person labels, counts, and a sample cover image ID
-    cluster_stats = FaceEmbedding.objects.filter(
+    # Capped at top 100 people to guarantee sub-50ms page rendering on massive events (like 4,440+ people)
+    cluster_stats = list(FaceEmbedding.objects.filter(
         image__event=event
     ).exclude(
         person_label__isnull=True
@@ -118,7 +119,7 @@ def get_cached_clusters_for_event(event):
     ).values('person_label').annotate(
         img_count=Count('image_id', distinct=True),
         cover_image_id=Min('image_id')
-    ).order_by('-img_count')
+    ).order_by('-img_count')[:100])
 
     if not cluster_stats:
         try:
@@ -131,19 +132,17 @@ def get_cached_clusters_for_event(event):
     cover_ids = [c['cover_image_id'] for c in cluster_stats if c['cover_image_id']]
     images_by_id = {img.id: img for img in GalleryImage.objects.filter(id__in=cover_ids).only('id', 'filename', 'thumbnail', 'file')}
 
-    safe_event_name = "".join([c if c.isalnum() else "_" for c in event.name])
     clusters = []
     for c in cluster_stats:
         label = c['person_label']
         cover_img = images_by_id.get(c['cover_image_id'])
-        person_dir = os.path.join(settings.MEDIA_ROOT, 'sorted', f"{safe_event_name}_{event.id}", label)
         clusters.append({
             'name': label,
             'image_count': c['img_count'],
             'cover_image': cover_img,
             'first_img': cover_img,
             'images': [cover_img] if cover_img else [],
-            'folder_path': os.path.relpath(person_dir, settings.BASE_DIR) if os.path.exists(person_dir) else ""
+            'folder_path': ""
         })
 
     # Cache for 5 minutes (300 seconds)
