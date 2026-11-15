@@ -231,6 +231,9 @@ def _get_super_admin_context(request, active_tab='overview'):
             pass
 
     leads_list = []
+    page_obj = None
+    paginator = None
+    total_leads_count = 0
     all_events = []
     selected_event = None
     selected_event_total_leads = 0
@@ -267,9 +270,18 @@ def _get_super_admin_context(request, active_tab='overview'):
         from django.db.models import Count
         all_events = Event.objects.all().select_related('owner').annotate(leads_count=Count('leads')).order_by('-created_at')
 
+        from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
         from django.urls import reverse
-        # Cap to top 150 leads for sub-50ms instant response without executing hundreds of N+1 database queries
-        leads_list = list(leads[:150])
+
+        total_leads_count = leads.count()
+        page_number = request.GET.get('page', 1)
+        paginator = Paginator(leads, 50)
+        try:
+            page_obj = paginator.page(page_number)
+        except (PageNotAnInteger, EmptyPage):
+            page_obj = paginator.page(1)
+
+        leads_list = list(page_obj.object_list)
         for lead in leads_list:
             pl = getattr(lead, 'personal_gallery_link', None) or lead.personal_links.first()
             if pl:
@@ -296,6 +308,9 @@ def _get_super_admin_context(request, active_tab='overview'):
         'total_plans': total_plans,
         'total_storage_used': total_storage_used,
         'leads': leads_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'total_leads_count': total_leads_count,
         'all_events': all_events,
         'selected_event': selected_event,
         'selected_event_total_leads': selected_event_total_leads,

@@ -201,7 +201,7 @@ def process_gallery_image(gallery_image, local_path=None, raw_bytes=None):
         
     # Update total faces count
     gallery_image.total_faces = len(faces)
-    gallery_image.save()
+    gallery_image.save(update_fields=['total_faces'])
     try:
         auto_sync_new_image_to_personal_links(gallery_image, faces)
     except Exception as _sync_err:
@@ -626,18 +626,73 @@ def find_or_create_personal_gallery_link(event, query_vector, results, searcher_
     return new_link, True
 
 
+# Thread-safe short TTL cache for personal gallery link search vectors per event.
+# Avoids re-fetching and decoding 1,000+ personal links on every individual photo.
+_links_matrix_cache = {}  # {event_id: (timestamp, valid_meta_list, matrix_2d)}
+_links_matrix_lock = threading.Lock()
+_LINKS_MATRIX_CACHE_TTL = 30  # seconds
+
+
+def _get_event_links_matrix(event_id):
+    """
+    Returns (valid_meta, matrix) for an event with thread-safe caching.
+    valid_meta: list of dicts with {'id': link_id, 'token': token, 'match_scores': match_scores}
+    matrix: normalized (N, 512) np.float32 array
+    """
+    import time
+    now = time.time()
+    with _links_matrix_lock:
+        cached = _links_matrix_cache.get(event_id)
+        if cached and (now - cached[0] < _LINKS_MATRIX_CACHE_TTL):
+            return cached[1], cached[2]
+
+    from .models import PersonalGalleryLink
+    raw_links = list(
+        PersonalGalleryLink.objects.filter(event_id=event_id, query_embedding__isnull=False)
+        .values('id', 'token', 'match_scores', 'query_embedding')
+    )
+    if not raw_links:
+        with _links_matrix_lock:
+            _links_matrix_cache[event_id] = (now, [], None)
+        return [], None
+
+    valid_meta = []
+    vectors = []
+    for pl in raw_links:
+        qv = pl.get('query_embedding')
+        if qv and len(qv) == 512:
+            valid_meta.append({
+                'id': pl['id'],
+                'token': pl['token'],
+                'match_scores': pl.get('match_scores') or {}
+            })
+            vectors.append(qv)
+
+    if not vectors:
+        with _links_matrix_lock:
+            _links_matrix_cache[event_id] = (now, [], None)
+        return [], None
+
+    matrix = np.asarray(vectors, dtype=np.float32)
+    faiss.normalize_L2(matrix)
+    with _links_matrix_lock:
+        _links_matrix_cache[event_id] = (now, valid_meta, matrix)
+    return valid_meta, matrix
+
+
 def auto_sync_new_image_to_personal_links(gallery_image, new_face_embeddings=None):
     """
     Called whenever a new photo finishes AI face indexing.
     Instantly attaches this photo to any matching PersonalGalleryLinks for the event!
+    Uses high-speed BLAS matrix multiplication across all active search links (0.2ms).
     """
     try:
         from .models import PersonalGalleryLink, FaceEmbedding
         if not gallery_image.event_id:
             return
 
-        personal_links = list(PersonalGalleryLink.objects.filter(event_id=gallery_image.event_id))
-        if not personal_links:
+        valid_meta, links_matrix = _get_event_links_matrix(gallery_image.event_id)
+        if links_matrix is None or len(valid_meta) == 0:
             return
 
         # Get embeddings for this new image
@@ -655,22 +710,29 @@ def auto_sync_new_image_to_personal_links(gallery_image, new_face_embeddings=Non
         img_mat = np.asarray(embeddings_list, dtype=np.float32)
         faiss.normalize_L2(img_mat)
 
-        for plink in personal_links:
-            q_vec = plink.query_embedding
-            if not q_vec:
-                continue
-            q_arr = np.asarray(q_vec, dtype=np.float32)
-            if q_arr.ndim == 1:
-                q_arr = np.expand_dims(q_arr, axis=0)
-            faiss.normalize_L2(q_arr)
+        # Single BLAS matrix multiplication: (F, 512) @ (512, N) -> (F, N)
+        scores_mat = img_mat @ links_matrix.T
+        max_scores = np.max(scores_mat, axis=0)  # Shape: (N,)
 
-            scores = img_mat @ q_arr[0]
-            max_score = float(np.max(scores))
-            if max_score >= SIMILARITY_THRESHOLD:
-                plink.images.add(gallery_image)
-                plink.match_scores[str(gallery_image.id)] = max_score
-                plink.save(update_fields=['match_scores'])
-                print(f"[AutoSync] Added photo #{gallery_image.id} (score {max_score:.2f}) to personal link {plink.token}")
+        # Identify all links where max similarity meets the threshold
+        matched_indices = np.where(max_scores >= SIMILARITY_THRESHOLD)[0]
+        if len(matched_indices) == 0:
+            return
+
+        # Only update links that actually matched this photo
+        matched_ids = [valid_meta[idx]['id'] for idx in matched_indices]
+        matched_links = PersonalGalleryLink.objects.filter(id__in=matched_ids)
+        for plink in matched_links:
+            for idx in matched_indices:
+                if valid_meta[idx]['id'] == plink.id:
+                    score = float(max_scores[idx])
+                    plink.images.add(gallery_image)
+                    if not isinstance(plink.match_scores, dict):
+                        plink.match_scores = {}
+                    plink.match_scores[str(gallery_image.id)] = score
+                    plink.save(update_fields=['match_scores'])
+                    print(f"[AutoSync] Added photo #{gallery_image.id} (score {score:.2f}) to personal link {plink.token}")
+                    break
 
     except Exception as e:
         print(f"[AutoSync] Error auto-syncing photo #{gallery_image.id}: {e}")

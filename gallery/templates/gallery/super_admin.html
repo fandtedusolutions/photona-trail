@@ -722,7 +722,7 @@
                                     </div>
                                 </div>
                             {% endif %}
-                            <span id="leadsBadgeCountDisplay" class="badge badge-purple" style="padding: 8px 16px; font-size: 0.82rem; font-weight: 700; border-radius: 10px;">{% if leads|length > 50 %}50 / {{ leads|length }} Shown{% else %}{{ leads|length }} Shown{% endif %}</span>
+                            <span id="leadsBadgeCountDisplay" class="badge badge-purple" style="padding: 8px 16px; font-size: 0.82rem; font-weight: 700; border-radius: 10px;">{% if page_obj and total_leads_count > 0 %}{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_leads_count }} Leads{% else %}{{ leads|length }} Leads{% endif %}</span>
                         </div>
                     </div>
                     
@@ -848,20 +848,33 @@
                     </table>
                 </div>
 
-                <!-- Pagination / Show More & Less Controls (50 per batch) -->
-                {% if leads|length > 0 %}
+                <!-- Server-Side Pagination Controls -->
+                {% if page_obj and paginator.num_pages > 1 %}
                 <div id="leadsPaginationControls" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0; flex-wrap: wrap; gap: 12px;">
                     <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">
-                        Showing <strong id="leadsCurrentCountDisplay" style="color: #0f172a;">{% if leads|length > 50 %}50{% else %}{{ leads|length }}{% endif %}</strong> of <strong style="color: #4f46e5;">{{ leads|length }}</strong> Captured Leads
+                        Showing <strong style="color: #0f172a;">{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong> of <strong style="color: #4f46e5;">{{ total_leads_count }}</strong> Captured Leads (Page {{ page_obj.number }} of {{ paginator.num_pages }})
                     </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <button type="button" id="btnShowLessLeads" class="btn btn-sm" onclick="showLessLeads()" style="display: none; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700; padding: 7px 15px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9';" onmouseout="this.style.background='#ffffff';">
-                            ↑ Show Less (-50)
-                        </button>
-                        <button type="button" id="btnShowMoreLeads" class="btn btn-sm" onclick="showMoreLeads()" style="{% if leads|length <= 50 %}display: none;{% else %}display: inline-flex;{% endif %} background: #4f46e5; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; padding: 7px 18px; font-size: 0.8rem; cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25); transition: all 0.2s;" onmouseover="this.style.background='#4338ca';" onmouseout="this.style.background='#4f46e5';">
-                            <span>↓ Show More (+50 Leads)</span>
-                        </button>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        {% if page_obj.has_previous %}
+                        <a href="?panel=leads&page={{ page_obj.previous_page_number }}{% if request.GET.search_q %}&search_q={{ request.GET.search_q }}{% endif %}{% if request.GET.organizer_id %}&organizer_id={{ request.GET.organizer_id }}{% endif %}{% if request.GET.event_id %}&event_id={{ request.GET.event_id }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}" class="btn btn-sm" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700; padding: 7px 15px; font-size: 0.82rem; text-decoration: none;" onmouseover="this.style.background='#f1f5f9';" onmouseout="this.style.background='#ffffff';">
+                            ← Previous
+                        </a>
+                        {% endif %}
+
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #3730a3; padding: 6px 14px; background: #e0e7ff; border-radius: 8px; border: 1px solid #c7d2fe;">
+                            Page {{ page_obj.number }} / {{ paginator.num_pages }}
+                        </span>
+
+                        {% if page_obj.has_next %}
+                        <a href="?panel=leads&page={{ page_obj.next_page_number }}{% if request.GET.search_q %}&search_q={{ request.GET.search_q }}{% endif %}{% if request.GET.organizer_id %}&organizer_id={{ request.GET.organizer_id }}{% endif %}{% if request.GET.event_id %}&event_id={{ request.GET.event_id }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}" class="btn btn-sm" style="background: #4f46e5; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; padding: 7px 18px; font-size: 0.82rem; text-decoration: none; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);" onmouseover="this.style.background='#4338ca';" onmouseout="this.style.background='#4f46e5';">
+                            Next →
+                        </a>
+                        {% endif %}
                     </div>
+                </div>
+                {% elif total_leads_count > 0 %}
+                <div style="padding: 1.25rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 0.85rem; color: #64748b; font-weight: 600;">
+                    Showing all <strong style="color: #4f46e5;">{{ total_leads_count }}</strong> Captured Leads
                 </div>
                 {% endif %}
             </div>
@@ -1233,10 +1246,8 @@ function updateLeadsVisibility() {
     const countDisplay = document.getElementById('leadsCurrentCountDisplay');
     if (countDisplay) countDisplay.innerText = shown;
 
-    const badgeDisplay = document.getElementById('leadsBadgeCountDisplay');
-    if (badgeDisplay) {
-        badgeDisplay.innerText = total > LEADS_CHUNK_SIZE ? `${shown} / ${total} Shown` : `${total} Shown`;
-    }
+    // For server-paginated rows, let Django template manage the total badge
+    // const badgeDisplay = document.getElementById('leadsBadgeCountDisplay');
 
     const btnMore = document.getElementById('btnShowMoreLeads');
     if (btnMore) {

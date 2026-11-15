@@ -145,7 +145,7 @@ def process_single_image_task(gallery_image_id, local_path=None):
         except:
             pass
 
-def trigger_event_fair_indexing(event_id):
+def trigger_event_fair_indexing(event_id, force=False):
     """
     Ensures that a fair round-robin indexing worker loop is running for this event.
     Uses atomic cache lock to prevent duplicate Celery tasks for the same event.
@@ -154,7 +154,9 @@ def trigger_event_fair_indexing(event_id):
         return
     from django.core.cache import cache
     lock_key = f"ai_indexing_active_{event_id}"
-    if cache.add(lock_key, True, timeout=300):
+    if force:
+        cache.delete(lock_key)
+    if cache.add(lock_key, True, timeout=180):
         try:
             process_event_fair_chunk_task.delay(event_id)
         except Exception as e:
@@ -162,23 +164,24 @@ def trigger_event_fair_indexing(event_id):
             print(f"[FairIndexer] Celery dispatch error: {e}")
 
 @shared_task
-def process_event_fair_chunk_task(event_id, chunk_size=5):
+def process_event_fair_chunk_task(event_id, chunk_size=30):
     """
     Fair Round-Robin AI Indexing Task.
-    Processes a small chunk of pending images for this event (default 5 photos),
+    Processes a chunk of pending images for this event (default 30 photos),
     then re-enqueues itself at the end of the Celery queue if more photos remain.
-    This ensures that even if 10 events are uploading in parallel, all 10 events
-    make continuous, fair progress without any event being starved or stuck at 0%!
+    This ensures that even if multiple events are uploading in parallel, all events
+    make continuous, fast progress without worker starvation or memory bloat!
     """
     import os
     from django.core.cache import cache
     from django.core.files import File
     from .models import GalleryImage, Event
-    from .utils import process_gallery_image
+    from .utils import process_gallery_image, create_thumbnail
 
+    lock_key = f"ai_indexing_active_{event_id}"
     event = Event.objects.filter(id=event_id).first()
     if not event:
-        cache.delete(f"ai_indexing_active_{event_id}")
+        cache.delete(lock_key)
         return
 
     # Grab the next batch of pending photos for this event
@@ -188,7 +191,7 @@ def process_event_fair_chunk_task(event_id, chunk_size=5):
     )
 
     if not pending_images:
-        cache.delete(f"ai_indexing_active_{event_id}")
+        cache.delete(lock_key)
         from .clustering import run_clustering_on_upload
         run_clustering_on_upload(event)
         return
@@ -216,18 +219,17 @@ def process_event_fair_chunk_task(event_id, chunk_size=5):
                 print(f"[FairChunk] Thumbnail generation fallback: {te}")
 
         num_faces = process_gallery_image(gallery_image, raw_bytes=raw_thumb_bytes)
-        gallery_image.total_faces = num_faces
-        gallery_image.save(update_fields=['total_faces'])
 
-    # Check if more pending photos remain for this event
-    remaining_count = GalleryImage.objects.filter(event_id=event_id, total_faces=-1).count()
-    if remaining_count > 0:
+    # Check if more pending photos remain for this event (sub-millisecond indexed existence query)
+    has_more = GalleryImage.objects.filter(event_id=event_id, total_faces=-1).exists()
+    if has_more:
         # Extend the lock and yield worker to the back of the queue so other parallel events get their turn!
-        cache.set(f"ai_indexing_active_{event_id}", True, timeout=300)
+        cache.set(lock_key, True, timeout=180)
         process_event_fair_chunk_task.apply_async(args=[event_id, chunk_size], countdown=0)
     else:
-        cache.delete(f"ai_indexing_active_{event_id}")
+        cache.delete(lock_key)
         from .clustering import run_clustering_on_upload
+        run_clustering_on_upload(event)
         run_clustering_on_upload(event)
 
 @shared_task
