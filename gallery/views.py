@@ -1444,31 +1444,38 @@ def search_person(request):
                     telemetry_session_id = request.POST.get('telemetry_session_id')
                     if telemetry_session_id:
                         VisitorSession.objects.filter(session_id=telemetry_session_id).update(guest_lead=user_lead)
-                    from .whatsapp import send_whatsapp_selfie_link_async, format_whatsapp_phone
-                    from django.core.cache import cache
 
-                    clean_phone = format_whatsapp_phone(phone)
-                    cache_key = f"wa_sent_{selected_event.id}_{clean_phone}"
+                    # Only send WhatsApp if at least one photo matched!
+                    has_matched_photos = bool(results and len(results) > 0)
+                    if not has_matched_photos and personal_link:
+                        has_matched_photos = personal_link.images.exists()
 
-                    already_sent_on_link = bool(personal_link and personal_link.match_scores.get('_wa_sent'))
-                    already_sent_in_cache = bool(clean_phone and cache.get(cache_key))
+                    if has_matched_photos:
+                        from .whatsapp import send_whatsapp_selfie_link_async, format_whatsapp_phone
+                        from django.core.cache import cache
 
-                    if already_sent_on_link or already_sent_in_cache:
-                        whatsapp_sent = False
-                        whatsapp_already_sent = True
-                    else:
-                        send_whatsapp_selfie_link_async(
-                            phone=phone,
-                            name=request.user.get_full_name() or request.user.username,
-                            link_url=personal_gallery_url,
-                            event_id=selected_event.id
-                        )
-                        whatsapp_sent = True
-                        if clean_phone:
-                            cache.set(cache_key, True, timeout=86400 * 30)
-                        if personal_link:
-                            personal_link.match_scores['_wa_sent'] = True
-                            personal_link.save(update_fields=['match_scores'])
+                        clean_phone = format_whatsapp_phone(phone)
+                        cache_key = f"wa_sent_{selected_event.id}_{clean_phone}"
+
+                        already_sent_on_link = bool(personal_link and personal_link.match_scores.get('_wa_sent'))
+                        already_sent_in_cache = bool(clean_phone and cache.get(cache_key))
+
+                        if already_sent_on_link or already_sent_in_cache:
+                            whatsapp_sent = False
+                            whatsapp_already_sent = True
+                        else:
+                            send_whatsapp_selfie_link_async(
+                                phone=phone,
+                                name=request.user.get_full_name() or request.user.username,
+                                link_url=personal_gallery_url,
+                                event_id=selected_event.id
+                            )
+                            whatsapp_sent = True
+                            if clean_phone:
+                                cache.set(cache_key, True, timeout=86400 * 30)
+                            if personal_link:
+                                personal_link.match_scores['_wa_sent'] = True
+                                personal_link.save(update_fields=['match_scores'])
         except Exception as e:
             error_message = str(e)
         finally:
@@ -2856,8 +2863,12 @@ def public_search_person(request, token):
                 raw_wa = f"Here are my photos from {event.name}: {personal_gallery_url}"
                 whatsapp_share_text = quote(raw_wa)
 
-                # Send WhatsApp notification via Natdemy WhatsApp Template API (Once per user/link)
-                if phone:
+                # Send WhatsApp notification via Natdemy WhatsApp Template API (Only if at least one photo matched)
+                has_matched_photos = bool(results and len(results) > 0)
+                if not has_matched_photos and personal_link:
+                    has_matched_photos = personal_link.images.exists()
+
+                if phone and has_matched_photos:
                     from .whatsapp import send_whatsapp_selfie_link_async, format_whatsapp_phone
                     from django.core.cache import cache
 
