@@ -124,18 +124,35 @@ def send_whatsapp_template_message(phone, name, link_url, template=None, languag
         return False, str(e)
 
 
-def send_whatsapp_selfie_link_async(phone, name, link_url, template=None, language=None):
+def send_whatsapp_selfie_link_async(phone, name, link_url, template=None, language=None, event_id=None, force=False):
     """
-    Dispatches WhatsApp message sending in background.
+    Dispatches WhatsApp message sending in background with automatic deduplication.
+    Ensures that once a WhatsApp message is sent to a user for an event, they are not spammed
+    repeatedly when scanning more selfies.
     Tries Celery task first; falls back to a daemon thread if Celery/broker is not active.
     """
     if not phone or not link_url:
         return False
 
+    formatted_phone = format_whatsapp_phone(phone)
+    if not formatted_phone:
+        return False
+
+    # Prevent duplicate WhatsApp delivery to the same phone number for the same event
+    if event_id and not force:
+        try:
+            from django.core.cache import cache
+            dedup_key = f"wa_sent_{event_id}_{formatted_phone}"
+            if cache.get(dedup_key):
+                logger.info(f"[WhatsApp] Skipping duplicate send to {formatted_phone} for event {event_id}")
+                return False
+            cache.set(dedup_key, True, timeout=86400 * 30)  # 30-day deduplication window
+        except Exception as c_err:
+            logger.warning(f"[WhatsApp] Dedup cache check warning: {c_err}")
+
     # Skip external queuing and API calls in development mode
     is_enabled = getattr(settings, 'ENABLE_WHATSAPP_LINK_SEND', False)
     if not is_enabled:
-        formatted_phone = format_whatsapp_phone(phone) or phone
         logger.info(
             f"[WhatsApp] [DEV SIMULATED] WhatsApp delivery is PAUSED (ENABLE_WHATSAPP_LINK_SEND=False). "
             f"Simulated personal gallery link dispatch for '{name}' to '{formatted_phone}': {link_url}"

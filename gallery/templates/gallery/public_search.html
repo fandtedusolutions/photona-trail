@@ -240,6 +240,10 @@
                                 <span>🛠️</span> [Dev Mode] WhatsApp delivery simulated for +{{ guest_phone }} (Active in Production)
                             </div>
                         {% endif %}
+                    {% elif whatsapp_already_sent and guest_phone %}
+                        <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #1d4ed8; font-size: 0.76rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">
+                            <span>💬</span> Link already shared with (+{{ guest_phone }}) on WhatsApp!
+                        </div>
                     {% endif %}
                 </div>
             </div>

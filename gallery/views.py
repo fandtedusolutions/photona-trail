@@ -1372,6 +1372,7 @@ def search_person(request):
     search_image_b64 = None
     whatsapp_share_text = None
     whatsapp_sent = False
+    whatsapp_already_sent = False
     phone_entered = None
     
     if not selected_event_slug:
@@ -1451,13 +1452,31 @@ def search_person(request):
                     telemetry_session_id = request.POST.get('telemetry_session_id')
                     if telemetry_session_id:
                         VisitorSession.objects.filter(session_id=telemetry_session_id).update(guest_lead=user_lead)
-                    from .whatsapp import send_whatsapp_selfie_link_async
-                    send_whatsapp_selfie_link_async(
-                        phone=phone,
-                        name=request.user.get_full_name() or request.user.username,
-                        link_url=personal_gallery_url
-                    )
-                    whatsapp_sent = True
+                    from .whatsapp import send_whatsapp_selfie_link_async, format_whatsapp_phone
+                    from django.core.cache import cache
+
+                    clean_phone = format_whatsapp_phone(phone)
+                    cache_key = f"wa_sent_{selected_event.id}_{clean_phone}"
+
+                    already_sent_on_link = bool(personal_link and personal_link.match_scores.get('_wa_sent'))
+                    already_sent_in_cache = bool(clean_phone and cache.get(cache_key))
+
+                    if already_sent_on_link or already_sent_in_cache:
+                        whatsapp_sent = False
+                        whatsapp_already_sent = True
+                    else:
+                        send_whatsapp_selfie_link_async(
+                            phone=phone,
+                            name=request.user.get_full_name() or request.user.username,
+                            link_url=personal_gallery_url,
+                            event_id=selected_event.id
+                        )
+                        whatsapp_sent = True
+                        if clean_phone:
+                            cache.set(cache_key, True, timeout=86400 * 30)
+                        if personal_link:
+                            personal_link.match_scores['_wa_sent'] = True
+                            personal_link.save(update_fields=['match_scores'])
         except Exception as e:
             error_message = str(e)
         finally:
@@ -1476,6 +1495,7 @@ def search_person(request):
         'search_image_b64': search_image_b64,
         'whatsapp_share_text': whatsapp_share_text,
         'whatsapp_sent': whatsapp_sent,
+        'whatsapp_already_sent': whatsapp_already_sent,
         'whatsapp_enabled': getattr(settings, 'ENABLE_WHATSAPP_LINK_SEND', False),
         'phone': phone_entered,
     })
@@ -2737,6 +2757,7 @@ def public_search_person(request, token):
     whatsapp_share_text = None
     created_lead = None
     whatsapp_sent = False
+    whatsapp_already_sent = False
     guest_phone_entered = None
 
     if request.method == 'POST':
@@ -2843,15 +2864,43 @@ def public_search_person(request, token):
                 raw_wa = f"Here are my photos from {event.name}: {personal_gallery_url}"
                 whatsapp_share_text = quote(raw_wa)
 
-                # Send WhatsApp notification via Natdemy WhatsApp Template API
+                # Send WhatsApp notification via Natdemy WhatsApp Template API (Once per user/link)
                 if phone:
-                    from .whatsapp import send_whatsapp_selfie_link_async
-                    send_whatsapp_selfie_link_async(
-                        phone=phone,
-                        name=name or 'Guest',
-                        link_url=personal_gallery_url
-                    )
-                    whatsapp_sent = True
+                    from .whatsapp import send_whatsapp_selfie_link_async, format_whatsapp_phone
+                    from django.core.cache import cache
+
+                    clean_phone = format_whatsapp_phone(phone)
+                    cache_key = f"wa_sent_{event.id}_{clean_phone}"
+
+                    already_sent_on_link = bool(personal_link and personal_link.match_scores.get('_wa_sent'))
+                    already_sent_in_cache = bool(clean_phone and cache.get(cache_key))
+                    already_sent_in_db = False
+                    if clean_phone:
+                        # Check if this phone number already has a lead that received a link for this event
+                        already_sent_in_db = GuestLead.objects.filter(
+                            event=event,
+                            phone__icontains=clean_phone[-10:]
+                        ).exclude(id=created_lead.id if created_lead else 0).exists()
+
+                    if already_sent_on_link or already_sent_in_cache or already_sent_in_db:
+                        whatsapp_sent = False
+                        whatsapp_already_sent = True
+                        if personal_link and not personal_link.match_scores.get('_wa_sent'):
+                            personal_link.match_scores['_wa_sent'] = True
+                            personal_link.save(update_fields=['match_scores'])
+                    else:
+                        send_whatsapp_selfie_link_async(
+                            phone=phone,
+                            name=name or 'Guest',
+                            link_url=personal_gallery_url,
+                            event_id=event.id
+                        )
+                        whatsapp_sent = True
+                        if clean_phone:
+                            cache.set(cache_key, True, timeout=86400 * 30)
+                        if personal_link:
+                            personal_link.match_scores['_wa_sent'] = True
+                            personal_link.save(update_fields=['match_scores'])
         except Exception as e:
             error_message = str(e)
         finally:
@@ -2873,6 +2922,7 @@ def public_search_person(request, token):
         'personal_gallery_url': personal_gallery_url,
         'whatsapp_share_text': whatsapp_share_text,
         'whatsapp_sent': whatsapp_sent,
+        'whatsapp_already_sent': whatsapp_already_sent,
         'whatsapp_enabled': getattr(settings, 'ENABLE_WHATSAPP_LINK_SEND', False),
         'guest_phone': guest_phone_entered,
     })
