@@ -249,10 +249,13 @@ def normalize_selfie_file(path, max_dim=SELFIE_MAX_DIM):
         print(f"[Search] Could not normalize selfie {path}: {e}")
 
 
-def _build_embedding_matrix(queryset, expected_count=None):
+_EMBED_CACHE_TTL = int(os.environ.get('EMBED_CACHE_TTL', '45'))  # 45s TTL between incremental updates
+
+
+def _build_embedding_matrix(queryset, expected_count=None, return_max_id=False):
     """
     Memory-lean, pre-allocated embedding matrix construction.
-    Streams through DB records in batches of 1000 instead of materializing
+    Streams through DB records in batches of 2000 instead of materializing
     millions of Python float objects into heap RAM.
     """
     import gc
@@ -262,19 +265,24 @@ def _build_embedding_matrix(queryset, expected_count=None):
         total = expected_count
 
     if total == 0:
-        return np.empty((0,), dtype=np.int64), np.empty((0, 512), dtype=np.float32)
+        empty_ids = np.empty((0,), dtype=np.int64)
+        empty_mat = np.empty((0, 512), dtype=np.float32)
+        return (empty_ids, empty_mat, 0) if return_max_id else (empty_ids, empty_mat)
 
     image_ids = np.empty((total,), dtype=np.int64)
     matrix = np.empty((total, 512), dtype=np.float32)
 
     idx = 0
-    # Stream in chunks of 1000 to keep intermediate Python object allocation minimal (<15MB)
-    for row in queryset.values_list('image_id', 'embedding_data').iterator(chunk_size=1000):
+    max_id = 0
+    # Stream in chunks of 2000 to keep intermediate Python object allocation minimal (<15MB)
+    for row in queryset.values_list('id', 'image_id', 'embedding_data').iterator(chunk_size=2000):
         if idx >= total:
             image_ids = np.resize(image_ids, (idx + 1000,))
             matrix = np.resize(matrix, (idx + 1000, 512))
             total = len(image_ids)
-        img_id, emb = row
+        emb_id, img_id, emb = row
+        if emb_id > max_id:
+            max_id = emb_id
         image_ids[idx] = img_id
         matrix[idx] = emb
         idx += 1
@@ -289,28 +297,71 @@ def _build_embedding_matrix(queryset, expected_count=None):
     del queryset
     gc.collect()
 
-    return image_ids, matrix
-
-
-def _event_embeddings_version(queryset):
-    from django.db.models import Count, Max
-    agg = queryset.aggregate(c=Count('id'), mx=Max('id'))
-    return (agg['c'], agg['mx'])
+    return (image_ids, matrix, max_id) if return_max_id else (image_ids, matrix)
 
 
 def get_event_embedding_matrix(event_id):
-    """Return (image_ids, normalized_matrix) for an event, cached per process."""
+    """
+    Return (image_ids, normalized_matrix) for an event, cached per process.
+    Uses smart incremental updates (fetching only embeddings added since last check)
+    to keep search response times in milliseconds even while massive events are actively indexing.
+    """
+    import time
+    now = time.time()
+    cached = None
+
+    with _embed_cache_lock:
+        cached_entry = _embed_cache.get(event_id)
+        if cached_entry:
+            cached_time, last_max_id, image_ids, matrix = cached_entry
+            # If cache is fresh (< TTL seconds old), return immediately! (sub-millisecond)
+            if (now - cached_time) < _EMBED_CACHE_TTL:
+                _embed_cache.move_to_end(event_id)
+                return image_ids, matrix
+            cached = cached_entry
+
+    # Incremental update: if we already have a cached matrix for this event,
+    # fetch ONLY the new embeddings added since last check!
+    if cached is not None:
+        cached_time, last_max_id, image_ids, matrix = cached
+        if last_max_id is not None and len(image_ids) > 0:
+            new_qs = FaceEmbedding.objects.filter(image__event_id=event_id, id__gt=last_max_id)
+            new_count = new_qs.count()
+            if new_count == 0:
+                with _embed_cache_lock:
+                    _embed_cache[event_id] = (now, last_max_id, image_ids, matrix)
+                    _embed_cache.move_to_end(event_id)
+                return image_ids, matrix
+
+            new_ids, new_matrix, new_max_id = _build_embedding_matrix(new_qs, expected_count=new_count, return_max_id=True)
+            if len(new_ids) > 0:
+                combined_ids = np.concatenate([image_ids, new_ids])
+                combined_matrix = np.vstack([matrix, new_matrix])
+                faiss.normalize_L2(combined_matrix)
+                effective_max_id = max(last_max_id, new_max_id or last_max_id)
+            else:
+                combined_ids = image_ids
+                combined_matrix = matrix
+                effective_max_id = last_max_id
+
+            with _embed_cache_lock:
+                _embed_cache[event_id] = (now, effective_max_id, combined_ids, combined_matrix)
+                _embed_cache.move_to_end(event_id)
+            return combined_ids, combined_matrix
+
+    # Cold start (first time loading this event on this worker)
     queryset = FaceEmbedding.objects.filter(image__event_id=event_id)
-    version = _event_embeddings_version(queryset)
+    total_count = queryset.count()
+    if total_count == 0:
+        empty_ids = np.empty((0,), dtype=np.int64)
+        empty_mat = np.empty((0, 512), dtype=np.float32)
+        with _embed_cache_lock:
+            _embed_cache[event_id] = (now, 0, empty_ids, empty_mat)
+        return empty_ids, empty_mat
+
+    image_ids, matrix, max_id = _build_embedding_matrix(queryset, expected_count=total_count, return_max_id=True)
     with _embed_cache_lock:
-        cached = _embed_cache.get(event_id)
-        if cached and cached[0] == version:
-            _embed_cache.move_to_end(event_id)
-            return cached[1], cached[2]
-    expected_count = version[0] or 0
-    image_ids, matrix = _build_embedding_matrix(queryset, expected_count=expected_count)
-    with _embed_cache_lock:
-        _embed_cache[event_id] = (version, image_ids, matrix)
+        _embed_cache[event_id] = (now, max_id, image_ids, matrix)
         _embed_cache.move_to_end(event_id)
         while len(_embed_cache) > _EMBED_CACHE_MAX_EVENTS:
             _embed_cache.popitem(last=False)
