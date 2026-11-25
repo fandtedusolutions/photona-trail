@@ -336,26 +336,22 @@ def super_admin_guest_leads(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def export_guest_leads_csv(request):
-    """Export captured guest leads to CSV, filtered by event and other active filters."""
+    """Export captured guest leads to CSV for a single selected event only."""
     import csv
     from django.db.models import Q
 
-    search_q = (request.GET.get('search_q') or '').strip()
-    organizer_id = (request.GET.get('organizer_id') or '').strip()
     event_id = (request.GET.get('event_id') or '').strip()
+    if not event_id:
+        messages.warning(request, 'Please select an event first to export its leads.')
+        return redirect('gallery:super_admin_guest_leads')
+
+    evt = get_object_or_404(Event, id=event_id)
+    search_q = (request.GET.get('search_q') or '').strip()
     start_date = (request.GET.get('start_date') or '').strip()
     end_date = (request.GET.get('end_date') or '').strip()
 
-    leads = GuestLead.objects.select_related('event').order_by('-created_at')
+    leads = GuestLead.objects.filter(event=evt).order_by('-created_at')
 
-    filename_scope = 'all_events'
-    if event_id:
-        leads = leads.filter(event_id=event_id)
-        evt = Event.objects.filter(id=event_id).only('slug').first()
-        if evt and evt.slug:
-            filename_scope = evt.slug
-    if organizer_id:
-        leads = leads.filter(event__owner_id=organizer_id)
     if search_q:
         leads = leads.filter(
             Q(name__icontains=search_q) | Q(phone__icontains=search_q) | Q(email__icontains=search_q)
@@ -367,6 +363,7 @@ def export_guest_leads_csv(request):
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     timestamp_str = timezone.localtime(timezone.now()).strftime('%Y%m%d_%H%M')
+    filename_scope = evt.slug or f'event_{evt.id}'
     response['Content-Disposition'] = f'attachment; filename="guest_leads_{filename_scope}_{timestamp_str}.csv"'
     # UTF-8 BOM for clean Excel compatibility
     response.write('\ufeff')
@@ -374,9 +371,10 @@ def export_guest_leads_csv(request):
     writer = csv.writer(response)
     writer.writerow(['Event Name', 'Name', 'Phone Number', 'Email'])
 
-    for lead in leads.only('name', 'phone', 'email', 'event__name').iterator(chunk_size=1000):
+    event_name = evt.name or ''
+    for lead in leads.only('name', 'phone', 'email').iterator(chunk_size=1000):
         writer.writerow([
-            lead.event.name if lead.event else '',
+            event_name,
             lead.name or '',
             lead.phone or '',
             lead.email or '',
