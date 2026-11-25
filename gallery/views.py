@@ -3939,12 +3939,14 @@ def export_analytics_csv(request):
     response['Content-Disposition'] = f'attachment; filename="photona_analytics_{timezone.now().strftime("%Y%m%d_%H%M")}.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(['Timestamp', 'Session ID', 'Organizer', 'Event Name', 'Page Type', 'URL Path', 'Duration (Seconds)', 'Device', 'OS', 'Browser', 'City', 'Traffic Source', 'Guest Name'])
+    writer.writerow(['Timestamp', 'Session ID', 'Organizer', 'Event Name', 'Page Type', 'URL Path', 'Duration (Seconds)', 'Device', 'OS', 'Browser', 'City', 'Traffic Source', 'Guest Name', 'Guest Phone', 'Guest Email'])
 
     views = views_qs[:5000]
     for v in views:
         sess = v.session
         lead_name = sess.guest_lead.name if sess.guest_lead else ''
+        lead_phone = sess.guest_lead.phone if sess.guest_lead else ''
+        lead_email = (sess.guest_lead.email or '') if sess.guest_lead else ''
         organizer_name = v.event.owner.username if v.event and v.event.owner else 'Global'
         writer.writerow([
             timezone.localtime(v.timestamp).strftime('%Y-%m-%d %H:%M:%S'),
@@ -3959,7 +3961,9 @@ def export_analytics_csv(request):
             sess.browser_name,
             sess.city,
             sess.traffic_source,
-            lead_name
+            lead_name,
+            lead_phone,
+            lead_email,
         ])
 
     return response
