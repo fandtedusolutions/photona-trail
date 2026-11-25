@@ -16,6 +16,7 @@ urlpatterns = [
     path('super-admin/', views.super_admin_dashboard, name='super_admin_dashboard'),
     path('super-admin/studio-admins/', views.super_admin_studio_admins, name='super_admin_studio_admins'),
     path('super-admin/guest-leads/', views.super_admin_guest_leads, name='super_admin_guest_leads'),
+    path('super-admin/guest-leads/export/', views.export_guest_leads_csv, name='export_guest_leads_csv'),
     path('super-admin/plans/', views.super_admin_manage_plans, name='super_admin_manage_plans'),
     path('super-admin/analytics/', views.super_admin_analytics_dashboard, name='super_admin_analytics'),
     path('super-admin/analytics/export/', views.export_analytics_csv, name='export_analytics_csv'),

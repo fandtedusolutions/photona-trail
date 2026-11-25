@@ -335,6 +335,56 @@ def super_admin_guest_leads(request):
     return render(request, 'gallery/super_admin.html', context)
 
 @user_passes_test(lambda u: u.is_superuser)
+def export_guest_leads_csv(request):
+    """Export captured guest leads to CSV, filtered by event and other active filters."""
+    import csv
+    from django.db.models import Q
+
+    search_q = (request.GET.get('search_q') or '').strip()
+    organizer_id = (request.GET.get('organizer_id') or '').strip()
+    event_id = (request.GET.get('event_id') or '').strip()
+    start_date = (request.GET.get('start_date') or '').strip()
+    end_date = (request.GET.get('end_date') or '').strip()
+
+    leads = GuestLead.objects.select_related('event').order_by('-created_at')
+
+    filename_scope = 'all_events'
+    if event_id:
+        leads = leads.filter(event_id=event_id)
+        evt = Event.objects.filter(id=event_id).only('slug').first()
+        if evt and evt.slug:
+            filename_scope = evt.slug
+    if organizer_id:
+        leads = leads.filter(event__owner_id=organizer_id)
+    if search_q:
+        leads = leads.filter(
+            Q(name__icontains=search_q) | Q(phone__icontains=search_q) | Q(email__icontains=search_q)
+        )
+    if start_date:
+        leads = leads.filter(created_at__date__gte=start_date)
+    if end_date:
+        leads = leads.filter(created_at__date__lte=end_date)
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    timestamp_str = timezone.localtime(timezone.now()).strftime('%Y%m%d_%H%M')
+    response['Content-Disposition'] = f'attachment; filename="guest_leads_{filename_scope}_{timestamp_str}.csv"'
+    # UTF-8 BOM for clean Excel compatibility
+    response.write('\ufeff')
+
+    writer = csv.writer(response)
+    writer.writerow(['Event Name', 'Name', 'Phone Number', 'Email'])
+
+    for lead in leads.only('name', 'phone', 'email', 'event__name').iterator(chunk_size=1000):
+        writer.writerow([
+            lead.event.name if lead.event else '',
+            lead.name or '',
+            lead.phone or '',
+            lead.email or '',
+        ])
+
+    return response
+
+@user_passes_test(lambda u: u.is_superuser)
 def super_admin_manage_plans(request):
     context = _get_super_admin_context(request, active_tab='plans')
     context['active_tab'] = 'plans'
